@@ -1,25 +1,50 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import { db } from "@/db";
-import { clientes } from "@/db/schema";
+import { clientes, trabajos } from "@/db/schema";
+import { requerirSupervisor } from "@/lib/auth";
 
-function obtenerTexto(formData: FormData, campo: string): string {
+function obtenerTexto(
+  formData: FormData,
+  campo: string,
+): string {
   const valor = formData.get(campo);
 
-  return typeof valor === "string" ? valor.trim() : "";
+  return typeof valor === "string"
+    ? valor.trim()
+    : "";
 }
 
-export async function crearCliente(formData: FormData): Promise<void> {
-  const nombre = obtenerTexto(formData, "nombre");
-  const telefono = obtenerTexto(formData, "telefono");
-  const direccion = obtenerTexto(formData, "direccion");
-  const notas = obtenerTexto(formData, "notas");
+function regresarConError(error: string): never {
+  redirect(`/clientes?error=${error}`);
+}
+
+export async function crearCliente(
+  formData: FormData,
+): Promise<void> {
+  await requerirSupervisor();
+
+  const nombre = obtenerTexto(
+    formData,
+    "nombre",
+  );
+
+  const telefono = obtenerTexto(
+    formData,
+    "telefono",
+  );
+
+  const direccion = obtenerTexto(
+    formData,
+    "direccion",
+  );
 
   if (!nombre) {
-    return;
+    regresarConError("nombre");
   }
 
   db.insert(clientes)
@@ -27,25 +52,57 @@ export async function crearCliente(formData: FormData): Promise<void> {
       nombre,
       telefono: telefono || null,
       direccion: direccion || null,
-      notas: notas || null,
-      activo: true,
     })
     .run();
 
   revalidatePath("/clientes");
   revalidatePath("/dashboard");
+
+  redirect("/clientes?exito=creado");
 }
 
-export async function actualizarCliente(formData: FormData): Promise<void> {
-  const id = Number(formData.get("id"));
-  const nombre = obtenerTexto(formData, "nombre");
-  const telefono = obtenerTexto(formData, "telefono");
-  const direccion = obtenerTexto(formData, "direccion");
-  const notas = obtenerTexto(formData, "notas");
-  const activo = formData.get("activo") === "on";
+export async function actualizarCliente(
+  formData: FormData,
+): Promise<void> {
+  await requerirSupervisor();
 
-  if (!Number.isInteger(id) || id <= 0 || !nombre) {
-    return;
+  const clienteId = Number(
+    formData.get("clienteId"),
+  );
+
+  const nombre = obtenerTexto(
+    formData,
+    "nombre",
+  );
+
+  const telefono = obtenerTexto(
+    formData,
+    "telefono",
+  );
+
+  const direccion = obtenerTexto(
+    formData,
+    "direccion",
+  );
+
+  if (
+    !Number.isInteger(clienteId) ||
+    clienteId <= 0 ||
+    !nombre
+  ) {
+    regresarConError("datos");
+  }
+
+  const clienteExiste = db
+    .select({
+      id: clientes.id,
+    })
+    .from(clientes)
+    .where(eq(clientes.id, clienteId))
+    .get();
+
+  if (!clienteExiste) {
+    regresarConError("no-encontrado");
   }
 
   db.update(clientes)
@@ -53,25 +110,58 @@ export async function actualizarCliente(formData: FormData): Promise<void> {
       nombre,
       telefono: telefono || null,
       direccion: direccion || null,
-      notas: notas || null,
-      activo,
     })
-    .where(eq(clientes.id, id))
+    .where(eq(clientes.id, clienteId))
+    .run();
+
+  revalidatePath("/clientes");
+  revalidatePath(
+    `/clientes/${clienteId}/historial`,
+  );
+  revalidatePath("/trabajos");
+  revalidatePath("/dashboard");
+
+  redirect("/clientes?exito=actualizado");
+}
+
+export async function eliminarCliente(
+  formData: FormData,
+): Promise<void> {
+  await requerirSupervisor();
+
+  const clienteId = Number(
+    formData.get("clienteId"),
+  );
+
+  if (
+    !Number.isInteger(clienteId) ||
+    clienteId <= 0
+  ) {
+    regresarConError("datos");
+  }
+
+  const cantidadTrabajos = db
+    .select({
+      total: sql<number>`count(*)`,
+    })
+    .from(trabajos)
+    .where(
+      eq(trabajos.clienteId, clienteId),
+    )
+    .get();
+
+  if (
+    Number(cantidadTrabajos?.total ?? 0) > 0
+  ) {
+    regresarConError("trabajos");
+  }
+
+  db.delete(clientes)
+    .where(eq(clientes.id, clienteId))
     .run();
 
   revalidatePath("/clientes");
   revalidatePath("/dashboard");
-}
 
-export async function eliminarCliente(formData: FormData): Promise<void> {
-  const id = Number(formData.get("id"));
-
-  if (!Number.isInteger(id) || id <= 0) {
-    return;
-  }
-
-  db.delete(clientes).where(eq(clientes.id, id)).run();
-
-  revalidatePath("/clientes");
-  revalidatePath("/dashboard");
+  redirect("/clientes?exito=eliminado");
 }

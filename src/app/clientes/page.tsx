@@ -1,8 +1,11 @@
-import { desc } from "drizzle-orm";
+import { asc } from "drizzle-orm";
 import Link from "next/link";
 
+import { AppShell } from "@/components/app-shell";
+import { PageHeader } from "@/components/page-header";
 import { db } from "@/db";
 import { clientes } from "@/db/schema";
+import { requerirSupervisor } from "@/lib/auth";
 
 import {
   actualizarCliente,
@@ -13,47 +16,95 @@ import {
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export default function ClientesPage() {
+type ClientesPageProps = {
+  searchParams: Promise<{
+    error?: string | string[];
+    exito?: string | string[];
+  }>;
+};
+
+export default async function ClientesPage({
+  searchParams,
+}: ClientesPageProps) {
+  await requerirSupervisor();
+
+  const parametros = await searchParams;
+
+  const error =
+    typeof parametros.error === "string"
+      ? parametros.error
+      : "";
+
+  const exito =
+    typeof parametros.exito === "string"
+      ? parametros.exito
+      : "";
+
   const listaClientes = db
-    .select()
+    .select({
+      id: clientes.id,
+      nombre: clientes.nombre,
+      telefono: clientes.telefono,
+      direccion: clientes.direccion,
+    })
     .from(clientes)
-    .orderBy(desc(clientes.id))
+    .orderBy(asc(clientes.nombre))
     .all();
 
+  const mensajeError =
+    error === "nombre"
+      ? "Debes escribir el nombre del cliente."
+      : error === "datos"
+        ? "Los datos enviados no son válidos."
+        : error === "no-encontrado"
+          ? "El cliente no fue encontrado."
+          : error === "trabajos"
+            ? "No puedes eliminar este cliente porque tiene trabajos registrados."
+            : error
+              ? "No fue posible realizar la operación."
+              : "";
+
+  const mensajeExito =
+    exito === "creado"
+      ? "Cliente registrado correctamente."
+      : exito === "actualizado"
+        ? "Cliente actualizado correctamente."
+        : exito === "eliminado"
+          ? "Cliente eliminado correctamente."
+          : "";
+
   return (
-    <main className="min-h-screen bg-slate-100 p-4 md:p-8">
-      <div className="mx-auto max-w-7xl">
-        <header className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-blue-700">
-              Control de Trabajos
-            </p>
+    <AppShell>
+      <PageHeader
+        title="Clientes"
+        description="Registra clientes y consulta su historial de trabajos"
+      />
 
-            <h1 className="text-3xl font-bold text-slate-900">
-              Clientes
-            </h1>
-
-            <p className="mt-1 text-slate-500">
-              Administra los clientes y sus direcciones.
-            </p>
+      <main className="space-y-7 p-5 md:p-8">
+        {mensajeError && (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
+            {mensajeError}
           </div>
+        )}
 
-          <Link
-            href="/dashboard"
-            className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-center font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            Volver al dashboard
-          </Link>
-        </header>
+        {mensajeExito && (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">
+            {mensajeExito}
+          </div>
+        )}
 
-        <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-bold text-slate-900">
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-bold text-slate-900">
             Registrar cliente
           </h2>
 
+          <p className="mt-1 text-sm text-slate-500">
+            Ingresa los datos básicos del cliente.
+          </p>
+
           <form
             action={crearCliente}
-            className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4"
+            className="mt-6 grid gap-5 md:grid-cols-2"
           >
             <div>
               <label
@@ -66,7 +117,6 @@ export default function ClientesPage() {
               <input
                 id="nombre"
                 name="nombre"
-                type="text"
                 required
                 placeholder="Nombre del cliente"
                 className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
@@ -84,13 +134,13 @@ export default function ClientesPage() {
               <input
                 id="telefono"
                 name="telefono"
-                type="text"
+                type="tel"
                 placeholder="5555-5555"
                 className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
               />
             </div>
 
-            <div>
+            <div className="md:col-span-2">
               <label
                 htmlFor="direccion"
                 className="mb-2 block text-sm font-semibold text-slate-700"
@@ -101,175 +151,187 @@ export default function ClientesPage() {
               <input
                 id="direccion"
                 name="direccion"
-                type="text"
-                placeholder="Zona, municipio o departamento"
+                placeholder="Dirección del cliente"
                 className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
               />
             </div>
 
-            <div className="flex items-end">
+            <div className="md:col-span-2">
               <button
                 type="submit"
-                className="w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-700"
+                className="rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700"
               >
-                Guardar cliente
+                Registrar cliente
               </button>
-            </div>
-
-            <div className="md:col-span-2 xl:col-span-4">
-              <label
-                htmlFor="notas"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
-                Notas
-              </label>
-
-              <textarea
-                id="notas"
-                name="notas"
-                rows={3}
-                placeholder="Referencias, contacto adicional u observaciones"
-                className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
-              />
             </div>
           </form>
         </section>
 
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-200 px-6 py-5">
-            <h2 className="text-lg font-bold text-slate-900">
+        <section>
+          <div className="mb-4">
+            <h2 className="text-2xl font-bold text-slate-900">
               Clientes registrados
             </h2>
 
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="text-sm text-slate-500">
               Total: {listaClientes.length}
             </p>
           </div>
 
           {listaClientes.length === 0 ? (
-            <div className="p-10 text-center text-slate-500">
-              Todavía no hay clientes registrados.
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
+              <h3 className="text-lg font-bold text-slate-900">
+                No hay clientes registrados
+              </h3>
+
+              <p className="mt-2 text-slate-500">
+                Registra el primer cliente utilizando el formulario.
+              </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[1100px] text-left">
-                <thead className="bg-slate-50 text-sm text-slate-600">
-                  <tr>
-                    <th className="px-5 py-4">Nombre</th>
-                    <th className="px-5 py-4">Teléfono</th>
-                    <th className="px-5 py-4">Dirección</th>
-                    <th className="px-5 py-4">Notas</th>
-                    <th className="px-5 py-4">Activo</th>
-                    <th className="px-5 py-4">Acciones</th>
-                  </tr>
-                </thead>
+            <div className="grid gap-5 xl:grid-cols-2">
+              {listaClientes.map((cliente) => (
+                <article
+                  key={cliente.id}
+                  className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+                >
+                  <p className="text-sm font-semibold text-blue-700">
+                    Cliente #{cliente.id}
+                  </p>
 
-                <tbody className="divide-y divide-slate-100">
-                  {listaClientes.map((cliente) => {
-                    const formId = `cliente-${cliente.id}`;
+                  <h3 className="mt-1 text-xl font-bold text-slate-900">
+                    {cliente.nombre}
+                  </h3>
 
-                    return (
-                      <tr
-                        key={cliente.id}
-                        className="hover:bg-slate-50"
-                      >
-                        <td className="px-5 py-4">
+                  <div className="mt-5 grid gap-4 text-sm sm:grid-cols-2">
+                    <div>
+                      <p className="font-semibold text-slate-500">
+                        Teléfono
+                      </p>
+
+                      <p className="mt-1 text-slate-800">
+                        {cliente.telefono || "Sin teléfono"}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="font-semibold text-slate-500">
+                        Dirección
+                      </p>
+
+                      <p className="mt-1 text-slate-800">
+                        {cliente.direccion || "Sin dirección"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex flex-wrap gap-3 border-t border-slate-200 pt-5">
+                    <Link
+                      href={`/clientes/${cliente.id}/historial`}
+                      className="rounded-xl bg-purple-100 px-4 py-2 text-sm font-semibold text-purple-800 transition hover:bg-purple-200"
+                    >
+                      Ver historial
+                    </Link>
+
+                    <details>
+                      <summary className="cursor-pointer list-none rounded-xl bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-800 transition hover:bg-blue-200">
+                        Editar
+                      </summary>
+
+                      <div className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                        <form
+                          action={actualizarCliente}
+                          className="grid gap-4 sm:grid-cols-2"
+                        >
                           <input
-                            form={formId}
-                            name="nombre"
-                            required
-                            defaultValue={cliente.nombre}
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                            type="hidden"
+                            name="clienteId"
+                            value={cliente.id}
                           />
-                        </td>
 
-                        <td className="px-5 py-4">
-                          <input
-                            form={formId}
-                            name="telefono"
-                            defaultValue={cliente.telefono ?? ""}
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2"
-                          />
-                        </td>
+                          <div>
+                            <label
+                              htmlFor={`nombre-${cliente.id}`}
+                              className="mb-2 block text-sm font-semibold text-slate-700"
+                            >
+                              Nombre
+                            </label>
 
-                        <td className="px-5 py-4">
-                          <input
-                            form={formId}
-                            name="direccion"
-                            defaultValue={cliente.direccion ?? ""}
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2"
-                          />
-                        </td>
-
-                        <td className="px-5 py-4">
-                          <input
-                            form={formId}
-                            name="notas"
-                            defaultValue={cliente.notas ?? ""}
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2"
-                          />
-                        </td>
-
-                        <td className="px-5 py-4">
-                          <label className="flex items-center gap-2 text-sm">
                             <input
-                              form={formId}
-                              name="activo"
-                              type="checkbox"
-                              defaultChecked={cliente.activo}
-                              className="h-4 w-4"
+                              id={`nombre-${cliente.id}`}
+                              name="nombre"
+                              required
+                              defaultValue={cliente.nombre}
+                              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"
                             />
-
-                            {cliente.activo ? "Activo" : "Inactivo"}
-                          </label>
-                        </td>
-
-                        <td className="px-5 py-4">
-                          <div className="flex gap-2">
-                            <form
-                              id={formId}
-                              action={actualizarCliente}
-                            >
-                              <input
-                                type="hidden"
-                                name="id"
-                                value={cliente.id}
-                              />
-                            </form>
-
-                            <button
-                              form={formId}
-                              type="submit"
-                              className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-                            >
-                              Guardar
-                            </button>
-
-                            <form action={eliminarCliente}>
-                              <input
-                                type="hidden"
-                                name="id"
-                                value={cliente.id}
-                              />
-
-                              <button
-                                type="submit"
-                                className="rounded-lg bg-red-100 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-200"
-                              >
-                                Eliminar
-                              </button>
-                            </form>
                           </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+
+                          <div>
+                            <label
+                              htmlFor={`telefono-${cliente.id}`}
+                              className="mb-2 block text-sm font-semibold text-slate-700"
+                            >
+                              Teléfono
+                            </label>
+
+                            <input
+                              id={`telefono-${cliente.id}`}
+                              name="telefono"
+                              type="tel"
+                              defaultValue={cliente.telefono ?? ""}
+                              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"
+                            />
+                          </div>
+
+                          <div className="sm:col-span-2">
+                            <label
+                              htmlFor={`direccion-${cliente.id}`}
+                              className="mb-2 block text-sm font-semibold text-slate-700"
+                            >
+                              Dirección
+                            </label>
+
+                            <input
+                              id={`direccion-${cliente.id}`}
+                              name="direccion"
+                              defaultValue={cliente.direccion ?? ""}
+                              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"
+                            />
+                          </div>
+
+                          <div className="sm:col-span-2">
+                            <button
+                              type="submit"
+                              className="rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700"
+                            >
+                              Guardar cambios
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    </details>
+
+                    <form action={eliminarCliente}>
+                      <input
+                        type="hidden"
+                        name="clienteId"
+                        value={cliente.id}
+                      />
+
+                      <button
+                        type="submit"
+                        className="rounded-xl bg-red-100 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-200"
+                      >
+                        Eliminar
+                      </button>
+                    </form>
+                  </div>
+                </article>
+              ))}
             </div>
           )}
         </section>
-      </div>
-    </main>
+      </main>
+    </AppShell>
   );
 }
