@@ -166,6 +166,38 @@ export const usuarios = sqliteTable("usuarios", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const evidencias = sqliteTable("evidencias", {
+  id: integer("id").primaryKey({
+    autoIncrement: true,
+  }),
+
+  trabajoId: integer("trabajo_id")
+    .notNull()
+    .references(() => trabajos.id, {
+      onDelete: "cascade",
+    }),
+
+  usuarioId: integer("usuario_id")
+    .notNull()
+    .references(() => usuarios.id),
+
+  archivoUrl: text("archivo_url").notNull(),
+
+  nombreOriginal: text("nombre_original").notNull(),
+
+  descripcion: text("descripcion"),
+
+  creadoEn: text("creado_en")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export type Evidencia =
+  typeof evidencias.$inferSelect;
+
+export type NuevaEvidencia =
+  typeof evidencias.$inferInsert;
+
 export type Usuario = typeof usuarios.$inferSelect;
 export type NuevoUsuario = typeof usuarios.$inferInsert;
 

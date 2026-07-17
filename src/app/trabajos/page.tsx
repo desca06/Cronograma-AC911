@@ -443,6 +443,12 @@ export default function TrabajosPage() {
                     >
                       Editar
                     </Link>
+                    <Link
+    href={`/evidencias/${trabajo.id}`}
+    className="rounded-lg bg-emerald-100 px-4 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-200"
+  >
+    Evidencias
+  </Link>
                     <form
                       action={actualizarEstadoTrabajo}
                       className="flex gap-2"

@@ -1,4 +1,5 @@
 import { asc, eq } from "drizzle-orm";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
@@ -76,8 +77,8 @@ export default async function MisTrabajosPage({
             </h2>
 
             <p className="mt-2 text-amber-700">
-              Un supervisor debe vincular tu usuario con
-              un empleado.
+              Un supervisor debe vincular tu usuario con un
+              empleado.
             </p>
           </div>
         </section>
@@ -132,9 +133,11 @@ export default async function MisTrabajosPage({
       ? "No tienes permiso para modificar ese trabajo."
       : error === "cuenta"
         ? "Tu cuenta no está vinculada con un empleado."
-        : error
-          ? "No se pudo actualizar el trabajo."
-          : "";
+        : error === "no-encontrado"
+          ? "El trabajo no fue encontrado."
+          : error
+            ? "No se pudo realizar la operación."
+            : "";
 
   return (
     <AppShell>
@@ -205,8 +208,10 @@ export default async function MisTrabajosPage({
                 <div className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
                   <p>
                     <strong>Hora:</strong>{" "}
-                    {trabajo.horaInicio ||
-                      "Sin definir"}
+                    {trabajo.horaInicio || "Sin definir"}
+                    {trabajo.horaFin
+                      ? ` - ${trabajo.horaFin}`
+                      : ""}
                   </p>
 
                   <p>
@@ -222,6 +227,13 @@ export default async function MisTrabajosPage({
                   </p>
                 </div>
 
+                <Link
+                  href={`/evidencias/${trabajo.id}`}
+                  className="mt-6 block w-full rounded-xl border border-blue-300 bg-blue-50 px-5 py-3 text-center font-semibold text-blue-700 transition hover:bg-blue-100"
+                >
+                  Ver o subir evidencias
+                </Link>
+
                 <form
                   action={actualizarMiTrabajo}
                   className="mt-6 space-y-4 border-t border-slate-200 pt-5"
@@ -233,14 +245,18 @@ export default async function MisTrabajosPage({
                   />
 
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    <label
+                      htmlFor={`estado-${trabajo.id}`}
+                      className="mb-2 block text-sm font-semibold text-slate-700"
+                    >
                       Estado del trabajo
                     </label>
 
                     <select
+                      id={`estado-${trabajo.id}`}
                       name="estado"
                       defaultValue={trabajo.estado}
-                      className="w-full rounded-xl border border-slate-300 px-4 py-3"
+                      className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"
                     >
                       <option value="Pendiente">
                         Pendiente
@@ -261,11 +277,15 @@ export default async function MisTrabajosPage({
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    <label
+                      htmlFor={`observaciones-${trabajo.id}`}
+                      className="mb-2 block text-sm font-semibold text-slate-700"
+                    >
                       Observaciones
                     </label>
 
                     <textarea
+                      id={`observaciones-${trabajo.id}`}
                       name="observaciones"
                       rows={3}
                       defaultValue={
@@ -278,7 +298,7 @@ export default async function MisTrabajosPage({
 
                   <button
                     type="submit"
-                    className="w-full rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700"
+                    className="w-full rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700"
                   >
                     Guardar actualización
                   </button>
