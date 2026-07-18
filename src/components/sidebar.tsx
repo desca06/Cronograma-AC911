@@ -1,24 +1,20 @@
 "use client";
 
 import {
-  Bell,
   BriefcaseBusiness,
   Building2,
   CalendarDays,
   CarFront,
   ClipboardList,
-  Contact,
   Gauge,
   LogOut,
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
-  ShieldCheck,
   UserCog,
   UsersRound,
   Wrench,
-  X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -28,6 +24,14 @@ import {
 } from "react";
 
 import { cerrarSesion } from "@/app/login/actions";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 type SidebarProps = {
   rol: string;
@@ -99,13 +103,13 @@ export function Sidebar({
     useState(false);
 
   const [
-    menuMovilAbierto,
-    setMenuMovilAbierto,
+    configuracionCargada,
+    setConfiguracionCargada,
   ] = useState(false);
 
   const [
-    configuracionCargada,
-    setConfiguracionCargada,
+    menuMovilAbierto,
+    setMenuMovilAbierto,
   ] = useState(false);
 
   useEffect(() => {
@@ -139,41 +143,6 @@ export function Sidebar({
     setMenuMovilAbierto(false);
   }, [pathname]);
 
-  useEffect(() => {
-    if (!menuMovilAbierto) {
-      return;
-    }
-
-    const cerrarConEscape = (
-      evento: KeyboardEvent,
-    ) => {
-      if (evento.key === "Escape") {
-        setMenuMovilAbierto(false);
-      }
-    };
-
-    const overflowAnterior =
-      document.body.style.overflow;
-
-    document.body.style.overflow =
-      "hidden";
-
-    window.addEventListener(
-      "keydown",
-      cerrarConEscape,
-    );
-
-    return () => {
-      document.body.style.overflow =
-        overflowAnterior;
-
-      window.removeEventListener(
-        "keydown",
-        cerrarConEscape,
-      );
-    };
-  }, [menuMovilAbierto]);
-
   const opcionesPermitidas =
     opciones.filter((opcion) =>
       opcion.roles.includes(rol),
@@ -188,62 +157,133 @@ export function Sidebar({
 
   return (
     <>
-      {/* Barra superior para celular */}
-      <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-slate-800 bg-slate-950 px-4 text-white shadow-sm lg:hidden">
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-red-600">
+      {/* BARRA SUPERIOR MÓVIL */}
+      <div className="h-16 lg:hidden" />
+
+      <header className="fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b border-slate-800 bg-slate-950 px-4 text-white shadow-sm lg:hidden">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-600">
             <Wrench size={20} />
           </div>
 
-          <div>
+          <div className="min-w-0">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-300">
               Sistema
             </p>
 
-            <p className="text-sm font-bold">
+            <p className="truncate text-sm font-bold">
               Control de Trabajos
             </p>
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() =>
-            setMenuMovilAbierto(true)
-          }
-          aria-label="Abrir menú"
-          aria-expanded={
-            menuMovilAbierto
-          }
-          className="grid h-10 w-10 place-items-center rounded-xl border border-slate-700 text-slate-200 transition hover:bg-slate-800 hover:text-white"
+        <Sheet
+          open={menuMovilAbierto}
+          onOpenChange={setMenuMovilAbierto}
         >
-          <Menu size={22} />
-        </button>
+          <SheetTrigger
+            render={
+              <button
+                type="button"
+                aria-label="Abrir menú"
+                className="grid h-10 w-10 place-items-center rounded-xl border border-slate-700 bg-slate-950 text-slate-200 transition hover:bg-slate-800 hover:text-white"
+              />
+            }
+          >
+            <Menu size={22} />
+          </SheetTrigger>
+
+          <SheetContent
+            side="left"
+            showCloseButton
+            className="flex h-dvh w-[88vw] max-w-[330px] flex-col border-r border-slate-800 bg-slate-950 p-0 text-white"
+          >
+            <SheetHeader className="border-b border-slate-800 p-5 text-left">
+              <div className="flex items-center gap-3">
+                <div className="grid h-11 w-11 place-items-center rounded-2xl bg-blue-600">
+                  <Wrench size={22} />
+                </div>
+
+                <div>
+                  <SheetDescription className="text-xs font-semibold uppercase tracking-wide text-blue-300">
+                    Sistema
+                  </SheetDescription>
+
+                  <SheetTitle className="text-base font-bold text-white">
+                    Control de Trabajos
+                  </SheetTitle>
+                </div>
+              </div>
+            </SheetHeader>
+
+            <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+              {opcionesPermitidas.map(
+                (opcion) => {
+                  const Icono =
+                    opcion.icono;
+
+                  const activo =
+                    pathname ===
+                      opcion.href ||
+                    pathname.startsWith(
+                      `${opcion.href}/`,
+                    );
+
+                  return (
+                    <Link
+                      key={opcion.href}
+                      href={opcion.href}
+                      onClick={() =>
+                        setMenuMovilAbierto(false)
+                      }
+                      className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-4 text-sm font-medium transition ${
+                        activo
+                          ? "bg-blue-600 text-white"
+                          : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                      }`}
+                    >
+                      <Icono
+                        size={19}
+                        className="shrink-0"
+                      />
+
+                      <span>
+                        {opcion.nombre}
+                      </span>
+                    </Link>
+                  );
+                },
+              )}
+            </nav>
+
+            <form
+              action={cerrarSesion}
+              className="shrink-0 border-t border-slate-800 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+            >
+              <button
+                type="submit"
+                className="flex min-h-12 w-full items-center justify-center gap-3 rounded-xl border border-slate-700 px-4 text-sm font-semibold text-slate-300 transition hover:border-red-500 hover:bg-red-600 hover:text-white"
+              >
+                <LogOut
+                  size={19}
+                  className="shrink-0"
+                />
+
+                <span>
+                  Cerrar sesión
+                </span>
+              </button>
+            </form>
+          </SheetContent>
+        </Sheet>
       </header>
 
-      {/* Fondo oscuro del menú móvil */}
-      <button
-        type="button"
-        aria-label="Cerrar menú"
-        onClick={() =>
-          setMenuMovilAbierto(false)
-        }
-        className={`fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm transition-opacity lg:hidden ${
-          menuMovilAbierto
-            ? "pointer-events-auto opacity-100"
-            : "pointer-events-none opacity-0"
-        }`}
-      />
-
+      {/* SIDEBAR DE COMPUTADORA */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col border-r border-slate-800 bg-slate-950 text-white shadow-2xl transition-transform duration-300 ease-out lg:sticky lg:top-0 lg:z-30 lg:h-screen lg:shrink-0 lg:translate-x-0 lg:shadow-none lg:transition-[width] ${
-          menuMovilAbierto
-            ? "translate-x-0"
-            : "-translate-x-full"
-        } ${
+        className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-slate-800 bg-slate-950 text-white transition-[width] duration-300 lg:flex ${
           contraido
-            ? "lg:w-[84px]"
-            : "lg:w-[270px]"
+            ? "w-[84px]"
+            : "w-[270px]"
         }`}
       >
         <div className="relative flex h-20 shrink-0 items-center border-b border-slate-800 px-5">
@@ -260,9 +300,9 @@ export function Sidebar({
                 ? "Expandir menú"
                 : "Contraer menú"
             }
-            className={`flex min-w-0 items-center rounded-xl text-left transition hover:bg-slate-900 lg:p-1 ${
+            className={`flex min-w-0 items-center rounded-xl p-1 text-left transition hover:bg-slate-900 ${
               contraido
-                ? "lg:mx-auto"
+                ? "mx-auto"
                 : ""
             }`}
           >
@@ -273,8 +313,8 @@ export function Sidebar({
             <div
               className={`ml-3 min-w-0 transition-all duration-200 ${
                 contraido
-                  ? "lg:ml-0 lg:w-0 lg:overflow-hidden lg:opacity-0"
-                  : "lg:w-[165px] lg:opacity-100"
+                  ? "ml-0 w-0 overflow-hidden opacity-0"
+                  : "w-[165px] opacity-100"
               }`}
             >
               <p className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-blue-300">
@@ -285,17 +325,6 @@ export function Sidebar({
                 Control de Trabajos
               </h2>
             </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() =>
-              setMenuMovilAbierto(false)
-            }
-            aria-label="Cerrar menú"
-            className="ml-auto grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-slate-700 text-slate-300 transition hover:bg-slate-800 hover:text-white lg:hidden"
-          >
-            <X size={21} />
           </button>
 
           <button
@@ -311,7 +340,7 @@ export function Sidebar({
                 ? "Expandir menú"
                 : "Contraer menú"
             }
-            className="absolute -right-3 top-7 hidden h-7 w-7 place-items-center rounded-full border border-slate-300 bg-white text-slate-700 shadow-md transition hover:bg-blue-50 hover:text-blue-700 lg:grid"
+            className="absolute -right-3 top-7 grid h-7 w-7 place-items-center rounded-full border border-slate-300 bg-white text-slate-700 shadow-md transition hover:bg-blue-50 hover:text-blue-700"
           >
             {contraido ? (
               <PanelLeftOpen size={15} />
@@ -345,7 +374,7 @@ export function Sidebar({
                   }
                   className={`flex min-h-12 items-center rounded-xl px-3 text-sm font-medium transition ${
                     contraido
-                      ? "lg:justify-center lg:px-0"
+                      ? "justify-center px-0"
                       : "gap-3"
                   } ${
                     activo
@@ -361,8 +390,8 @@ export function Sidebar({
                   <span
                     className={`whitespace-nowrap transition-all duration-200 ${
                       contraido
-                        ? "lg:w-0 lg:overflow-hidden lg:opacity-0"
-                        : "lg:w-auto lg:opacity-100"
+                        ? "w-0 overflow-hidden opacity-0"
+                        : "w-auto opacity-100"
                     }`}
                   >
                     {opcion.nombre}
@@ -386,7 +415,7 @@ export function Sidebar({
             }
             className={`flex min-h-12 w-full items-center rounded-xl border border-slate-700 text-sm font-semibold text-slate-300 transition hover:border-red-500 hover:bg-red-600 hover:text-white ${
               contraido
-                ? "lg:justify-center lg:px-0"
+                ? "justify-center px-0"
                 : "gap-3 px-3"
             }`}
           >
@@ -398,8 +427,8 @@ export function Sidebar({
             <span
               className={`whitespace-nowrap transition-all duration-200 ${
                 contraido
-                  ? "lg:w-0 lg:overflow-hidden lg:opacity-0"
-                  : "lg:w-auto lg:opacity-100"
+                  ? "w-0 overflow-hidden opacity-0"
+                  : "w-auto opacity-100"
               }`}
             >
               Cerrar sesión
