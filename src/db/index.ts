@@ -1,9 +1,28 @@
+import { mkdirSync } from "node:fs";
+import path from "node:path";
+
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 
 import * as schema from "./schema";
 
-const sqlite = new Database("./data/control-trabajos.db");
+const carpetaDatos = path.join(
+  process.cwd(),
+  "data",
+);
+
+mkdirSync(carpetaDatos, {
+  recursive: true,
+});
+
+const rutaBaseDatos = path.join(
+  carpetaDatos,
+  "control-trabajos.db",
+);
+
+const sqlite = new Database(rutaBaseDatos);
+
+sqlite.pragma("foreign_keys = ON");
 
 export const db = drizzle(sqlite, {
   schema,
