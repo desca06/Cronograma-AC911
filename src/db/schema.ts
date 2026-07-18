@@ -166,6 +166,52 @@ export const usuarios = sqliteTable("usuarios", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const notificaciones = sqliteTable(
+  "notificaciones",
+  {
+    id: integer("id").primaryKey({
+      autoIncrement: true,
+    }),
+
+    usuarioId: integer("usuario_id")
+      .notNull()
+      .references(() => usuarios.id, {
+        onDelete: "cascade",
+      }),
+
+    trabajoId: integer("trabajo_id").references(
+      () => trabajos.id,
+      {
+        onDelete: "set null",
+      },
+    ),
+
+    titulo: text("titulo").notNull(),
+
+    mensaje: text("mensaje").notNull(),
+
+    tipo: text("tipo")
+      .notNull()
+      .default("ASIGNACION"),
+
+    leida: integer("leida", {
+      mode: "boolean",
+    })
+      .notNull()
+      .default(false),
+
+    creadoEn: text("creado_en")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+);
+
+export type Notificacion =
+  typeof notificaciones.$inferSelect;
+
+export type NuevaNotificacion =
+  typeof notificaciones.$inferInsert;
+
 export const evidencias = sqliteTable("evidencias", {
   id: integer("id").primaryKey({
     autoIncrement: true,
