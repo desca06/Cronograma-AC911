@@ -222,7 +222,7 @@ export default async function NotificacionesPage() {
                         <Link
                           href={
                             sesion.rol === "TECNICO"
-                              ? "/mis-trabajos"
+                              ? `/mis-trabajos/${notificacion.trabajoId}`
                               : `/trabajos/${notificacion.trabajoId}/editar`
                           }
                           className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"

@@ -145,7 +145,7 @@ export default async function CronogramaPage({
         <header className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-sm font-semibold text-blue-700">
-              Control de Trabajos
+              Cronograma
             </p>
 
             <h1 className="text-3xl font-bold text-slate-900">
@@ -169,7 +169,7 @@ export default async function CronogramaPage({
               href="/dashboard"
               className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-center text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
-              Volver al dashboard
+              Volver al inicio
             </Link>
           </div>
         </header>

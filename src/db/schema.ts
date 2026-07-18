@@ -110,7 +110,19 @@ export const trabajos = sqliteTable("trabajos", {
 
   horaFin: text("hora_fin"),
 
+  /*
+   * Indicaciones agregadas por el supervisor.
+   * El técnico solamente puede leerlas.
+   */
   observaciones: text("observaciones"),
+
+  /*
+   * Observaciones independientes escritas
+   * por el técnico durante el trabajo.
+   */
+  observacionesTecnico: text(
+    "observaciones_tecnico",
+  ),
 
   creadoEn: text("creado_en")
     .notNull()
@@ -130,7 +142,10 @@ export const trabajoEmpleados = sqliteTable(
   },
   (tabla) => [
     primaryKey({
-      columns: [tabla.trabajoId, tabla.empleadoId],
+      columns: [
+        tabla.trabajoId,
+        tabla.empleadoId,
+      ],
     }),
   ],
 );
@@ -141,7 +156,7 @@ export const usuarios = sqliteTable("usuarios", {
   }),
 
   empleadoId: integer("empleado_id")
-  .references(() => empleados.id),
+    .references(() => empleados.id),
 
   nombre: text("nombre").notNull(),
 
@@ -149,7 +164,9 @@ export const usuarios = sqliteTable("usuarios", {
     .notNull()
     .unique(),
 
-  passwordHash: text("password_hash").notNull(),
+  passwordHash: text(
+    "password_hash",
+  ).notNull(),
 
   rol: text("rol")
     .notNull()
@@ -179,12 +196,10 @@ export const notificaciones = sqliteTable(
         onDelete: "cascade",
       }),
 
-    trabajoId: integer("trabajo_id").references(
-      () => trabajos.id,
-      {
+    trabajoId: integer("trabajo_id")
+      .references(() => trabajos.id, {
         onDelete: "set null",
-      },
-    ),
+      }),
 
     titulo: text("titulo").notNull(),
 
@@ -229,7 +244,9 @@ export const evidencias = sqliteTable("evidencias", {
 
   archivoUrl: text("archivo_url").notNull(),
 
-  nombreOriginal: text("nombre_original").notNull(),
+  nombreOriginal: text(
+    "nombre_original",
+  ).notNull(),
 
   descripcion: text("descripcion"),
 
@@ -244,17 +261,32 @@ export type Evidencia =
 export type NuevaEvidencia =
   typeof evidencias.$inferInsert;
 
-export type Usuario = typeof usuarios.$inferSelect;
-export type NuevoUsuario = typeof usuarios.$inferInsert;
+export type Usuario =
+  typeof usuarios.$inferSelect;
 
-export type Empleado = typeof empleados.$inferSelect;
-export type NuevoEmpleado = typeof empleados.$inferInsert;
+export type NuevoUsuario =
+  typeof usuarios.$inferInsert;
 
-export type Cliente = typeof clientes.$inferSelect;
-export type NuevoCliente = typeof clientes.$inferInsert;
+export type Empleado =
+  typeof empleados.$inferSelect;
 
-export type Vehiculo = typeof vehiculos.$inferSelect;
-export type NuevoVehiculo = typeof vehiculos.$inferInsert;
+export type NuevoEmpleado =
+  typeof empleados.$inferInsert;
 
-export type Trabajo = typeof trabajos.$inferSelect;
-export type NuevoTrabajo = typeof trabajos.$inferInsert;
+export type Cliente =
+  typeof clientes.$inferSelect;
+
+export type NuevoCliente =
+  typeof clientes.$inferInsert;
+
+export type Vehiculo =
+  typeof vehiculos.$inferSelect;
+
+export type NuevoVehiculo =
+  typeof vehiculos.$inferInsert;
+
+export type Trabajo =
+  typeof trabajos.$inferSelect;
+
+export type NuevoTrabajo =
+  typeof trabajos.$inferInsert;

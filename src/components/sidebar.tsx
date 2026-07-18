@@ -99,7 +99,7 @@ export function Sidebar({
           </p>
 
           <h2 className="font-bold">
-            Control de Trabajos
+            Cronogramas
           </h2>
         </div>
       </div>

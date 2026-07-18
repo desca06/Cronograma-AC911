@@ -24,8 +24,42 @@ function obtenerTexto(
     : "";
 }
 
-function revalidarPaginas(): void {
+function obtenerRutaRetorno(
+  formData: FormData,
+  trabajoId: number,
+): string {
+  const ruta = obtenerTexto(
+    formData,
+    "rutaRetorno",
+  );
+
+  const rutaDetalle =
+    `/mis-trabajos/${trabajoId}`;
+
+  /*
+   * Solo acepta rutas internas conocidas.
+   * Evita redirecciones hacia sitios externos.
+   */
+  return ruta === rutaDetalle
+    ? rutaDetalle
+    : "/mis-trabajos";
+}
+
+function agregarParametro(
+  ruta: string,
+  nombre: "error" | "exito",
+  valor: string,
+): string {
+  return `${ruta}?${nombre}=${encodeURIComponent(valor)}`;
+}
+
+function revalidarPaginas(
+  trabajoId: number,
+): void {
   revalidatePath("/mis-trabajos");
+  revalidatePath(
+    `/mis-trabajos/${trabajoId}`,
+  );
   revalidatePath("/dashboard");
   revalidatePath("/cronograma");
   revalidatePath("/trabajos");
@@ -45,14 +79,29 @@ export async function actualizarMiTrabajo(
     formData.get("trabajoId"),
   );
 
+  if (
+    !Number.isInteger(trabajoId) ||
+    trabajoId <= 0
+  ) {
+    redirect(
+      "/mis-trabajos?error=datos",
+    );
+  }
+
+  const rutaRetorno =
+    obtenerRutaRetorno(
+      formData,
+      trabajoId,
+    );
+
   const estado = obtenerTexto(
     formData,
     "estado",
   );
 
-  const observaciones = obtenerTexto(
+  const observacionesTecnico = obtenerTexto(
     formData,
-    "observaciones",
+    "observacionesTecnico",
   );
 
   const estadosPermitidos = [
@@ -62,12 +111,14 @@ export async function actualizarMiTrabajo(
     "Finalizado",
   ];
 
-  if (
-    !Number.isInteger(trabajoId) ||
-    trabajoId <= 0 ||
-    !estadosPermitidos.includes(estado)
-  ) {
-    redirect("/mis-trabajos?error=datos");
+  if (!estadosPermitidos.includes(estado)) {
+    redirect(
+      agregarParametro(
+        rutaRetorno,
+        "error",
+        "datos",
+      ),
+    );
   }
 
   const usuario = db
@@ -84,13 +135,15 @@ export async function actualizarMiTrabajo(
     .get();
 
   if (!usuario?.empleadoId) {
-    redirect("/mis-trabajos?error=cuenta");
+    redirect(
+      agregarParametro(
+        rutaRetorno,
+        "error",
+        "cuenta",
+      ),
+    );
   }
 
-  /*
-   * Verifica que el técnico esté realmente
-   * asignado al trabajo antes de modificarlo.
-   */
   const asignacion = db
     .select({
       trabajoId:
@@ -113,7 +166,11 @@ export async function actualizarMiTrabajo(
 
   if (!asignacion) {
     redirect(
-      "/mis-trabajos?error=permiso",
+      agregarParametro(
+        rutaRetorno,
+        "error",
+        "permiso",
+      ),
     );
   }
 
@@ -123,40 +180,49 @@ export async function actualizarMiTrabajo(
       tipo: trabajos.tipo,
       fecha: trabajos.fecha,
       estado: trabajos.estado,
-      observaciones:
-        trabajos.observaciones,
+      observacionesTecnico:
+        trabajos.observacionesTecnico,
     })
     .from(trabajos)
     .where(
-      eq(trabajos.id, trabajoId),
+      eq(
+        trabajos.id,
+        trabajoId,
+      ),
     )
     .get();
 
   if (!trabajoActual) {
     redirect(
-      "/mis-trabajos?error=no-encontrado",
+      agregarParametro(
+        rutaRetorno,
+        "error",
+        "no-encontrado",
+      ),
     );
   }
 
-  const observacionesAnteriores =
-    trabajoActual.observaciones?.trim() ?? "";
+  const observacionesTecnicoAnteriores =
+    trabajoActual.observacionesTecnico
+      ?.trim() ?? "";
 
   const cambioEstado =
     trabajoActual.estado !== estado;
 
-  const cambioObservaciones =
-    observacionesAnteriores !== observaciones;
+  const cambioObservacionesTecnico =
+    observacionesTecnicoAnteriores !==
+    observacionesTecnico;
 
-  /*
-   * Si el técnico envía exactamente los mismos
-   * datos, no actualiza ni crea otra notificación.
-   */
   if (
     !cambioEstado &&
-    !cambioObservaciones
+    !cambioObservacionesTecnico
   ) {
     redirect(
-      "/mis-trabajos?exito=sin-cambios",
+      agregarParametro(
+        rutaRetorno,
+        "exito",
+        "sin-cambios",
+      ),
     );
   }
 
@@ -164,25 +230,27 @@ export async function actualizarMiTrabajo(
     tx.update(trabajos)
       .set({
         estado,
-        observaciones:
-          observaciones || null,
+        observacionesTecnico:
+          observacionesTecnico || null,
       })
       .where(
-        eq(trabajos.id, trabajoId),
+        eq(
+          trabajos.id,
+          trabajoId,
+        ),
       )
       .run();
 
-    /*
-     * Obtiene todos los supervisores para
-     * notificarles el cambio realizado.
-     */
     const supervisores = tx
       .select({
         usuarioId: usuarios.id,
       })
       .from(usuarios)
       .where(
-        eq(usuarios.rol, "SUPERVISOR"),
+        eq(
+          usuarios.rol,
+          "SUPERVISOR",
+        ),
       )
       .all();
 
@@ -216,21 +284,22 @@ export async function actualizarMiTrabajo(
 
     if (
       cambioEstado &&
-      cambioObservaciones
+      cambioObservacionesTecnico
     ) {
       mensaje +=
-        " También se actualizaron las observaciones.";
+        " El técnico también agregó o actualizó sus observaciones.";
     } else if (
       !cambioEstado &&
-      cambioObservaciones
+      cambioObservacionesTecnico
     ) {
       titulo =
-        "Observaciones actualizadas";
+        "Observaciones del técnico actualizadas";
 
       mensaje =
-        `El técnico actualizó las observaciones ` +
-        `del trabajo "${trabajoActual.tipo}" ` +
-        `programado para el ${trabajoActual.fecha}.`;
+        `El técnico agregó o actualizó sus ` +
+        `observaciones en el trabajo ` +
+        `"${trabajoActual.tipo}" del ` +
+        `${trabajoActual.fecha}.`;
     }
 
     tx.insert(notificaciones)
@@ -250,9 +319,13 @@ export async function actualizarMiTrabajo(
       .run();
   });
 
-  revalidarPaginas();
+  revalidarPaginas(trabajoId);
 
   redirect(
-    "/mis-trabajos?exito=actualizado",
+    agregarParametro(
+      rutaRetorno,
+      "exito",
+      "actualizado",
+    ),
   );
 }

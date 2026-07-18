@@ -59,7 +59,12 @@ export default async function MisTrabajosPage({
       empleadoId: usuarios.empleadoId,
     })
     .from(usuarios)
-    .where(eq(usuarios.id, sesion.usuarioId))
+    .where(
+      eq(
+        usuarios.id,
+        sesion.usuarioId,
+      ),
+    )
     .get();
 
   if (!usuario?.empleadoId) {
@@ -77,8 +82,8 @@ export default async function MisTrabajosPage({
             </h2>
 
             <p className="mt-2 text-amber-700">
-              Un supervisor debe vincular tu usuario con un
-              empleado.
+              Un supervisor debe vincular tu usuario
+              con un empleado.
             </p>
           </div>
         </section>
@@ -96,7 +101,21 @@ export default async function MisTrabajosPage({
       estado: trabajos.estado,
       horaInicio: trabajos.horaInicio,
       horaFin: trabajos.horaFin,
-      observaciones: trabajos.observaciones,
+
+      /*
+       * Observaciones del supervisor:
+       * solamente se muestran como información.
+       */
+      observacionesSupervisor:
+        trabajos.observaciones,
+
+      /*
+       * Observaciones que sí puede editar
+       * el técnico.
+       */
+      observacionesTecnico:
+        trabajos.observacionesTecnico,
+
       clienteNombre: clientes.nombre,
       vehiculoNombre: vehiculos.nombre,
     })
@@ -110,11 +129,17 @@ export default async function MisTrabajosPage({
     )
     .innerJoin(
       clientes,
-      eq(trabajos.clienteId, clientes.id),
+      eq(
+        trabajos.clienteId,
+        clientes.id,
+      ),
     )
     .leftJoin(
       vehiculos,
-      eq(trabajos.vehiculoId, vehiculos.id),
+      eq(
+        trabajos.vehiculoId,
+        vehiculos.id,
+      ),
     )
     .where(
       eq(
@@ -159,6 +184,12 @@ export default async function MisTrabajosPage({
           </div>
         )}
 
+        {exito === "sin-cambios" && (
+          <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-blue-700">
+            No había cambios nuevos para guardar.
+          </div>
+        )}
+
         {listaTrabajos.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
             <h2 className="text-xl font-bold text-slate-900">
@@ -193,7 +224,9 @@ export default async function MisTrabajosPage({
 
                   <span
                     className={`w-fit rounded-full px-3 py-1 text-xs font-bold ${
-                      coloresEstado[trabajo.estado] ??
+                      coloresEstado[
+                        trabajo.estado
+                      ] ??
                       "bg-slate-100 text-slate-700"
                     }`}
                   >
@@ -208,7 +241,8 @@ export default async function MisTrabajosPage({
                 <div className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
                   <p>
                     <strong>Hora:</strong>{" "}
-                    {trabajo.horaInicio || "Sin definir"}
+                    {trabajo.horaInicio ||
+                      "Sin definir"}
                     {trabajo.horaFin
                       ? ` - ${trabajo.horaFin}`
                       : ""}
@@ -224,6 +258,17 @@ export default async function MisTrabajosPage({
                     <strong>Dirección:</strong>{" "}
                     {trabajo.direccion ||
                       "Sin dirección"}
+                  </p>
+                </div>
+
+                <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                  <p className="text-sm font-bold text-amber-900">
+                    Indicaciones del supervisor
+                  </p>
+
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-amber-900">
+                    {trabajo.observacionesSupervisor ||
+                      "El supervisor no agregó indicaciones."}
                   </p>
                 </div>
 
@@ -255,7 +300,9 @@ export default async function MisTrabajosPage({
                     <select
                       id={`estado-${trabajo.id}`}
                       name="estado"
-                      defaultValue={trabajo.estado}
+                      defaultValue={
+                        trabajo.estado
+                      }
                       className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"
                     >
                       <option value="Pendiente">
@@ -278,20 +325,21 @@ export default async function MisTrabajosPage({
 
                   <div>
                     <label
-                      htmlFor={`observaciones-${trabajo.id}`}
+                      htmlFor={`observaciones-tecnico-${trabajo.id}`}
                       className="mb-2 block text-sm font-semibold text-slate-700"
                     >
-                      Observaciones
+                      Observaciones del técnico
                     </label>
 
                     <textarea
-                      id={`observaciones-${trabajo.id}`}
-                      name="observaciones"
+                      id={`observaciones-tecnico-${trabajo.id}`}
+                      name="observacionesTecnico"
                       rows={3}
                       defaultValue={
-                        trabajo.observaciones ?? ""
+                        trabajo.observacionesTecnico ??
+                        ""
                       }
-                      placeholder="Escribe avances, problemas o resultados"
+                      placeholder="Escribe avances, problemas, materiales utilizados o resultados"
                       className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3"
                     />
                   </div>

@@ -34,7 +34,7 @@ export default async function LoginPage({
           </div>
 
           <p className="mt-5 text-sm font-bold uppercase tracking-widest text-blue-700">
-            Control de Trabajos
+            Cronogramas
           </p>
 
           <h1 className="mt-2 text-3xl font-bold text-slate-900">
