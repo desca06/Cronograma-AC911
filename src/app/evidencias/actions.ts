@@ -15,6 +15,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import {
   evidencias,
+  notificaciones,
   trabajos,
   trabajoEmpleados,
   usuarios,
@@ -40,6 +41,19 @@ function obtenerTexto(
     : "";
 }
 
+function revalidarPaginas(
+  trabajoId: number,
+): void {
+  revalidatePath(
+    `/evidencias/${trabajoId}`,
+  );
+
+  revalidatePath("/mis-trabajos");
+  revalidatePath("/trabajos");
+  revalidatePath("/dashboard");
+  revalidatePath("/notificaciones");
+}
+
 async function verificarAccesoAlTrabajo(
   trabajoId: number,
 ) {
@@ -50,7 +64,9 @@ async function verificarAccesoAlTrabajo(
       id: trabajos.id,
     })
     .from(trabajos)
-    .where(eq(trabajos.id, trabajoId))
+    .where(
+      eq(trabajos.id, trabajoId),
+    )
     .get();
 
   if (!trabajoExiste) {
@@ -70,16 +86,24 @@ async function verificarAccesoAlTrabajo(
       empleadoId: usuarios.empleadoId,
     })
     .from(usuarios)
-    .where(eq(usuarios.id, sesion.usuarioId))
+    .where(
+      eq(
+        usuarios.id,
+        sesion.usuarioId,
+      ),
+    )
     .get();
 
   if (!usuario?.empleadoId) {
-    redirect("/mis-trabajos?error=cuenta");
+    redirect(
+      "/mis-trabajos?error=cuenta",
+    );
   }
 
   const asignacion = db
     .select({
-      trabajoId: trabajoEmpleados.trabajoId,
+      trabajoId:
+        trabajoEmpleados.trabajoId,
     })
     .from(trabajoEmpleados)
     .where(
@@ -97,7 +121,9 @@ async function verificarAccesoAlTrabajo(
     .get();
 
   if (!asignacion) {
-    redirect("/mis-trabajos?error=permiso");
+    redirect(
+      "/mis-trabajos?error=permiso",
+    );
   }
 
   return sesion;
@@ -114,11 +140,15 @@ export async function subirEvidencia(
     !Number.isInteger(trabajoId) ||
     trabajoId <= 0
   ) {
-    redirect("/mis-trabajos?error=datos");
+    redirect(
+      "/mis-trabajos?error=datos",
+    );
   }
 
   const sesion =
-    await verificarAccesoAlTrabajo(trabajoId);
+    await verificarAccesoAlTrabajo(
+      trabajoId,
+    );
 
   const archivo = formData.get("foto");
 
@@ -151,6 +181,26 @@ export async function subirEvidencia(
     );
   }
 
+  const trabajo = db
+    .select({
+      id: trabajos.id,
+      tipo: trabajos.tipo,
+      fecha: trabajos.fecha,
+    })
+    .from(trabajos)
+    .where(
+      eq(trabajos.id, trabajoId),
+    )
+    .get();
+
+  if (!trabajo) {
+    redirect(
+      sesion.rol === "SUPERVISOR"
+        ? "/trabajos?error=no-encontrado"
+        : "/mis-trabajos?error=no-encontrado",
+    );
+  }
+
   const nombreArchivo =
     `${randomUUID()}.${extension}`;
 
@@ -180,33 +230,86 @@ export async function subirEvidencia(
   );
 
   try {
-    db.insert(evidencias)
-      .values({
-        trabajoId,
-        usuarioId: sesion.usuarioId,
-        archivoUrl:
-          `/uploads/evidencias/${nombreArchivo}`,
-        nombreOriginal:
-          archivo.name || nombreArchivo,
-        descripcion:
-          descripcion || null,
-      })
-      .run();
+    db.transaction((tx) => {
+      tx.insert(evidencias)
+        .values({
+          trabajoId,
+          usuarioId: sesion.usuarioId,
+          archivoUrl:
+            `/uploads/evidencias/${nombreArchivo}`,
+          nombreOriginal:
+            archivo.name || nombreArchivo,
+          descripcion:
+            descripcion || null,
+        })
+        .run();
+
+      /*
+       * Cuando un técnico sube una evidencia,
+       * se notifica a todos los supervisores.
+       */
+      if (sesion.rol !== "TECNICO") {
+        return;
+      }
+
+      const supervisores = tx
+        .select({
+          usuarioId: usuarios.id,
+        })
+        .from(usuarios)
+        .where(
+          eq(
+            usuarios.rol,
+            "SUPERVISOR",
+          ),
+        )
+        .all();
+
+      if (supervisores.length === 0) {
+        return;
+      }
+
+      const detalleDescripcion =
+        descripcion
+          ? " Incluyó una descripción."
+          : "";
+
+      tx.insert(notificaciones)
+        .values(
+          supervisores.map(
+            (supervisor) => ({
+              usuarioId:
+                supervisor.usuarioId,
+
+              trabajoId,
+
+              titulo:
+                "Nueva evidencia subida",
+
+              mensaje:
+                `Se agregó una evidencia al trabajo ` +
+                `"${trabajo.tipo}" del ${trabajo.fecha}.` +
+                detalleDescripcion,
+
+              tipo: "EVIDENCIA",
+              leida: false,
+            }),
+          ),
+        )
+        .run();
+    });
   } catch (error) {
     await unlink(rutaFisica).catch(() => {
-      // Evita dejar fotografías sin registro.
+      /*
+       * Evita dejar fotografías en la carpeta
+       * cuando el registro en SQLite falla.
+       */
     });
 
     throw error;
   }
 
-  revalidatePath(
-    `/evidencias/${trabajoId}`,
-  );
-
-  revalidatePath("/mis-trabajos");
-  revalidatePath("/trabajos");
-  revalidatePath("/dashboard");
+  revalidarPaginas(trabajoId);
 
   redirect(
     `/evidencias/${trabajoId}?exito=subida`,

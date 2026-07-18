@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 
 import { db } from "@/db";
 import {
+  notificaciones,
   trabajos,
   trabajoEmpleados,
   usuarios,
@@ -21,6 +22,14 @@ function obtenerTexto(
   return typeof valor === "string"
     ? valor.trim()
     : "";
+}
+
+function revalidarPaginas(): void {
+  revalidatePath("/mis-trabajos");
+  revalidatePath("/dashboard");
+  revalidatePath("/cronograma");
+  revalidatePath("/trabajos");
+  revalidatePath("/notificaciones");
 }
 
 export async function actualizarMiTrabajo(
@@ -66,7 +75,12 @@ export async function actualizarMiTrabajo(
       empleadoId: usuarios.empleadoId,
     })
     .from(usuarios)
-    .where(eq(usuarios.id, sesion.usuarioId))
+    .where(
+      eq(
+        usuarios.id,
+        sesion.usuarioId,
+      ),
+    )
     .get();
 
   if (!usuario?.empleadoId) {
@@ -74,12 +88,13 @@ export async function actualizarMiTrabajo(
   }
 
   /*
-   * Verifica que el técnico realmente esté
+   * Verifica que el técnico esté realmente
    * asignado al trabajo antes de modificarlo.
    */
   const asignacion = db
     .select({
-      trabajoId: trabajoEmpleados.trabajoId,
+      trabajoId:
+        trabajoEmpleados.trabajoId,
     })
     .from(trabajoEmpleados)
     .where(
@@ -97,22 +112,147 @@ export async function actualizarMiTrabajo(
     .get();
 
   if (!asignacion) {
-    redirect("/mis-trabajos?error=permiso");
+    redirect(
+      "/mis-trabajos?error=permiso",
+    );
   }
 
-  db.update(trabajos)
-    .set({
-      estado,
+  const trabajoActual = db
+    .select({
+      id: trabajos.id,
+      tipo: trabajos.tipo,
+      fecha: trabajos.fecha,
+      estado: trabajos.estado,
       observaciones:
-        observaciones || null,
+        trabajos.observaciones,
     })
-    .where(eq(trabajos.id, trabajoId))
-    .run();
+    .from(trabajos)
+    .where(
+      eq(trabajos.id, trabajoId),
+    )
+    .get();
 
-  revalidatePath("/mis-trabajos");
-  revalidatePath("/dashboard");
-  revalidatePath("/cronograma");
-  revalidatePath("/trabajos");
+  if (!trabajoActual) {
+    redirect(
+      "/mis-trabajos?error=no-encontrado",
+    );
+  }
 
-  redirect("/mis-trabajos?exito=actualizado");
+  const observacionesAnteriores =
+    trabajoActual.observaciones?.trim() ?? "";
+
+  const cambioEstado =
+    trabajoActual.estado !== estado;
+
+  const cambioObservaciones =
+    observacionesAnteriores !== observaciones;
+
+  /*
+   * Si el técnico envía exactamente los mismos
+   * datos, no actualiza ni crea otra notificación.
+   */
+  if (
+    !cambioEstado &&
+    !cambioObservaciones
+  ) {
+    redirect(
+      "/mis-trabajos?exito=sin-cambios",
+    );
+  }
+
+  db.transaction((tx) => {
+    tx.update(trabajos)
+      .set({
+        estado,
+        observaciones:
+          observaciones || null,
+      })
+      .where(
+        eq(trabajos.id, trabajoId),
+      )
+      .run();
+
+    /*
+     * Obtiene todos los supervisores para
+     * notificarles el cambio realizado.
+     */
+    const supervisores = tx
+      .select({
+        usuarioId: usuarios.id,
+      })
+      .from(usuarios)
+      .where(
+        eq(usuarios.rol, "SUPERVISOR"),
+      )
+      .all();
+
+    if (supervisores.length === 0) {
+      return;
+    }
+
+    let titulo =
+      "Trabajo actualizado por técnico";
+
+    let mensaje =
+      `El trabajo "${trabajoActual.tipo}" ` +
+      `del ${trabajoActual.fecha} fue actualizado.`;
+
+    let tipoNotificacion =
+      "ACTUALIZACION";
+
+    if (cambioEstado) {
+      titulo =
+        estado === "Finalizado"
+          ? "Trabajo finalizado"
+          : "Estado actualizado por técnico";
+
+      mensaje =
+        `El trabajo "${trabajoActual.tipo}" ` +
+        `del ${trabajoActual.fecha} cambió ` +
+        `de ${trabajoActual.estado} a ${estado}.`;
+
+      tipoNotificacion = "ESTADO";
+    }
+
+    if (
+      cambioEstado &&
+      cambioObservaciones
+    ) {
+      mensaje +=
+        " También se actualizaron las observaciones.";
+    } else if (
+      !cambioEstado &&
+      cambioObservaciones
+    ) {
+      titulo =
+        "Observaciones actualizadas";
+
+      mensaje =
+        `El técnico actualizó las observaciones ` +
+        `del trabajo "${trabajoActual.tipo}" ` +
+        `programado para el ${trabajoActual.fecha}.`;
+    }
+
+    tx.insert(notificaciones)
+      .values(
+        supervisores.map(
+          (supervisor) => ({
+            usuarioId:
+              supervisor.usuarioId,
+            trabajoId,
+            titulo,
+            mensaje,
+            tipo: tipoNotificacion,
+            leida: false,
+          }),
+        ),
+      )
+      .run();
+  });
+
+  revalidarPaginas();
+
+  redirect(
+    "/mis-trabajos?exito=actualizado",
+  );
 }

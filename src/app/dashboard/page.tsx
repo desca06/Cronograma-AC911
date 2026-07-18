@@ -154,7 +154,7 @@ export default async function DashboardPage() {
         action={
           <a
             href="/trabajos"
-            className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+            className="mt-14 md:mt-12 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white"
           >
             + Nuevo trabajo
           </a>
