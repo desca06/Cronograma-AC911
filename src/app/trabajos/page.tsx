@@ -9,6 +9,7 @@ import {
   trabajoEmpleados,
   vehiculos,
 } from "@/db/schema";
+import { requerirSupervisor } from "@/lib/auth";
 
 import {
   actualizarEstadoTrabajo,
@@ -27,10 +28,65 @@ const coloresEstado: Record<string, string> = {
   Cancelado: "bg-red-100 text-red-800",
 };
 
-export default function TrabajosPage() {
-  const fechaHoy = new Date().toLocaleDateString("en-CA", {
-    timeZone: "America/Guatemala",
-  });
+const estadosDisponibles = [
+  "Pendiente",
+  "En camino",
+  "En proceso",
+  "Finalizado",
+  "Cancelado",
+];
+
+type TrabajosPageProps = {
+  searchParams: Promise<{
+    clienteId?: string | string[];
+    estado?: string | string[];
+    empleadoId?: string | string[];
+    vehiculoId?: string | string[];
+    fecha?: string | string[];
+  }>;
+};
+
+function obtenerParametro(
+  valor: string | string[] | undefined,
+): string {
+  return typeof valor === "string"
+    ? valor.trim()
+    : "";
+}
+
+export default async function TrabajosPage({
+  searchParams,
+}: TrabajosPageProps) {
+  await requerirSupervisor();
+
+  const parametros = await searchParams;
+
+  const clienteFiltro = obtenerParametro(
+    parametros.clienteId,
+  );
+
+  const estadoFiltro = obtenerParametro(
+    parametros.estado,
+  );
+
+  const empleadoFiltro = obtenerParametro(
+    parametros.empleadoId,
+  );
+
+  const vehiculoFiltro = obtenerParametro(
+    parametros.vehiculoId,
+  );
+
+  const fechaFiltro = obtenerParametro(
+    parametros.fecha,
+  );
+
+  const fechaHoy = new Date().toLocaleDateString(
+    "en-CA",
+    {
+      timeZone: "America/Guatemala",
+    },
+  );
 
   const listaClientes = db
     .select()
@@ -57,6 +113,8 @@ export default function TrabajosPage() {
     .select({
       id: trabajos.id,
       fecha: trabajos.fecha,
+      clienteId: trabajos.clienteId,
+      vehiculoId: trabajos.vehiculoId,
       tipo: trabajos.tipo,
       descripcion: trabajos.descripcion,
       direccion: trabajos.direccion,
@@ -83,30 +141,91 @@ export default function TrabajosPage() {
   const asignaciones = db
     .select({
       trabajoId: trabajoEmpleados.trabajoId,
+      empleadoId: trabajoEmpleados.empleadoId,
       empleadoNombre: empleados.nombre,
     })
     .from(trabajoEmpleados)
     .innerJoin(
       empleados,
-      eq(trabajoEmpleados.empleadoId, empleados.id),
+      eq(
+        trabajoEmpleados.empleadoId,
+        empleados.id,
+      ),
     )
     .all();
 
-  const empleadosPorTrabajo =
-    asignaciones.reduce<Record<number, string[]>>(
-      (resultado, asignacion) => {
-        if (!resultado[asignacion.trabajoId]) {
-          resultado[asignacion.trabajoId] = [];
-        }
+  const empleadosPorTrabajo: Record<
+    number,
+    string[]
+  > = {};
 
-        resultado[asignacion.trabajoId].push(
-          asignacion.empleadoNombre,
-        );
+  const empleadoIdsPorTrabajo: Record<
+    number,
+    number[]
+  > = {};
 
-        return resultado;
-      },
-      {},
+  for (const asignacion of asignaciones) {
+    if (!empleadosPorTrabajo[asignacion.trabajoId]) {
+      empleadosPorTrabajo[asignacion.trabajoId] = [];
+    }
+
+    if (!empleadoIdsPorTrabajo[asignacion.trabajoId]) {
+      empleadoIdsPorTrabajo[asignacion.trabajoId] = [];
+    }
+
+    empleadosPorTrabajo[
+      asignacion.trabajoId
+    ].push(asignacion.empleadoNombre);
+
+    empleadoIdsPorTrabajo[
+      asignacion.trabajoId
+    ].push(asignacion.empleadoId);
+  }
+
+  const trabajosFiltrados =
+  listaTrabajos.filter((trabajo) => {
+    const idsEmpleados =
+      empleadoIdsPorTrabajo[trabajo.id] ?? [];
+
+    const coincideCliente =
+      !clienteFiltro ||
+      String(trabajo.clienteId) ===
+        clienteFiltro;
+
+    const coincideEstado =
+      !estadoFiltro ||
+      trabajo.estado === estadoFiltro;
+
+    const coincideEmpleado =
+      !empleadoFiltro ||
+      idsEmpleados.includes(
+        Number(empleadoFiltro),
+      );
+
+    const coincideVehiculo =
+      !vehiculoFiltro ||
+      String(trabajo.vehiculoId ?? "") ===
+        vehiculoFiltro;
+
+    const coincideFecha =
+      !fechaFiltro ||
+      trabajo.fecha === fechaFiltro;
+
+    return (
+      coincideCliente &&
+      coincideEstado &&
+      coincideEmpleado &&
+      coincideVehiculo &&
+      coincideFecha
     );
+  });
+
+  const hayFiltros =
+    Boolean(clienteFiltro) ||
+    Boolean(estadoFiltro) ||
+    Boolean(empleadoFiltro) ||
+    Boolean(vehiculoFiltro) ||
+    Boolean(fechaFiltro);
 
   return (
     <main className="min-h-screen bg-slate-100 p-4 md:p-8">
@@ -122,7 +241,7 @@ export default function TrabajosPage() {
             </h1>
 
             <p className="mt-1 text-slate-500">
-              Crea y administra las órdenes de trabajo.
+              Crea, administra y consulta las órdenes de trabajo.
             </p>
           </div>
 
@@ -150,11 +269,15 @@ export default function TrabajosPage() {
             className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-4"
           >
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
+              <label
+                htmlFor="fecha"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
                 Fecha
               </label>
 
               <input
+                id="fecha"
                 name="fecha"
                 type="date"
                 required
@@ -164,11 +287,15 @@ export default function TrabajosPage() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
+              <label
+                htmlFor="clienteId"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
                 Cliente
               </label>
 
               <select
+                id="clienteId"
                 name="clienteId"
                 required
                 defaultValue=""
@@ -190,11 +317,15 @@ export default function TrabajosPage() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
+              <label
+                htmlFor="vehiculoId"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
                 Vehículo
               </label>
 
               <select
+                id="vehiculoId"
                 name="vehiculoId"
                 defaultValue=""
                 className="w-full rounded-xl border border-slate-300 px-4 py-3"
@@ -215,11 +346,15 @@ export default function TrabajosPage() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
+              <label
+                htmlFor="tipo"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
                 Tipo de trabajo
               </label>
 
               <select
+                id="tipo"
                 name="tipo"
                 required
                 defaultValue="Mantenimiento"
@@ -240,16 +375,22 @@ export default function TrabajosPage() {
                 <option value="Supervisión">
                   Supervisión
                 </option>
-                <option value="Otro">Otro</option>
+                <option value="Otro">
+                  Otro
+                </option>
               </select>
             </div>
 
             <div className="md:col-span-2 xl:col-span-4">
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
+              <label
+                htmlFor="descripcion"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
                 Descripción
               </label>
 
               <input
+                id="descripcion"
                 name="descripcion"
                 required
                 placeholder="Ejemplo: Instalación de equipos VRF"
@@ -258,11 +399,15 @@ export default function TrabajosPage() {
             </div>
 
             <div className="md:col-span-2">
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
+              <label
+                htmlFor="direccion"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
                 Dirección del trabajo
               </label>
 
               <input
+                id="direccion"
                 name="direccion"
                 placeholder="Dirección o ubicación"
                 className="w-full rounded-xl border border-slate-300 px-4 py-3"
@@ -270,11 +415,15 @@ export default function TrabajosPage() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
+              <label
+                htmlFor="horaInicio"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
                 Hora de inicio
               </label>
 
               <input
+                id="horaInicio"
                 name="horaInicio"
                 type="time"
                 className="w-full rounded-xl border border-slate-300 px-4 py-3"
@@ -282,20 +431,29 @@ export default function TrabajosPage() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
+              <label
+                htmlFor="estado"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
                 Estado inicial
               </label>
 
               <select
+                id="estado"
                 name="estado"
                 defaultValue="Pendiente"
                 className="w-full rounded-xl border border-slate-300 px-4 py-3"
               >
-                <option value="Pendiente">Pendiente</option>
-                <option value="En camino">En camino</option>
-                <option value="En proceso">En proceso</option>
-                <option value="Finalizado">Finalizado</option>
-                <option value="Cancelado">Cancelado</option>
+                {estadosDisponibles.map(
+                  (estado) => (
+                    <option
+                      key={estado}
+                      value={estado}
+                    >
+                      {estado}
+                    </option>
+                  ),
+                )}
               </select>
             </div>
 
@@ -304,39 +462,51 @@ export default function TrabajosPage() {
                 Empleados asignados
               </legend>
 
-              <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-                {listaEmpleados.map((empleado) => (
-                  <label
-                    key={empleado.id}
-                    className="flex cursor-pointer items-center gap-3 rounded-lg bg-white p-3 shadow-sm"
-                  >
-                    <input
-                      type="checkbox"
-                      name="empleadoIds"
-                      value={empleado.id}
-                      className="h-4 w-4"
-                    />
+              {listaEmpleados.length === 0 ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-800">
+                  No hay empleados activos para asignar.
+                </div>
+              ) : (
+                <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+                  {listaEmpleados.map(
+                    (empleado) => (
+                      <label
+                        key={empleado.id}
+                        className="flex cursor-pointer items-center gap-3 rounded-lg bg-white p-3 shadow-sm"
+                      >
+                        <input
+                          type="checkbox"
+                          name="empleadoIds"
+                          value={empleado.id}
+                          className="h-4 w-4"
+                        />
 
-                    <span>
-                      <strong className="block text-sm text-slate-900">
-                        {empleado.nombre}
-                      </strong>
+                        <span>
+                          <strong className="block text-sm text-slate-900">
+                            {empleado.nombre}
+                          </strong>
 
-                      <span className="text-xs text-slate-500">
-                        {empleado.puesto}
-                      </span>
-                    </span>
-                  </label>
-                ))}
-              </div>
+                          <span className="text-xs text-slate-500">
+                            {empleado.puesto}
+                          </span>
+                        </span>
+                      </label>
+                    ),
+                  )}
+                </div>
+              )}
             </fieldset>
 
             <div className="md:col-span-2 xl:col-span-4">
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
+              <label
+                htmlFor="observaciones"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
                 Observaciones
               </label>
 
               <textarea
+                id="observaciones"
                 name="observaciones"
                 rows={3}
                 placeholder="Herramientas, equipo requerido o instrucciones"
@@ -356,23 +526,218 @@ export default function TrabajosPage() {
           </form>
         </section>
 
-        <section className="space-y-4">
+        <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div>
             <h2 className="text-xl font-bold text-slate-900">
-              Trabajos registrados
+              Filtrar trabajos
             </h2>
 
-            <p className="text-sm text-slate-500">
-              Total: {listaTrabajos.length}
+            <p className="mt-1 text-sm text-slate-500">
+              Filtra los trabajos por cliente, estado, técnico, vehículo o fecha.
             </p>
           </div>
 
-          {listaTrabajos.length === 0 ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-slate-500">
-              Todavía no hay trabajos registrados.
+          <form
+            method="get"
+            className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3"
+          >
+            <div>
+              <label
+                htmlFor="filtro-cliente"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
+                Cliente
+              </label>
+
+              <select
+                id="filtro-cliente"
+                name="clienteId"
+                defaultValue={clienteFiltro}
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"
+              >
+                <option value="">
+                  Todos los clientes
+                </option>
+
+                {listaClientes.map((cliente) => (
+                  <option
+                    key={cliente.id}
+                    value={cliente.id}
+                  >
+                    {cliente.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="filtro-estado"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
+                Estado
+              </label>
+
+              <select
+                id="filtro-estado"
+                name="estado"
+                defaultValue={estadoFiltro}
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"
+              >
+                <option value="">
+                  Todos los estados
+                </option>
+
+                {estadosDisponibles.map(
+                  (estado) => (
+                    <option
+                      key={estado}
+                      value={estado}
+                    >
+                      {estado}
+                    </option>
+                  ),
+                )}
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="filtro-empleado"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
+                Técnico o empleado
+              </label>
+
+              <select
+                id="filtro-empleado"
+                name="empleadoId"
+                defaultValue={empleadoFiltro}
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"
+              >
+                <option value="">
+                  Todos los empleados
+                </option>
+
+                {listaEmpleados.map(
+                  (empleado) => (
+                    <option
+                      key={empleado.id}
+                      value={empleado.id}
+                    >
+                      {empleado.nombre}
+                    </option>
+                  ),
+                )}
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="filtro-vehiculo"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
+                Vehículo
+              </label>
+
+              <select
+                id="filtro-vehiculo"
+                name="vehiculoId"
+                defaultValue={vehiculoFiltro}
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"
+              >
+                <option value="">
+                  Todos los vehículos
+                </option>
+
+                {listaVehiculos.map(
+                  (vehiculo) => (
+                    <option
+                      key={vehiculo.id}
+                      value={vehiculo.id}
+                    >
+                      {vehiculo.nombre}
+                    </option>
+                  ),
+                )}
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="filtro-fecha"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
+                Fecha
+              </label>
+
+              <input
+                id="filtro-fecha"
+                name="fecha"
+                type="date"
+                defaultValue={fechaFiltro}
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"
+              />
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <button
+                type="submit"
+                className="rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700"
+              >
+                Aplicar filtros
+              </button>
+
+              <Link
+                href="/trabajos"
+                className="rounded-xl border border-slate-300 bg-white px-6 py-3 text-center font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Limpiar
+              </Link>
+            </div>
+          </form>
+        </section>
+
+        <section className="space-y-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">
+                Trabajos registrados
+              </h2>
+
+              <p className="text-sm text-slate-500">
+                {hayFiltros
+                  ? `Mostrando ${trabajosFiltrados.length} de ${listaTrabajos.length}`
+                  : `Total: ${listaTrabajos.length}`}
+              </p>
+            </div>
+
+            {hayFiltros && (
+              <span className="w-fit rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700">
+                Filtros activos
+              </span>
+            )}
+          </div>
+
+          {trabajosFiltrados.length === 0 ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center">
+              <h3 className="text-lg font-bold text-slate-900">
+                No se encontraron trabajos
+              </h3>
+
+              <p className="mt-2 text-slate-500">
+                Prueba cambiando o limpiando los filtros.
+              </p>
+
+              <Link
+                href="/trabajos"
+                className="mt-5 inline-flex rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700"
+              >
+                Limpiar filtros
+              </Link>
             </div>
           ) : (
-            listaTrabajos.map((trabajo) => (
+            trabajosFiltrados.map((trabajo) => (
               <article
                 key={trabajo.id}
                 className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
@@ -387,7 +752,9 @@ export default function TrabajosPage() {
 
                         <span
                           className={`rounded-full px-3 py-1 text-xs font-bold ${
-                            coloresEstado[trabajo.estado] ??
+                            coloresEstado[
+                              trabajo.estado
+                            ] ??
                             "bg-slate-100 text-slate-700"
                           }`}
                         >
@@ -412,7 +779,8 @@ export default function TrabajosPage() {
 
                       <p>
                         <strong>Hora:</strong>{" "}
-                        {trabajo.horaInicio || "Sin definir"}
+                        {trabajo.horaInicio ||
+                          "Sin definir"}
                       </p>
 
                       <p>
@@ -429,29 +797,34 @@ export default function TrabajosPage() {
 
                       <p className="sm:col-span-2">
                         <strong>Equipo:</strong>{" "}
-                        {empleadosPorTrabajo[trabajo.id]?.join(
-                          " / ",
-                        ) || "Sin empleados asignados"}
+                        {empleadosPorTrabajo[
+                          trabajo.id
+                        ]?.join(" / ") ||
+                          "Sin empleados asignados"}
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-3 sm:flex-row">
-                    <Link
-                      href={`/trabajos/${trabajo.id}/editar`}
-                      className="rounded-lg bg-slate-900 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-slate-800"
-                    >
-                      Editar
-                    </Link>
-                    <Link
-    href={`/evidencias/${trabajo.id}`}
-    className="rounded-lg bg-emerald-100 px-4 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-200"
-  >
-    Evidencias
-  </Link>
+                  <div className="flex flex-col gap-3 xl:min-w-[430px]">
+                    <div className="flex flex-wrap gap-2">
+                      <Link
+                        href={`/trabajos/${trabajo.id}/editar`}
+                        className="rounded-lg bg-slate-900 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-slate-800"
+                      >
+                        Editar
+                      </Link>
+
+                      <Link
+                        href={`/evidencias/${trabajo.id}`}
+                        className="rounded-lg bg-emerald-100 px-4 py-2 text-center text-sm font-semibold text-emerald-800 hover:bg-emerald-200"
+                      >
+                        Evidencias
+                      </Link>
+                    </div>
+
                     <form
                       action={actualizarEstadoTrabajo}
-                      className="flex gap-2"
+                      className="flex flex-col gap-2 sm:flex-row"
                     >
                       <input
                         type="hidden"
@@ -464,21 +837,16 @@ export default function TrabajosPage() {
                         defaultValue={trabajo.estado}
                         className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
                       >
-                        <option value="Pendiente">
-                          Pendiente
-                        </option>
-                        <option value="En camino">
-                          En camino
-                        </option>
-                        <option value="En proceso">
-                          En proceso
-                        </option>
-                        <option value="Finalizado">
-                          Finalizado
-                        </option>
-                        <option value="Cancelado">
-                          Cancelado
-                        </option>
+                        {estadosDisponibles.map(
+                          (estado) => (
+                            <option
+                              key={estado}
+                              value={estado}
+                            >
+                              {estado}
+                            </option>
+                          ),
+                        )}
                       </select>
 
                       <button
@@ -490,12 +858,6 @@ export default function TrabajosPage() {
                     </form>
 
                     <form action={eliminarTrabajo}>
-                      <Link
-                        href={`/trabajos/${trabajo.id}/editar`}
-                        className="rounded-lg bg-slate-900 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-slate-800"
-                      >
-                        Editar
-                      </Link>
                       <input
                         type="hidden"
                         name="id"
