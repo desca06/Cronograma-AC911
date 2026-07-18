@@ -43,16 +43,16 @@ export async function AppShell({
   }
 
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[270px_1fr]">
+    <div className="min-h-screen bg-slate-100 lg:flex">
       <Sidebar rol={sesion?.rol ?? ""} />
 
-      <main className="relative min-w-0 bg-slate-100">
+      <main className="relative min-w-0 flex-1 bg-slate-100">
         {sesion && (
           <Link
             href="/notificaciones"
             aria-label={`Notificaciones: ${notificacionesNoLeidas} sin leer`}
             title="Notificaciones"
-            className="absolute right-4 top-4 z-30 grid h-11 w-11 place-items-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-blue-50 hover:text-blue-700 md:right-7 md:top-5"
+            className="absolute right-4 top-20 z-30 grid h-11 w-11 place-items-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-blue-50 hover:text-blue-700 md:right-7 lg:top-5"
           >
             <Bell size={21} />
 
