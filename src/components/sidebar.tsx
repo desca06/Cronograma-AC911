@@ -69,12 +69,6 @@ const opciones = [
     roles: ["SUPERVISOR"],
   },
   {
-    href: "/configuracion",
-    nombre: "Configuración",
-    icono: Settings,
-    roles: ["SUPERVISOR"],
-  },
-  {
     href: "/mis-trabajos",
     nombre: "Mis trabajos",
     icono: BriefcaseBusiness,
