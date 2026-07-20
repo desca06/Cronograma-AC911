@@ -238,7 +238,7 @@ export default async function MisTrabajosPage({
                   {trabajo.descripcion}
                 </p>
 
-                <div className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
+                <div className="mt-5 grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
                   <p>
                     <strong>Hora:</strong>{" "}
                     {trabajo.horaInicio ||
