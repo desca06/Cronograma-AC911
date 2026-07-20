@@ -12,7 +12,6 @@ import {
   Settings,
   UserCog,
   UsersRound,
-  Wrench,
   X,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
@@ -85,7 +84,12 @@ export function MobileSidebar({
   rol,
 }: MobileSidebarProps) {
   const pathname = usePathname();
-  const [abierto, setAbierto] = useState(false);
+
+  const [abierto, setAbierto] =
+    useState(false);
+
+  const [logoError, setLogoError] =
+    useState(false);
 
   const opcionesPermitidas =
     opciones.filter((opcion) =>
@@ -104,7 +108,8 @@ export function MobileSidebar({
     const overflowAnterior =
       document.body.style.overflow;
 
-    document.body.style.overflow = "hidden";
+    document.body.style.overflow =
+      "hidden";
 
     return () => {
       document.body.style.overflow =
@@ -114,65 +119,77 @@ export function MobileSidebar({
 
   return (
     <div className="lg:hidden">
-      <header className="fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b border-slate-800 bg-slate-950 px-4 text-white shadow-sm">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-600">
-            <Wrench size={20} />
-          </div>
-
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-300">
-              Sistema
-            </p>
-
-            <p className="truncate text-sm font-bold">
+      {/* Barra superior fija */}
+      <header className="fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b border-slate-800 bg-slate-950 px-3 text-white shadow-sm">
+        <div className="min-w-0 flex-1">
+          {logoError ? (
+            <p className="truncate pl-1 text-sm font-bold">
               Control de Trabajos
             </p>
-          </div>
+          ) : (
+            <div className="flex h-11 w-[190px] max-w-[65vw] items-center overflow-hidden">
+              <img
+                src="/img/logo-911.jpg"
+                alt="Logo A-C911"
+                className="h-full w-full object-contain object-left"
+                onError={() =>
+                  setLogoError(true)
+                }
+              />
+            </div>
+          )}
         </div>
 
         <button
           type="button"
           onClick={() => setAbierto(true)}
           aria-label="Abrir menú"
-          className="grid h-10 w-10 place-items-center rounded-xl border border-slate-700 text-slate-200 active:bg-slate-800"
+          aria-expanded={abierto}
+          className="ml-3 grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-slate-700 text-slate-200 transition active:bg-slate-800"
         >
           <Menu size={22} />
         </button>
       </header>
 
+      {/* Reserva el espacio del header */}
       <div
         aria-hidden="true"
         className="h-16"
       />
 
+      {/* Menú a pantalla completa */}
       {abierto && (
         <section
           className="fixed inset-0 flex flex-col bg-slate-950 text-white lg:hidden"
           style={{ zIndex: 9999 }}
         >
-          <header className="flex h-20 shrink-0 items-center justify-between border-b border-slate-800 px-5">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-blue-600">
-                <Wrench size={22} />
-              </div>
-
-              <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-wide text-blue-300">
-                  Sistema
-                </p>
-
-                <p className="truncate font-bold">
+          <header className="flex h-20 shrink-0 items-center justify-between border-b border-slate-800 px-4">
+            <div className="min-w-0 flex-1">
+              {logoError ? (
+                <p className="truncate text-base font-bold">
                   Control de Trabajos
                 </p>
-              </div>
+              ) : (
+                <div className="flex h-8 w-[140px] max-w-[72vw] items-center overflow-hidden">
+                  <img
+                    src="/img/logo-911.jpg"
+                    alt="Logo A-C911"
+                    className="h-full w-full object-contain object-left"
+                    onError={() =>
+                      setLogoError(true)
+                    }
+                  />
+                </div>
+              )}
             </div>
 
             <button
               type="button"
-              onClick={() => setAbierto(false)}
+              onClick={() =>
+                setAbierto(false)
+              }
               aria-label="Cerrar menú"
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-slate-700 text-slate-300 active:bg-slate-800 active:text-white"
+              className="ml-3 grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-slate-700 text-slate-300 transition active:bg-slate-800 active:text-white"
             >
               <X size={22} />
             </button>
@@ -181,7 +198,8 @@ export function MobileSidebar({
           <nav className="flex-1 space-y-2 overflow-y-auto px-4 py-5">
             {opcionesPermitidas.map(
               (opcion) => {
-                const Icono = opcion.icono;
+                const Icono =
+                  opcion.icono;
 
                 const activo =
                   pathname === opcion.href ||
@@ -193,7 +211,7 @@ export function MobileSidebar({
                   <a
                     key={opcion.href}
                     href={opcion.href}
-                    className={`flex min-h-14 items-center gap-4 rounded-xl px-4 text-base font-medium ${
+                    className={`flex min-h-14 items-center gap-4 rounded-xl px-4 text-base font-medium transition ${
                       activo
                         ? "bg-blue-600 text-white"
                         : "text-slate-300 active:bg-slate-800 active:text-white"
@@ -219,7 +237,7 @@ export function MobileSidebar({
           >
             <button
               type="submit"
-              className="flex min-h-14 w-full items-center justify-center gap-3 rounded-xl border border-slate-700 px-4 text-base font-semibold text-slate-300 active:border-red-500 active:bg-red-600 active:text-white"
+              className="flex min-h-14 w-full items-center justify-center gap-3 rounded-xl border border-slate-700 px-4 text-base font-semibold text-slate-300 transition active:border-red-500 active:bg-red-600 active:text-white"
             >
               <LogOut
                 size={20}
