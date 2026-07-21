@@ -199,9 +199,11 @@ export default async function HistorialPage({ searchParams,
             </div>
 
             {filtrosActivos && (
-              <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700">
-                Activo
-              </span>
+              <p className="text-sm font-medium text-slate-600">
+                Mostrando resultados
+                {desde ? ` desde ${desde}` : ""}
+                {hasta ? ` hasta ${hasta}` : ""}.
+              </p>
             )}
           </summary>
 
@@ -276,11 +278,15 @@ export default async function HistorialPage({ searchParams,
             </div>
 
             <h2 className="mt-4 text-xl font-bold text-slate-900">
-              No hay trabajos finalizados
+              {filtrosActivos
+                ? "No hay resultados con estos filtros"
+                : "No hay trabajos finalizados"}
             </h2>
 
             <p className="mt-2 text-slate-500">
-              Cuando finalices un trabajo aparecerá aquí.
+              {filtrosActivos
+                ? "Probá cambiando las fechas o limpiando los filtros."
+                : "Cuando finalices un trabajo aparecerá aquí."}
             </p>
 
           </section>
@@ -365,13 +371,6 @@ export default async function HistorialPage({ searchParams,
                     className="flex-1 rounded-xl border border-blue-300 bg-blue-50 px-5 py-3 text-center font-semibold text-blue-700 transition hover:bg-blue-100"
                   >
                     📂 Ver evidencias
-                  </Link>
-
-                  <Link
-                    href={`/cronograma?trabajoId=${trabajo.id}`}
-                    className="flex-1 rounded-xl bg-slate-900 px-5 py-3 text-center font-semibold text-white transition hover:bg-slate-800"
-                  >
-                    ✅ Ver detalles
                   </Link>
                 </div>
               </article>
