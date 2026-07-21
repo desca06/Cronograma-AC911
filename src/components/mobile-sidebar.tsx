@@ -73,7 +73,7 @@ const opciones = [
     roles: ["TECNICO"],
   },
   {
-    href: "/hitorial",
+    href: "/historial",
     nombre: "Historial",
     icono: ClipboardList,
     roles: ["TECNICO"],

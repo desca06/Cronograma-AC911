@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -13,6 +13,9 @@ import {
   vehiculos,
 } from "@/db/schema";
 import { requerirSesion } from "@/lib/auth";
+
+import { CheckCircle2 } from "lucide-react";
+import { StatCard } from "@/components/stat-card";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -107,8 +110,8 @@ export default async function HistorialPage() {
       ),
     )
     .orderBy(
-      asc(trabajos.fecha),
-      asc(trabajos.horaInicio),
+      desc(trabajos.fecha),
+      desc(trabajos.horaInicio),
     )
     .all();
 
@@ -122,31 +125,21 @@ export default async function HistorialPage() {
       <section className="space-y-6 p-5 md:p-8">
 
         <div className="grid gap-4 sm:grid-cols-2">
+        <StatCard
+            label="Trabajos finalizados"
+            value={historial.length}
+            helper="Total de trabajos completados"
+            icon={CheckCircle2}
+            color="green"
+        />
 
-          <article className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
-
-            <p className="text-sm font-semibold text-emerald-700">
-              Trabajos finalizados
-            </p>
-
-            <p className="mt-2 text-3xl font-bold text-emerald-900">
-              {historial.length}
-            </p>
-
-          </article>
-
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-
-            <p className="text-sm font-semibold text-slate-500">
-              Estado
-            </p>
-
-            <p className="mt-2 text-xl font-bold text-slate-900">
-              Historial del técnico
-            </p>
-
-          </article>
-
+        <StatCard
+            label="Historial"
+            value="Técnico"
+            helper="Consulta de asignaciones finalizadas"
+            icon={CheckCircle2}
+            color="blue"
+        />
         </div>
 
         {historial.length === 0 ? (
@@ -252,7 +245,7 @@ export default async function HistorialPage() {
                     href={`/cronograma?trabajoId=${trabajo.id}`}
                     className="flex-1 rounded-xl bg-slate-900 px-5 py-3 text-center font-semibold text-white transition hover:bg-slate-800"
                   >
-                    👀 Ver detalles
+                    ✅ Ver detalles
                   </Link>
                 </div>
               </article>
