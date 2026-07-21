@@ -1,4 +1,5 @@
 import { and, desc, eq, gte, lte} from "drizzle-orm";
+
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -13,8 +14,8 @@ import {
   vehiculos,
 } from "@/db/schema";
 import { requerirSesion } from "@/lib/auth";
-
 import { CheckCircle2, Filter, RotateCcw } from "lucide-react";
+
 import { StatCard } from "@/components/stat-card";
 
 export const dynamic = "force-dynamic";
