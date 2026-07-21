@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, gte, lte} from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -14,14 +14,38 @@ import {
 } from "@/db/schema";
 import { requerirSesion } from "@/lib/auth";
 
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Filter, RotateCcw } from "lucide-react";
 import { StatCard } from "@/components/stat-card";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export default async function HistorialPage() {
+type HistorialPageProps = {
+  searchParams: Promise<{
+    desde?: string | string[];
+    hasta?: string | string[];
+  }>;
+};
+
+export default async function HistorialPage({ searchParams,
+}: HistorialPageProps) {
   const sesion = await requerirSesion();
+
+  const parametros = await searchParams;
+
+  const desde =
+    typeof parametros.desde === "string"
+      ? parametros.desde
+      : "";
+
+  const hasta =
+    typeof parametros.hasta === "string"
+      ? parametros.hasta
+      : "";
+
+  const filtrosActivos = Boolean(
+    desde || hasta,
+  );
 
   if (sesion.rol === "SUPERVISOR") {
     redirect("/dashboard");
@@ -107,6 +131,12 @@ export default async function HistorialPage() {
           trabajos.estado,
           "Finalizado",
         ),
+        desde
+        ? gte(trabajos.fecha, desde)
+        : undefined,
+        hasta
+        ? lte(trabajos.fecha, hasta)
+        : undefined,
       ),
     )
     .orderBy(
@@ -140,6 +170,101 @@ export default async function HistorialPage() {
             icon={CheckCircle2}
             color="blue"
         />
+
+        <details className="group rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-2xl px-4 py-4 transition hover:bg-slate-50">
+            <div className="flex items-center gap-3">
+              <div
+                className={`grid h-11 w-11 place-items-center rounded-xl ${
+                  filtrosActivos
+                    ? "bg-blue-600 text-white"
+                    : "bg-blue-50 text-blue-700"
+                }`}
+              >
+                <Filter size={20} />
+              </div>
+
+              <div>
+                <p className="font-bold text-slate-900">
+                  Filtrar historial
+                </p>
+
+                <p className="text-sm text-slate-500">
+                  {filtrosActivos
+                    ? "Hay filtros aplicados"
+                    : "Selecciona un rango de fechas"}
+                </p>
+              </div>
+            </div>
+
+            {filtrosActivos && (
+              <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700">
+                Activo
+              </span>
+            )}
+          </summary>
+
+          <form
+            method="GET"
+            className="border-t border-slate-200 p-4"
+          >
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label
+                  htmlFor="desde"
+                  className="mb-2 block text-sm font-semibold text-slate-700"
+                >
+                  Desde
+                </label>
+
+                <input
+                  id="desde"
+                  type="date"
+                  name="desde"
+                  defaultValue={desde}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="hasta"
+                  className="mb-2 block text-sm font-semibold text-slate-700"
+                >
+                  Hasta
+                </label>
+
+                <input
+                  id="hasta"
+                  type="date"
+                  name="hasta"
+                  defaultValue={hasta}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                />
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:justify-end">
+              {filtrosActivos && (
+                <Link
+                  href="/historial"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 font-semibold text-slate-700 transition hover:bg-slate-100"
+                >
+                  <RotateCcw size={18} />
+                  Limpiar
+                </Link>
+              )}
+
+              <button
+                type="submit"
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 font-semibold text-white transition hover:bg-blue-700"
+              >
+                <Filter size={18} />
+                Aplicar filtros
+              </button>
+            </div>
+          </form>
+        </details>
         </div>
 
         {historial.length === 0 ? (
