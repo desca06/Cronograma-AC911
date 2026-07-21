@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, ne } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -142,10 +142,16 @@ export default async function MisTrabajosPage({
       ),
     )
     .where(
-      eq(
-        trabajoEmpleados.empleadoId,
-        usuario.empleadoId,
-      ),
+      and(
+        eq(
+          trabajoEmpleados.empleadoId,
+          usuario.empleadoId,
+        ),
+        ne(
+          trabajos.estado,
+          "Finalizado",
+        )
+      )
     )
     .orderBy(
       asc(trabajos.fecha),
