@@ -68,3 +68,35 @@ export async function marcarTodasLeidas(): Promise<void> {
 
   redirect("/notificaciones");
 }
+
+export async function eliminarNotificacion(
+  formData: FormData,
+): Promise<void> {
+  const sesion = await requerirSesion();
+  const notificacionId = Number(formData.get("notificacionId"));
+
+  if (
+    !Number.isInteger(notificacionId) ||
+    notificacionId <= 0
+  ) {
+    redirect("/notificaciones?error=datos");
+  }
+
+  db.delete(notificaciones)
+    .where(
+      and(
+        eq(notificaciones.id, notificacionId),
+        eq(
+          notificaciones.usuarioId,
+          sesion.usuarioId,
+        ),
+      ),
+    )
+    .run();
+
+  revalidatePath("/notificaciones");
+  revalidatePath("/mis-trabajos");
+  revalidatePath("/dashboard");
+
+  redirect("/notificaciones");
+}

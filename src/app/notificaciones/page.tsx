@@ -11,9 +11,12 @@ import {
 import { requerirSesion } from "@/lib/auth";
 
 import {
+  eliminarNotificacion,
   marcarNotificacionLeida,
   marcarTodasLeidas,
 } from "./actions";
+
+import { BotonEliminarNotificacion } from "@/components/boton-eliminar-notificacion";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -225,7 +228,7 @@ export default async function NotificacionesPage() {
                               ? `/mis-trabajos/${notificacion.trabajoId}`
                               : `/trabajos/${notificacion.trabajoId}/editar`
                           }
-                          className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                          className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
                         >
                           Ver trabajo
                         </Link>
@@ -243,12 +246,18 @@ export default async function NotificacionesPage() {
 
                           <button
                             type="submit"
-                            className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                            className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
                           >
                             Marcar como leída
                           </button>
                         </form>
                       )}
+
+                      <BotonEliminarNotificacion
+                        notificacionId={notificacion.id}
+                        titulo={notificacion.titulo}
+                        action={eliminarNotificacion}
+                      />
                     </div>
                   </div>
                 </article>
