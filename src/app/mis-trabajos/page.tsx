@@ -311,10 +311,6 @@ export default async function MisTrabajosPage({
                       }
                       className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"
                     >
-                      <option value="Pendiente">
-                        Pendiente
-                      </option>
-
                       <option value="En camino">
                         En camino
                       </option>

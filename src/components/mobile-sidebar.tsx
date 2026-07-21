@@ -72,6 +72,12 @@ const opciones = [
     icono: BriefcaseBusiness,
     roles: ["TECNICO"],
   },
+  {
+    href: "/hitorial",
+    nombre: "Historial",
+    icono: ClipboardList,
+    roles: ["TECNICO"],
+  }
 ];
 
 export function MobileSidebar({

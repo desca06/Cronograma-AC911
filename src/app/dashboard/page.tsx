@@ -1,9 +1,9 @@
 import { asc, eq } from "drizzle-orm";
 import {
   BriefcaseBusiness,
-  Car,
+  CarFront,
   CheckCircle2,
-  Users,
+  UsersRound,
 } from "lucide-react";
 import { redirect } from "next/navigation";
 
@@ -164,31 +164,35 @@ export default async function DashboardPage() {
       <section className="space-y-6 p-5 md:p-8">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
-            label="Trabajos hoy"
-            value={listaTrabajosHoy.length}
-            helper="Trabajos programados para hoy"
-            icon={BriefcaseBusiness}
+              label="Trabajos hoy"
+              value={listaTrabajosHoy.length}
+              helper="Programados para hoy"
+              icon={BriefcaseBusiness}
+              color="blue"
           />
 
           <StatCard
-            label="Empleados activos"
-            value={empleadosActivos.length}
-            helper="Personal disponible registrado"
-            icon={Users}
+              label="Empleados activos"
+              value={empleadosActivos.length}
+              helper="Disponibles"
+              icon={UsersRound}
+              color="purple"
           />
 
           <StatCard
-            label="Vehículos en ruta"
-            value={vehiculosEnRuta}
-            helper={`${vehiculosActivos.length} vehículos activos`}
-            icon={Car}
+              label="Vehículos"
+              value={vehiculosEnRuta}
+              helper="En ruta"
+              icon={CarFront}
+              color="amber"
           />
 
           <StatCard
-            label="Finalizados"
-            value={trabajosFinalizados}
-            helper={`De ${listaTrabajosHoy.length} trabajos del día`}
-            icon={CheckCircle2}
+              label="Finalizados"
+              value={trabajosFinalizados}
+              helper="Completados hoy"
+              icon={CheckCircle2}
+              color="green"
           />
         </div>
 
