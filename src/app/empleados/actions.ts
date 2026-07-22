@@ -86,10 +86,9 @@ export async function eliminarEmpleado(
     `);
 
     await tx.execute(sql`
-      UPDATE "usuarios"
-      SET "empleado_id" = NULL
-      WHERE "empleado_id" = ${id}
-    `);
+    DELETE FROM "usuarios"
+    WHERE "empleado_id" = ${id}
+  `);
 
     await tx
       .delete(empleados)
