@@ -12,6 +12,7 @@ import {
   usuarios,
 } from "@/db/schema";
 import { requerirSesion } from "@/lib/auth";
+import { enviarPushAUsuarios } from "@/lib/push";
 
 function obtenerTexto(
   formData: FormData,
@@ -36,10 +37,6 @@ function obtenerRutaRetorno(
   const rutaDetalle =
     `/mis-trabajos/${trabajoId}`;
 
-  /*
-   * Solo acepta rutas internas conocidas.
-   * Evita redirecciones hacia sitios externos.
-   */
   return ruta === rutaDetalle
     ? rutaDetalle
     : "/mis-trabajos";
@@ -257,6 +254,11 @@ export async function actualizarMiTrabajo(
     if (supervisores.length === 0) {
       return;
     }
+
+    supervisorIds = supervisores.map(
+      (supervisor) =>
+        supervisor.usuarioId,
+    );
 
     let titulo =
       "Trabajo actualizado por técnico";

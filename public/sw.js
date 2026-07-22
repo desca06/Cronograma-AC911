@@ -1,29 +1,42 @@
-self.addEventListener("install", () => {
-  console.log("Service Worker instalado");
-  self.skipWaiting();
-});
+self.addEventListener("push", (event) => {
+  let datos = {
+    titulo: "AC911",
+    mensaje: "Tenés una nueva notificación.",
+    url: "/notificaciones",
+  };
 
-self.addEventListener("activate", (event) => {
-  console.log("Service Worker activado");
+  if (event.data) {
+    try {
+      datos = {
+        ...datos,
+        ...event.data.json(),
+      };
+    } catch {
+      datos.mensaje = event.data.text();
+    }
+  }
 
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    self.registration.showNotification(datos.titulo, {
+      body: datos.mensaje,
+      icon: "/icons/icon-192x192.png",
+      badge: "/icons/icon-192x192.png",
+      data: {
+        url: datos.url,
+      },
+      tag: "ac911-push",
+    }),
+  );
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
-  event.waitUntil(
-    self.clients.matchAll({
-      type: "window",
-      includeUncontrolled: true,
-    }).then((clientes) => {
-      for (const cliente of clientes) {
-        if ("focus" in cliente) {
-          return cliente.focus();
-        }
-      }
+  const url =
+    event.notification.data?.url ??
+    "/notificaciones";
 
-      return self.clients.openWindow("/mis-trabajos");
-    }),
+  event.waitUntil(
+    clients.openWindow(url),
   );
 });

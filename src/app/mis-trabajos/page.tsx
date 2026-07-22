@@ -14,7 +14,6 @@ import {
 } from "@/db/schema";
 import { requerirSesion } from "@/lib/auth";
 import { actualizarMiTrabajo } from "./actions";
-import ActivarNotificaciones from "@/components/ActivarNotificaciones";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -178,7 +177,7 @@ export default async function MisTrabajosPage({
       />
 
       <section className="space-y-6 p-5 md:p-8">
-        <ActivarNotificaciones />
+        {/*<ActivarNotificaciones />*/}
         {mensajeError && (
           <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
             {mensajeError}
