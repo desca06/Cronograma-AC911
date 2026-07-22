@@ -11,6 +11,28 @@ type Estado =
   | "no-compatible"
   | "error";
 
+function convertirBase64AUint8Array(
+  claveBase64: string,
+): Uint8Array<ArrayBuffer> {
+  const relleno = "=".repeat(
+    (4 - (claveBase64.length % 4)) % 4,
+  );
+
+  const base64 = (
+    claveBase64 + relleno
+  )
+    .replace(/-/g, "+")
+    .replace(/_/g, "/");
+
+  const datosCrudos = window.atob(base64);
+
+  return Uint8Array.from(
+    [...datosCrudos].map((caracter) =>
+      caracter.charCodeAt(0),
+    ),
+  );
+}
+
 export default function ActivarNotificaciones() {
   const [estado, setEstado] = useState<Estado>("inactivo");
   const [mensaje, setMensaje] = useState("");
@@ -55,14 +77,69 @@ export default function ActivarNotificaciones() {
         return;
       }
 
-      await registro.showNotification("AC911", {
-        body: "Las notificaciones fueron activadas correctamente.",
-        icon: "/icons/icon-192x192.png",
-        badge: "/icons/icon-192x192.png",
-        tag: "ac911-activacion",
-      });
+      const clavePublica =
+  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
-      setEstado("activado");
+if (!clavePublica) {
+  throw new Error(
+    "No está configurada NEXT_PUBLIC_VAPID_PUBLIC_KEY",
+  );
+}
+
+let suscripcion =
+  await registro.pushManager.getSubscription();
+
+if (!suscripcion) {
+  suscripcion =
+    await registro.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey:
+        convertirBase64AUint8Array(
+          clavePublica,
+        ),
+    });
+}
+
+const respuesta = await fetch(
+  "/api/push/suscribir",
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(
+      suscripcion.toJSON(),
+    ),
+  },
+);
+
+const resultado = await respuesta.json();
+
+if (!respuesta.ok) {
+  throw new Error(
+    resultado.error ??
+      "No se pudo guardar la suscripción.",
+  );
+}
+
+console.log(
+  "Suscripción guardada:",
+  resultado,
+);
+
+console.log(
+  "Suscripción push creada:",
+  suscripcion.toJSON(),
+);
+
+await registro.showNotification("AC911", {
+  body: "El dispositivo quedó registrado para notificaciones push.",
+  icon: "/icons/icon-192x192.png",
+  badge: "/icons/icon-192x192.png",
+  tag: "ac911-activacion",
+});
+
+setEstado("activado");
       setMensaje(
         "Notificaciones activadas correctamente.",
       );

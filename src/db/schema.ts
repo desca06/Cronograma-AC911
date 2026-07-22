@@ -221,6 +221,39 @@ export const notificaciones = sqliteTable(
   },
 );
 
+export const suscripcionesPush = sqliteTable(
+  "suscripciones_push",
+  {
+    id: integer("id").primaryKey({
+      autoIncrement: true,
+    }),
+
+    usuarioId: integer("usuario_id")
+      .notNull()
+      .references(() => usuarios.id, {
+        onDelete: "cascade",
+      }),
+
+    endpoint: text("endpoint")
+      .notNull()
+      .unique(),
+
+    p256dh: text("p256dh").notNull(),
+
+    auth: text("auth").notNull(),
+
+    navegador: text("navegador"),
+
+    creadoEn: text("creado_en")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+
+    actualizadoEn: text("actualizado_en")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+);
+
 export type Notificacion =
   typeof notificaciones.$inferSelect;
 
@@ -290,3 +323,9 @@ export type Trabajo =
 
 export type NuevoTrabajo =
   typeof trabajos.$inferInsert;
+
+export type SuscripcionPush =
+  typeof suscripcionesPush.$inferSelect;
+
+export type NuevaSuscripcionPush =
+  typeof suscripcionesPush.$inferInsert;
