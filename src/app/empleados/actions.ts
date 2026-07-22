@@ -1,6 +1,6 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
@@ -30,14 +30,14 @@ export async function crearEmpleado(
     return;
   }
 
-  await db.insert(empleados)
+  await db
+    .insert(empleados)
     .values({
       nombre,
       telefono: telefono || null,
       puesto: puesto || "Técnico",
       activo: true,
-    })
-;
+    });
 
   revalidatePath("/empleados");
   revalidatePath("/dashboard");
@@ -56,15 +56,15 @@ export async function actualizarEmpleado(
     return;
   }
 
-  await db.update(empleados)
+  await db
+    .update(empleados)
     .set({
       nombre,
       telefono: telefono || null,
       puesto: puesto || "Técnico",
       activo,
     })
-    .where(eq(empleados.id, id))
-;
+    .where(eq(empleados.id, id));
 
   revalidatePath("/empleados");
   revalidatePath("/dashboard");
@@ -79,10 +79,25 @@ export async function eliminarEmpleado(
     return;
   }
 
-  await db.delete(empleados)
-    .where(eq(empleados.id, id))
-;
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`
+      DELETE FROM "trabajo_empleados"
+      WHERE "empleado_id" = ${id}
+    `);
+
+    await tx.execute(sql`
+      UPDATE "usuarios"
+      SET "empleado_id" = NULL
+      WHERE "empleado_id" = ${id}
+    `);
+
+    await tx
+      .delete(empleados)
+      .where(eq(empleados.id, id));
+  });
 
   revalidatePath("/empleados");
+  revalidatePath("/trabajos");
+  revalidatePath("/usuarios");
   revalidatePath("/dashboard");
 }
