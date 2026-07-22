@@ -53,30 +53,30 @@ export default async function DashboardPage() {
   /*
    * Empleados activos
    */
-  const empleadosActivos = db
+  const empleadosActivos = await db
     .select({
       id: empleados.id,
     })
     .from(empleados)
     .where(eq(empleados.activo, true))
-    .all();
+;
 
   /*
    * Vehículos activos
    */
-  const vehiculosActivos = db
+  const vehiculosActivos = await db
     .select({
       id: vehiculos.id,
       estado: vehiculos.estado,
     })
     .from(vehiculos)
     .where(eq(vehiculos.activo, true))
-    .all();
+;
 
   /*
    * Trabajos programados para hoy
    */
-  const listaTrabajosHoy = db
+  const listaTrabajosHoy = await db
     .select({
       id: trabajos.id,
       fecha: trabajos.fecha,
@@ -101,12 +101,12 @@ export default async function DashboardPage() {
       asc(trabajos.horaInicio),
       asc(trabajos.id),
     )
-    .all();
+;
 
   /*
    * Empleados asignados a los trabajos
    */
-  const asignaciones = db
+  const asignaciones = await db
     .select({
       trabajoId: trabajoEmpleados.trabajoId,
       empleadoNombre: empleados.nombre,
@@ -116,7 +116,7 @@ export default async function DashboardPage() {
       empleados,
       eq(trabajoEmpleados.empleadoId, empleados.id),
     )
-    .all();
+;
 
   const empleadosPorTrabajo =
     asignaciones.reduce<Record<number, string[]>>(

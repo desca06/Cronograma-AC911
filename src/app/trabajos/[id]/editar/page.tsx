@@ -32,44 +32,44 @@ export default async function EditarTrabajoPage({
     notFound();
   }
 
-  const trabajo = db
+  const [trabajo] = await db
     .select()
     .from(trabajos)
     .where(eq(trabajos.id, id))
-    .get();
+    .limit(1);
 
   if (!trabajo) {
     notFound();
   }
 
-  const listaClientes = db
+  const listaClientes = await db
     .select()
     .from(clientes)
     .where(eq(clientes.activo, true))
     .orderBy(asc(clientes.nombre))
-    .all();
+;
 
-  const listaVehiculos = db
+  const listaVehiculos = await db
     .select()
     .from(vehiculos)
     .where(eq(vehiculos.activo, true))
     .orderBy(asc(vehiculos.nombre))
-    .all();
+;
 
-  const listaEmpleados = db
+  const listaEmpleados = await db
     .select()
     .from(empleados)
     .where(eq(empleados.activo, true))
     .orderBy(asc(empleados.nombre))
-    .all();
+;
 
-  const asignaciones = db
+  const asignaciones = await db
     .select({
       empleadoId: trabajoEmpleados.empleadoId,
     })
     .from(trabajoEmpleados)
     .where(eq(trabajoEmpleados.trabajoId, id))
-    .all();
+;
 
   const empleadosAsignados = new Set(
     asignaciones.map(

@@ -47,13 +47,13 @@ export async function crearCliente(
     regresarConError("nombre");
   }
 
-  db.insert(clientes)
+  await db.insert(clientes)
     .values({
       nombre,
       telefono: telefono || null,
       direccion: direccion || null,
     })
-    .run();
+;
 
   revalidatePath("/clientes");
   revalidatePath("/dashboard");
@@ -93,26 +93,26 @@ export async function actualizarCliente(
     regresarConError("datos");
   }
 
-  const clienteExiste = db
+  const [clienteExiste] = await db
     .select({
       id: clientes.id,
     })
     .from(clientes)
     .where(eq(clientes.id, clienteId))
-    .get();
+    .limit(1);
 
   if (!clienteExiste) {
     regresarConError("no-encontrado");
   }
 
-  db.update(clientes)
+  await db.update(clientes)
     .set({
       nombre,
       telefono: telefono || null,
       direccion: direccion || null,
     })
     .where(eq(clientes.id, clienteId))
-    .run();
+;
 
   revalidatePath("/clientes");
   revalidatePath(
@@ -140,7 +140,7 @@ export async function eliminarCliente(
     regresarConError("datos");
   }
 
-  const cantidadTrabajos = db
+  const [cantidadTrabajos] = await db
     .select({
       total: sql<number>`count(*)`,
     })
@@ -148,7 +148,7 @@ export async function eliminarCliente(
     .where(
       eq(trabajos.clienteId, clienteId),
     )
-    .get();
+    .limit(1);
 
   if (
     Number(cantidadTrabajos?.total ?? 0) > 0
@@ -156,9 +156,9 @@ export async function eliminarCliente(
     regresarConError("trabajos");
   }
 
-  db.delete(clientes)
+  await db.delete(clientes)
     .where(eq(clientes.id, clienteId))
-    .run();
+;
 
   revalidatePath("/clientes");
   revalidatePath("/dashboard");

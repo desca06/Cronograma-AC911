@@ -28,36 +28,36 @@ async function crearAdministrador() {
 
   const passwordHash = await hash(password, 12);
 
-  const usuarioExistente = db
+  const [usuarioExistente] = await db
     .select()
     .from(usuarios)
     .where(eq(usuarios.correo, correo))
-    .get();
+    .limit(1);
 
   if (usuarioExistente) {
-    db.update(usuarios)
+    await db
+      .update(usuarios)
       .set({
         nombre,
         passwordHash,
         rol: "SUPERVISOR",
         activo: true,
       })
-      .where(eq(usuarios.id, usuarioExistente.id))
-      .run();
+      .where(eq(usuarios.id, usuarioExistente.id));
 
     console.log("Administrador actualizado correctamente.");
     return;
   }
 
-  db.insert(usuarios)
+  await db
+    .insert(usuarios)
     .values({
       nombre,
       correo,
       passwordHash,
       rol: "SUPERVISOR",
       activo: true,
-    })
-    .run();
+    });
 
   console.log("Administrador creado correctamente.");
 }

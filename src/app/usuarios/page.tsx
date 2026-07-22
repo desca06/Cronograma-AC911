@@ -41,7 +41,7 @@ export default async function UsuariosPage({
       ? parametros.exito
       : "";
 
-  const listaEmpleados = db
+  const listaEmpleados = await db
     .select({
       id: empleados.id,
       nombre: empleados.nombre,
@@ -50,9 +50,9 @@ export default async function UsuariosPage({
     .from(empleados)
     .where(eq(empleados.activo, true))
     .orderBy(asc(empleados.nombre))
-    .all();
+;
 
-  const listaUsuarios = db
+  const listaUsuarios = await db
     .select({
       id: usuarios.id,
       nombre: usuarios.nombre,
@@ -63,7 +63,7 @@ export default async function UsuariosPage({
     })
     .from(usuarios)
     .orderBy(desc(usuarios.id))
-    .all();
+;
 
   const mensajeError =
     error === "correo"

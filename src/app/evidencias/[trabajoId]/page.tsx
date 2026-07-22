@@ -48,7 +48,7 @@ export default async function EvidenciasPage({
     notFound();
   }
 
-  const trabajo = db
+  const [trabajo] = await db
     .select({
       id: trabajos.id,
       tipo: trabajos.tipo,
@@ -63,7 +63,7 @@ export default async function EvidenciasPage({
       eq(trabajos.clienteId, clientes.id),
     )
     .where(eq(trabajos.id, trabajoId))
-    .get();
+    .limit(1);
 
   if (!trabajo) {
     notFound();
@@ -74,19 +74,19 @@ export default async function EvidenciasPage({
    * Los técnicos solo los trabajos que tengan asignados.
    */
   if (sesion.rol === "TECNICO") {
-    const usuario = db
+    const [usuario] = await db
       .select({
         empleadoId: usuarios.empleadoId,
       })
       .from(usuarios)
       .where(eq(usuarios.id, sesion.usuarioId))
-      .get();
+      .limit(1);
 
     if (!usuario?.empleadoId) {
       redirect("/mis-trabajos?error=cuenta");
     }
 
-    const asignacion = db
+    const [asignacion] = await db
       .select({
         trabajoId: trabajoEmpleados.trabajoId,
       })
@@ -103,7 +103,7 @@ export default async function EvidenciasPage({
           ),
         ),
       )
-      .get();
+      .limit(1);
 
     if (!asignacion) {
       redirect("/mis-trabajos?error=permiso");
@@ -120,7 +120,7 @@ export default async function EvidenciasPage({
       ? parametros.exito
       : "";
 
-  const listaEvidencias = db
+  const listaEvidencias = await db
     .select({
       id: evidencias.id,
       archivoUrl: evidencias.archivoUrl,
@@ -138,7 +138,7 @@ export default async function EvidenciasPage({
       eq(evidencias.trabajoId, trabajoId),
     )
     .orderBy(desc(evidencias.id))
-    .all();
+;
 
   const mensajeError =
     error === "archivo"

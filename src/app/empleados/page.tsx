@@ -13,12 +13,12 @@ import {
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export default function EmpleadosPage() {
-  const listaEmpleados = db
+export default async function EmpleadosPage() {
+  const listaEmpleados = await db
     .select()
     .from(empleados)
     .orderBy(desc(empleados.id))
-    .all();
+;
 
   return (
     <main className="min-h-screen bg-slate-100 p-4 md:p-8">

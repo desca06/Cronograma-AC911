@@ -20,7 +20,7 @@ export async function AppShell({ children }: AppShellProps) {
   let notificacionesNoLeidas = 0;
 
   if (sesion) {
-    const resultado = db
+    const [resultado] = await db
       .select({ total: count() })
       .from(notificaciones)
       .where(
@@ -29,7 +29,7 @@ export async function AppShell({ children }: AppShellProps) {
           eq(notificaciones.leida, false),
         ),
       )
-      .get();
+      .limit(1);
 
     notificacionesNoLeidas = resultado?.total ?? 0;
   }

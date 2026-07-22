@@ -118,7 +118,7 @@ export async function actualizarMiTrabajo(
     );
   }
 
-  const usuario = db
+  const [usuario] = await db
     .select({
       empleadoId: usuarios.empleadoId,
     })
@@ -129,7 +129,7 @@ export async function actualizarMiTrabajo(
         sesion.usuarioId,
       ),
     )
-    .get();
+    .limit(1);
 
   if (!usuario?.empleadoId) {
     redirect(
@@ -141,7 +141,7 @@ export async function actualizarMiTrabajo(
     );
   }
 
-  const asignacion = db
+  const [asignacion] = await db
     .select({
       trabajoId:
         trabajoEmpleados.trabajoId,
@@ -159,7 +159,7 @@ export async function actualizarMiTrabajo(
         ),
       ),
     )
-    .get();
+    .limit(1);
 
   if (!asignacion) {
     redirect(
@@ -171,7 +171,7 @@ export async function actualizarMiTrabajo(
     );
   }
 
-  const trabajoActual = db
+  const [trabajoActual] = await db
     .select({
       id: trabajos.id,
       tipo: trabajos.tipo,
@@ -187,7 +187,7 @@ export async function actualizarMiTrabajo(
         trabajoId,
       ),
     )
-    .get();
+    .limit(1);
 
   if (!trabajoActual) {
     redirect(
@@ -223,8 +223,8 @@ export async function actualizarMiTrabajo(
     );
   }
 
-  db.transaction((tx) => {
-    tx.update(trabajos)
+  await db.transaction(async (tx) => {
+    await tx.update(trabajos)
       .set({
         estado,
         observacionesTecnico:
@@ -236,9 +236,9 @@ export async function actualizarMiTrabajo(
           trabajoId,
         ),
       )
-      .run();
+;
 
-    const supervisores = tx
+    const supervisores = await tx
       .select({
         usuarioId: usuarios.id,
       })
@@ -249,16 +249,11 @@ export async function actualizarMiTrabajo(
           "SUPERVISOR",
         ),
       )
-      .all();
+;
 
     if (supervisores.length === 0) {
       return;
     }
-
-    supervisorIds = supervisores.map(
-      (supervisor) =>
-        supervisor.usuarioId,
-    );
 
     let titulo =
       "Trabajo actualizado por técnico";
@@ -304,7 +299,7 @@ export async function actualizarMiTrabajo(
         `${trabajoActual.fecha}.`;
     }
 
-    tx.insert(notificaciones)
+    await tx.insert(notificaciones)
       .values(
         supervisores.map(
           (supervisor) => ({
@@ -318,7 +313,7 @@ export async function actualizarMiTrabajo(
           }),
         ),
       )
-      .run();
+;
   });
 
   revalidarPaginas(trabajoId);

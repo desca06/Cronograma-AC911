@@ -52,13 +52,13 @@ export default async function HistorialPage({ searchParams,
     redirect("/dashboard");
   }
 
-  const usuario = db
+  const [usuario] = await db
     .select({
       empleadoId: usuarios.empleadoId,
     })
     .from(usuarios)
     .where(eq(usuarios.id, sesion.usuarioId))
-    .get();
+    .limit(1);
 
   if (!usuario?.empleadoId) {
     return (
@@ -83,7 +83,7 @@ export default async function HistorialPage({ searchParams,
     );
   }
 
-  const historial = db
+  const historial = await db
     .select({
       id: trabajos.id,
       fecha: trabajos.fecha,
@@ -144,7 +144,7 @@ export default async function HistorialPage({ searchParams,
       desc(trabajos.fecha),
       desc(trabajos.horaInicio),
     )
-    .all();
+;
 
   return (
     <AppShell>

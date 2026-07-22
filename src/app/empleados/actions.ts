@@ -30,14 +30,14 @@ export async function crearEmpleado(
     return;
   }
 
-  db.insert(empleados)
+  await db.insert(empleados)
     .values({
       nombre,
       telefono: telefono || null,
       puesto: puesto || "Técnico",
       activo: true,
     })
-    .run();
+;
 
   revalidatePath("/empleados");
   revalidatePath("/dashboard");
@@ -56,7 +56,7 @@ export async function actualizarEmpleado(
     return;
   }
 
-  db.update(empleados)
+  await db.update(empleados)
     .set({
       nombre,
       telefono: telefono || null,
@@ -64,7 +64,7 @@ export async function actualizarEmpleado(
       activo,
     })
     .where(eq(empleados.id, id))
-    .run();
+;
 
   revalidatePath("/empleados");
   revalidatePath("/dashboard");
@@ -79,9 +79,9 @@ export async function eliminarEmpleado(
     return;
   }
 
-  db.delete(empleados)
+  await db.delete(empleados)
     .where(eq(empleados.id, id))
-    .run();
+;
 
   revalidatePath("/empleados");
   revalidatePath("/dashboard");

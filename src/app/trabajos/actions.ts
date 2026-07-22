@@ -110,8 +110,8 @@ export async function crearTrabajo(
     redirect("/trabajos?error=datos");
   }
 
-  db.transaction((tx) => {
-    const resultado = tx
+  await db.transaction(async (tx) => {
+    const [nuevoTrabajo] = await tx
       .insert(trabajos)
       .values({
         fecha,
@@ -133,17 +133,15 @@ export async function crearTrabajo(
         observaciones:
           observaciones || null,
       })
-      .run();
+      .returning({ id: trabajos.id });
 
-    const trabajoId = Number(
-      resultado.lastInsertRowid,
-    );
+    const trabajoId = nuevoTrabajo.id;
 
     if (empleadoIds.length === 0) {
       return;
     }
 
-    tx.insert(trabajoEmpleados)
+    await tx.insert(trabajoEmpleados)
       .values(
         empleadoIds.map(
           (empleadoId) => ({
@@ -152,13 +150,13 @@ export async function crearTrabajo(
           }),
         ),
       )
-      .run();
+;
 
     /*
      * Busca las cuentas técnicas vinculadas
      * con los empleados asignados.
      */
-    const destinatarios = tx
+    const destinatarios = await tx
       .select({
         usuarioId: usuarios.id,
       })
@@ -179,7 +177,7 @@ export async function crearTrabajo(
           eq(usuarios.rol, "TECNICO"),
         ),
       )
-      .all();
+;
 
     const usuarioIds = [
       ...new Set(
@@ -195,7 +193,7 @@ export async function crearTrabajo(
         ? ` a las ${horaInicio}`
         : "";
 
-      tx.insert(notificaciones)
+      await tx.insert(notificaciones)
         .values(
           usuarioIds.map((usuarioId) => ({
             usuarioId,
@@ -209,7 +207,7 @@ export async function crearTrabajo(
             leida: false,
           })),
         )
-        .run();
+;
     }
   });
 
@@ -240,7 +238,7 @@ export async function actualizarEstadoTrabajo(
     redirect("/trabajos?error=datos");
   }
 
-  const trabajoActual = db
+  const [trabajoActual] = await db
     .select({
       id: trabajos.id,
       tipo: trabajos.tipo,
@@ -249,7 +247,7 @@ export async function actualizarEstadoTrabajo(
     })
     .from(trabajos)
     .where(eq(trabajos.id, id))
-    .get();
+    .limit(1);
 
   if (!trabajoActual) {
     redirect(
@@ -265,15 +263,15 @@ export async function actualizarEstadoTrabajo(
     redirect("/trabajos");
   }
 
-  db.transaction((tx) => {
-    tx.update(trabajos)
+  await db.transaction(async (tx) => {
+    await tx.update(trabajos)
       .set({
         estado,
       })
       .where(eq(trabajos.id, id))
-      .run();
+;
 
-    const destinatarios = tx
+    const destinatarios = await tx
       .select({
         usuarioId: usuarios.id,
       })
@@ -294,7 +292,7 @@ export async function actualizarEstadoTrabajo(
           eq(usuarios.rol, "TECNICO"),
         ),
       )
-      .all();
+;
 
     const usuarioIds = [
       ...new Set(
@@ -306,7 +304,7 @@ export async function actualizarEstadoTrabajo(
     ];
 
     if (usuarioIds.length > 0) {
-      tx.insert(notificaciones)
+      await tx.insert(notificaciones)
         .values(
           usuarioIds.map((usuarioId) => ({
             usuarioId,
@@ -330,7 +328,7 @@ export async function actualizarEstadoTrabajo(
             leida: false,
           })),
         )
-        .run();
+;
     }
   });
 
@@ -355,19 +353,19 @@ export async function eliminarTrabajo(
     redirect("/trabajos?error=datos");
   }
 
-  db.transaction((tx) => {
-    tx.delete(trabajoEmpleados)
+  await db.transaction(async (tx) => {
+    await tx.delete(trabajoEmpleados)
       .where(
         eq(
           trabajoEmpleados.trabajoId,
           id,
         ),
       )
-      .run();
+;
 
-    tx.delete(trabajos)
+    await tx.delete(trabajos)
       .where(eq(trabajos.id, id))
-      .run();
+;
   });
 
   revalidarPaginas();
@@ -447,13 +445,13 @@ export async function actualizarTrabajoCompleto(
     redirect("/trabajos?error=datos");
   }
 
-  const trabajoExiste = db
+  const [trabajoExiste] = await db
     .select({
       id: trabajos.id,
     })
     .from(trabajos)
     .where(eq(trabajos.id, id))
-    .get();
+    .limit(1);
 
   if (!trabajoExiste) {
     redirect(
@@ -461,8 +459,8 @@ export async function actualizarTrabajoCompleto(
     );
   }
 
-  db.transaction((tx) => {
-    tx.update(trabajos)
+  await db.transaction(async (tx) => {
+    await tx.update(trabajos)
       .set({
         fecha,
         clienteId,
@@ -485,22 +483,22 @@ export async function actualizarTrabajoCompleto(
           observaciones || null,
       })
       .where(eq(trabajos.id, id))
-      .run();
+;
 
-    tx.delete(trabajoEmpleados)
+    await tx.delete(trabajoEmpleados)
       .where(
         eq(
           trabajoEmpleados.trabajoId,
           id,
         ),
       )
-      .run();
+;
 
     if (empleadoIds.length === 0) {
       return;
     }
 
-    tx.insert(trabajoEmpleados)
+    await tx.insert(trabajoEmpleados)
       .values(
         empleadoIds.map(
           (empleadoId) => ({
@@ -509,9 +507,9 @@ export async function actualizarTrabajoCompleto(
           }),
         ),
       )
-      .run();
+;
 
-    const destinatarios = tx
+    const destinatarios = await tx
       .select({
         usuarioId: usuarios.id,
       })
@@ -532,7 +530,7 @@ export async function actualizarTrabajoCompleto(
           eq(usuarios.rol, "TECNICO"),
         ),
       )
-      .all();
+;
 
     const usuarioIds = [
       ...new Set(
@@ -548,7 +546,7 @@ export async function actualizarTrabajoCompleto(
         ? ` a las ${horaInicio}`
         : "";
 
-      tx.insert(notificaciones)
+      await tx.insert(notificaciones)
         .values(
           usuarioIds.map((usuarioId) => ({
             usuarioId,
@@ -563,7 +561,7 @@ export async function actualizarTrabajoCompleto(
             leida: false,
           })),
         )
-        .run();
+;
     }
   });
 

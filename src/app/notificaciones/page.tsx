@@ -35,7 +35,7 @@ const estilosTipo: Record<string, string> = {
 export default async function NotificacionesPage() {
   const sesion = await requerirSesion();
 
-  const listaNotificaciones = db
+  const listaNotificaciones = await db
     .select({
       id: notificaciones.id,
       trabajoId: notificaciones.trabajoId,
@@ -62,7 +62,7 @@ export default async function NotificacionesPage() {
       ),
     )
     .orderBy(desc(notificaciones.id))
-    .all();
+;
 
   const totalSinLeer =
     listaNotificaciones.filter(

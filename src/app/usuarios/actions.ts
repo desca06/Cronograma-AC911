@@ -80,7 +80,7 @@ export async function crearUsuario(
     redirect("/usuarios?error=empleado");
   }
 
-  const correoExistente = db
+  const [correoExistente] = await db
     .select({
       id: usuarios.id,
     })
@@ -88,7 +88,7 @@ export async function crearUsuario(
     .where(
       eq(usuarios.correo, correo),
     )
-    .get();
+    .limit(1);
 
   if (correoExistente) {
     redirect("/usuarios?error=correo");
@@ -99,7 +99,7 @@ export async function crearUsuario(
     12,
   );
 
-  db.insert(usuarios)
+  await db.insert(usuarios)
     .values({
       nombre,
       correo,
@@ -108,7 +108,7 @@ export async function crearUsuario(
       empleadoId,
       activo: true,
     })
-    .run();
+;
 
   revalidatePath("/usuarios");
 
@@ -159,7 +159,7 @@ export async function actualizarUsuario(
     redirect("/usuarios?error=datos");
   }
 
-  const correoExistente = db
+  const [correoExistente] = await db
     .select({
       id: usuarios.id,
     })
@@ -170,7 +170,7 @@ export async function actualizarUsuario(
         ne(usuarios.id, id),
       ),
     )
-    .get();
+    .limit(1);
 
   if (correoExistente) {
     redirect("/usuarios?error=correo");
@@ -209,7 +209,7 @@ export async function actualizarUsuario(
     redirect("/usuarios?error=empleado");
   }
 
-  db.update(usuarios)
+  await db.update(usuarios)
     .set({
       nombre,
       correo,
@@ -220,7 +220,7 @@ export async function actualizarUsuario(
     .where(
       eq(usuarios.id, id),
     )
-    .run();
+;
 
   revalidatePath("/usuarios");
 
@@ -253,7 +253,7 @@ export async function cambiarPasswordUsuario(
     redirect("/usuarios?error=password");
   }
 
-  const usuarioExistente = db
+  const [usuarioExistente] = await db
     .select({
       id: usuarios.id,
     })
@@ -261,7 +261,7 @@ export async function cambiarPasswordUsuario(
     .where(
       eq(usuarios.id, id),
     )
-    .get();
+    .limit(1);
 
   if (!usuarioExistente) {
     redirect("/usuarios?error=datos");
@@ -272,14 +272,14 @@ export async function cambiarPasswordUsuario(
     12,
   );
 
-  db.update(usuarios)
+  await db.update(usuarios)
     .set({
       passwordHash,
     })
     .where(
       eq(usuarios.id, id),
     )
-    .run();
+;
 
   revalidatePath("/usuarios");
 

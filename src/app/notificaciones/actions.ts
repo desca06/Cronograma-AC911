@@ -24,7 +24,7 @@ export async function marcarNotificacionLeida(
     redirect("/notificaciones?error=datos");
   }
 
-  db.update(notificaciones)
+  await db.update(notificaciones)
     .set({
       leida: true,
     })
@@ -37,7 +37,7 @@ export async function marcarNotificacionLeida(
         ),
       ),
     )
-    .run();
+;
 
   revalidatePath("/notificaciones");
   revalidatePath("/mis-trabajos");
@@ -48,7 +48,7 @@ export async function marcarNotificacionLeida(
 export async function marcarTodasLeidas(): Promise<void> {
   const sesion = await requerirSesion();
 
-  db.update(notificaciones)
+  await db.update(notificaciones)
     .set({
       leida: true,
     })
@@ -61,7 +61,7 @@ export async function marcarTodasLeidas(): Promise<void> {
         eq(notificaciones.leida, false),
       ),
     )
-    .run();
+;
 
   revalidatePath("/notificaciones");
   revalidatePath("/mis-trabajos");
@@ -82,7 +82,7 @@ export async function eliminarNotificacion(
     redirect("/notificaciones?error=datos");
   }
 
-  db.delete(notificaciones)
+  await db.delete(notificaciones)
     .where(
       and(
         eq(notificaciones.id, notificacionId),
@@ -92,7 +92,7 @@ export async function eliminarNotificacion(
         ),
       ),
     )
-    .run();
+;
 
   revalidatePath("/notificaciones");
   revalidatePath("/mis-trabajos");

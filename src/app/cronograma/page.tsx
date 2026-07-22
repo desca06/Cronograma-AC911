@@ -58,7 +58,7 @@ export default async function CronogramaPage({
   const fechaSeleccionada =
     fechaParametro || obtenerFechaHoy();
 
-  const listaTrabajos = db
+  const listaTrabajos = await db
     .select({
       id: trabajos.id,
       fecha: trabajos.fecha,
@@ -88,9 +88,9 @@ export default async function CronogramaPage({
       asc(trabajos.horaInicio),
       asc(trabajos.id),
     )
-    .all();
+;
 
-  const asignaciones = db
+  const asignaciones = await db
     .select({
       trabajoId: trabajoEmpleados.trabajoId,
       empleadoNombre: empleados.nombre,
@@ -101,7 +101,7 @@ export default async function CronogramaPage({
       empleados,
       eq(trabajoEmpleados.empleadoId, empleados.id),
     )
-    .all();
+;
 
   const empleadosPorTrabajo =
     asignaciones.reduce<

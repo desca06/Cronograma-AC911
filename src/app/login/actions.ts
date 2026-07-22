@@ -39,11 +39,11 @@ export async function iniciarSesion(
     redirect("/login?error=campos");
   }
 
-  const usuario = db
+  const [usuario] = await db
     .select()
     .from(usuarios)
     .where(eq(usuarios.correo, correo))
-    .get();
+    .limit(1);
 
   if (!usuario || !usuario.activo) {
     redirect("/login?error=credenciales");

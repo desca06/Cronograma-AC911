@@ -53,7 +53,7 @@ export default async function MisTrabajosPage({
       ? parametros.exito
       : "";
 
-  const usuario = db
+  const [usuario] = await db
     .select({
       empleadoId: usuarios.empleadoId,
     })
@@ -64,7 +64,7 @@ export default async function MisTrabajosPage({
         sesion.usuarioId,
       ),
     )
-    .get();
+    .limit(1);
 
   if (!usuario?.empleadoId) {
     return (
@@ -90,7 +90,7 @@ export default async function MisTrabajosPage({
     );
   }
 
-  const listaTrabajos = db
+  const listaTrabajos = await db
     .select({
       id: trabajos.id,
       fecha: trabajos.fecha,
@@ -156,7 +156,7 @@ export default async function MisTrabajosPage({
       asc(trabajos.fecha),
       asc(trabajos.horaInicio),
     )
-    .all();
+;
 
   const mensajeError =
     error === "permiso"

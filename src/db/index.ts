@@ -1,29 +1,16 @@
-import { mkdirSync } from "node:fs";
-import path from "node:path";
-
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
+import { Pool } from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
 
 import * as schema from "./schema";
 
-const carpetaDatos = path.join(
-  process.cwd(),
-  "data",
-);
+if (!process.env.DATABASE_URL) {
+  throw new Error("DATABASE_URL no está configurada");
+}
 
-mkdirSync(carpetaDatos, {
-  recursive: true,
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
 });
 
-const rutaBaseDatos = path.join(
-  carpetaDatos,
-  "control-trabajos.db",
-);
-
-const sqlite = new Database(rutaBaseDatos);
-
-sqlite.pragma("foreign_keys = ON");
-
-export const db = drizzle(sqlite, {
+export const db = drizzle(pool, {
   schema,
 });

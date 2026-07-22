@@ -59,7 +59,7 @@ async function verificarAccesoAlTrabajo(
 ) {
   const sesion = await requerirSesion();
 
-  const trabajoExiste = db
+  const [trabajoExiste] = await db
     .select({
       id: trabajos.id,
     })
@@ -67,7 +67,7 @@ async function verificarAccesoAlTrabajo(
     .where(
       eq(trabajos.id, trabajoId),
     )
-    .get();
+    .limit(1);
 
   if (!trabajoExiste) {
     redirect(
@@ -81,7 +81,7 @@ async function verificarAccesoAlTrabajo(
     return sesion;
   }
 
-  const usuario = db
+  const [usuario] = await db
     .select({
       empleadoId: usuarios.empleadoId,
     })
@@ -92,7 +92,7 @@ async function verificarAccesoAlTrabajo(
         sesion.usuarioId,
       ),
     )
-    .get();
+    .limit(1);
 
   if (!usuario?.empleadoId) {
     redirect(
@@ -100,7 +100,7 @@ async function verificarAccesoAlTrabajo(
     );
   }
 
-  const asignacion = db
+  const [asignacion] = await db
     .select({
       trabajoId:
         trabajoEmpleados.trabajoId,
@@ -118,7 +118,7 @@ async function verificarAccesoAlTrabajo(
         ),
       ),
     )
-    .get();
+    .limit(1);
 
   if (!asignacion) {
     redirect(
@@ -181,7 +181,7 @@ export async function subirEvidencia(
     );
   }
 
-  const trabajo = db
+  const [trabajo] = await db
     .select({
       id: trabajos.id,
       tipo: trabajos.tipo,
@@ -191,7 +191,7 @@ export async function subirEvidencia(
     .where(
       eq(trabajos.id, trabajoId),
     )
-    .get();
+    .limit(1);
 
   if (!trabajo) {
     redirect(
@@ -230,8 +230,8 @@ export async function subirEvidencia(
   );
 
   try {
-    db.transaction((tx) => {
-      tx.insert(evidencias)
+    await db.transaction(async (tx) => {
+      await tx.insert(evidencias)
         .values({
           trabajoId,
           usuarioId: sesion.usuarioId,
@@ -242,7 +242,7 @@ export async function subirEvidencia(
           descripcion:
             descripcion || null,
         })
-        .run();
+;
 
       /*
        * Cuando un técnico sube una evidencia,
@@ -252,7 +252,7 @@ export async function subirEvidencia(
         return;
       }
 
-      const supervisores = tx
+      const supervisores = await tx
         .select({
           usuarioId: usuarios.id,
         })
@@ -263,7 +263,7 @@ export async function subirEvidencia(
             "SUPERVISOR",
           ),
         )
-        .all();
+;
 
       if (supervisores.length === 0) {
         return;
@@ -274,7 +274,7 @@ export async function subirEvidencia(
           ? " Incluyó una descripción."
           : "";
 
-      tx.insert(notificaciones)
+      await tx.insert(notificaciones)
         .values(
           supervisores.map(
             (supervisor) => ({
@@ -296,7 +296,7 @@ export async function subirEvidencia(
             }),
           ),
         )
-        .run();
+;
     });
   } catch (error) {
     await unlink(rutaFisica).catch(() => {

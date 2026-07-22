@@ -88,28 +88,28 @@ export default async function TrabajosPage({
     },
   );
 
-  const listaClientes = db
+  const listaClientes = await db
     .select()
     .from(clientes)
     .where(eq(clientes.activo, true))
     .orderBy(asc(clientes.nombre))
-    .all();
+;
 
-  const listaVehiculos = db
+  const listaVehiculos = await db
     .select()
     .from(vehiculos)
     .where(eq(vehiculos.activo, true))
     .orderBy(asc(vehiculos.nombre))
-    .all();
+;
 
-  const listaEmpleados = db
+  const listaEmpleados = await db
     .select()
     .from(empleados)
     .where(eq(empleados.activo, true))
     .orderBy(asc(empleados.nombre))
-    .all();
+;
 
-  const listaTrabajos = db
+  const listaTrabajos = await db
     .select({
       id: trabajos.id,
       fecha: trabajos.fecha,
@@ -136,9 +136,9 @@ export default async function TrabajosPage({
       desc(trabajos.fecha),
       desc(trabajos.id),
     )
-    .all();
+;
 
-  const asignaciones = db
+  const asignaciones = await db
     .select({
       trabajoId: trabajoEmpleados.trabajoId,
       empleadoId: trabajoEmpleados.empleadoId,
@@ -152,7 +152,7 @@ export default async function TrabajosPage({
         empleados.id,
       ),
     )
-    .all();
+;
 
   const empleadosPorTrabajo: Record<
     number,

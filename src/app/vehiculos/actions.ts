@@ -25,7 +25,7 @@ export async function crearVehiculo(
     return;
   }
 
-  db.insert(vehiculos)
+  await db.insert(vehiculos)
     .values({
       nombre,
       placa: placa || null,
@@ -34,7 +34,7 @@ export async function crearVehiculo(
       estado: estado || "Disponible",
       activo: true,
     })
-    .run();
+;
 
   revalidatePath("/vehiculos");
   revalidatePath("/dashboard");
@@ -56,7 +56,7 @@ export async function actualizarVehiculo(
     return;
   }
 
-  db.update(vehiculos)
+  await db.update(vehiculos)
     .set({
       nombre,
       placa: placa || null,
@@ -66,7 +66,7 @@ export async function actualizarVehiculo(
       activo,
     })
     .where(eq(vehiculos.id, id))
-    .run();
+;
 
   revalidatePath("/vehiculos");
   revalidatePath("/dashboard");
@@ -81,9 +81,9 @@ export async function eliminarVehiculo(
     return;
   }
 
-  db.delete(vehiculos)
+  await db.delete(vehiculos)
     .where(eq(vehiculos.id, id))
-    .run();
+;
 
   revalidatePath("/vehiculos");
   revalidatePath("/dashboard");

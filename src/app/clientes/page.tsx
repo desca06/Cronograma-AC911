@@ -40,7 +40,7 @@ export default async function ClientesPage({
       ? parametros.exito
       : "";
 
-  const listaClientes = db
+  const listaClientes = await db
     .select({
       id: clientes.id,
       nombre: clientes.nombre,
@@ -49,7 +49,7 @@ export default async function ClientesPage({
     })
     .from(clientes)
     .orderBy(asc(clientes.nombre))
-    .all();
+;
 
   const mensajeError =
     error === "nombre"

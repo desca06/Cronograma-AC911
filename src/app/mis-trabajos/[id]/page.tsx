@@ -71,7 +71,7 @@ export default async function TrabajoAsignadoPage({
       ? parametros.exito
       : "";
 
-  const usuario = db
+  const [usuario] = await db
     .select({
       empleadoId: usuarios.empleadoId,
     })
@@ -82,7 +82,7 @@ export default async function TrabajoAsignadoPage({
         sesion.usuarioId,
       ),
     )
-    .get();
+    .limit(1);
 
   if (!usuario?.empleadoId) {
     redirect(
@@ -95,7 +95,7 @@ export default async function TrabajoAsignadoPage({
    * Así nadie puede abrir un trabajo ajeno
    * escribiendo otro ID en la dirección.
    */
-  const trabajo = db
+  const [trabajo] = await db
     .select({
       id: trabajos.id,
       fecha: trabajos.fecha,
@@ -146,7 +146,7 @@ export default async function TrabajoAsignadoPage({
         eq(trabajos.id, trabajoId),
       ),
     )
-    .get();
+    .limit(1);
 
   if (!trabajo) {
     redirect(

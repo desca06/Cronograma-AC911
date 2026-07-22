@@ -46,22 +46,22 @@ export default async function HistorialClientePage({
     notFound();
   }
 
-  const cliente = db
-    .select({
-      id: clientes.id,
-      nombre: clientes.nombre,
-      telefono: clientes.telefono,
-      direccion: clientes.direccion,
-    })
-    .from(clientes)
-    .where(eq(clientes.id, clienteId))
-    .get();
+  const [cliente] = await db
+  .select({
+    id: clientes.id,
+    nombre: clientes.nombre,
+    telefono: clientes.telefono,
+    direccion: clientes.direccion,
+  })
+  .from(clientes)
+  .where(eq(clientes.id, clienteId))
+  .limit(1);
 
   if (!cliente) {
     notFound();
   }
 
-  const listaTrabajos = db
+  const listaTrabajos = await db
     .select({
       id: trabajos.id,
       fecha: trabajos.fecha,
@@ -84,11 +84,10 @@ export default async function HistorialClientePage({
       desc(trabajos.fecha),
       desc(trabajos.id),
     )
-    .all();
 
-  const trabajosConDetalles = listaTrabajos.map(
-    (trabajo) => {
-      const empleadosAsignados = db
+  const trabajosConDetalles = await Promise.all(
+    listaTrabajos.map(async (trabajo) => {
+      const empleadosAsignados = await db
         .select({
           id: empleados.id,
           nombre: empleados.nombre,
@@ -107,9 +106,8 @@ export default async function HistorialClientePage({
             trabajo.id,
           ),
         )
-        .all();
 
-      const contadorEvidencias = db
+      const [contadorEvidencias] = await db
         .select({
           total: sql<number>`count(*)`,
         })
@@ -120,7 +118,7 @@ export default async function HistorialClientePage({
             trabajo.id,
           ),
         )
-        .get();
+        .limit(1);
 
       return {
         ...trabajo,
@@ -129,7 +127,7 @@ export default async function HistorialClientePage({
           contadorEvidencias?.total ?? 0,
         ),
       };
-    },
+    }),
   );
 
   const totalTrabajos =
