@@ -1,10 +1,9 @@
 "use server";
-
-import { eq } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
-
 import { db } from "@/db";
-import { vehiculos } from "@/db/schema";
+import { trabajos, vehiculos } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 
 function obtenerTexto(formData: FormData, campo: string): string {
   const valor = formData.get(campo);
@@ -72,19 +71,30 @@ export async function actualizarVehiculo(
   revalidatePath("/dashboard");
 }
 
-export async function eliminarVehiculo(
-  formData: FormData,
-): Promise<void> {
+export async function eliminarVehiculo(formData: FormData) {
   const id = Number(formData.get("id"));
 
   if (!Number.isInteger(id) || id <= 0) {
-    return;
+    redirect("/vehiculos?error=vehiculo-invalido");
   }
 
-  await db.delete(vehiculos)
-    .where(eq(vehiculos.id, id))
-;
+  // Revisar si existe al menos un trabajo asociado al vehículo
+  const trabajoAsociado = await db
+    .select({
+      id: trabajos.id,
+    })
+    .from(trabajos)
+    .where(eq(trabajos.vehiculoId, id))
+    .limit(1);
+
+  if (trabajoAsociado.length > 0) {
+    redirect("/vehiculos?error=vehiculo-con-trabajos");
+  }
+
+  await db
+    .delete(vehiculos)
+    .where(eq(vehiculos.id, id));
 
   revalidatePath("/vehiculos");
-  revalidatePath("/dashboard");
+  redirect("/vehiculos?success=vehiculo-eliminado");
 }

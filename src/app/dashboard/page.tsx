@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import {
   BriefcaseBusiness,
   CarFront,
@@ -64,14 +64,13 @@ export default async function DashboardPage() {
   /*
    * Vehículos activos
    */
-  const vehiculosActivos = await db
-    .select({
-      id: vehiculos.id,
-      estado: vehiculos.estado,
-    })
-    .from(vehiculos)
-    .where(eq(vehiculos.activo, true))
-;
+const vehiculosActivos = await db
+  .select({
+    id: vehiculos.id,
+    estado: vehiculos.estado,
+  })
+  .from(vehiculos)
+  .where(eq(vehiculos.activo, true));;
 
   /*
    * Trabajos programados para hoy
@@ -140,12 +139,11 @@ export default async function DashboardPage() {
         trabajo.estado === "Finalizado",
     ).length;
 
-  const vehiculosEnRuta =
-    vehiculosActivos.filter(
-      (vehiculo) =>
-        vehiculo.estado === "En ruta",
-    ).length;
-
+  const vehiculosDisponibles =
+  vehiculosActivos.filter(
+    (vehiculo) => vehiculo.estado === "Disponible",
+  ).length;
+  
   return (
     <AppShell>
       <PageHeader
@@ -181,8 +179,8 @@ export default async function DashboardPage() {
 
           <StatCard
               label="Vehículos"
-              value={vehiculosEnRuta}
-              helper="En ruta"
+              value={vehiculosDisponibles}
+              helper="Disponibles"
               icon={CarFront}
               color="amber"
           />

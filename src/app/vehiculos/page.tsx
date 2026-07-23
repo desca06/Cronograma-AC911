@@ -13,12 +13,22 @@ import {
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export default async function VehiculosPage() {
+type VehiculosPageProps = {
+  searchParams: Promise<{
+    error?: string;
+    success?: string;
+  }>;
+};
+
+export default async function VehiculosPage({
+  searchParams,
+}: VehiculosPageProps) {
+  const params = await searchParams;
+
   const listaVehiculos = await db
     .select()
     .from(vehiculos)
-    .orderBy(desc(vehiculos.id))
-;
+    .orderBy(desc(vehiculos.id));
 
   return (
     <main className="min-h-screen bg-slate-100 p-4 md:p-8">
@@ -45,6 +55,55 @@ export default async function VehiculosPage() {
             Volver al dashboard
           </Link>
         </header>
+
+        {params.error === "vehiculo-con-trabajos" && (
+          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-red-800 shadow-sm">
+            <p className="font-bold">
+              No se puede eliminar el vehículo
+            </p>
+
+            <p className="mt-1 text-sm">
+              Este vehículo tiene uno o más trabajos asociados. Para conservar
+              el historial, podés marcarlo como inactivo o fuera de servicio.
+            </p>
+          </div>
+        )}
+
+        {params.error === "vehiculo-invalido" && (
+          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-red-800 shadow-sm">
+            <p className="font-bold">
+              Vehículo inválido
+            </p>
+
+            <p className="mt-1 text-sm">
+              El identificador del vehículo no es válido.
+            </p>
+          </div>
+        )}
+
+        {params.error === "vehiculo-no-encontrado" && (
+          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-red-800 shadow-sm">
+            <p className="font-bold">
+              Vehículo no encontrado
+            </p>
+
+            <p className="mt-1 text-sm">
+              El vehículo que intentaste eliminar ya no existe.
+            </p>
+          </div>
+        )}
+
+        {params.success === "vehiculo-eliminado" && (
+          <div className="mb-6 rounded-2xl border border-green-200 bg-green-50 px-5 py-4 text-green-800 shadow-sm">
+            <p className="font-bold">
+              Vehículo eliminado
+            </p>
+
+            <p className="mt-1 text-sm">
+              El vehículo fue eliminado correctamente.
+            </p>
+          </div>
+        )}
 
         <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-bold text-slate-900">
@@ -138,11 +197,14 @@ export default async function VehiculosPage() {
                 defaultValue="Disponible"
                 className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
               >
-                <option value="Disponible">Disponible</option>
-                <option value="En ruta">En ruta</option>
+                <option value="Disponible">
+                  Disponible
+                </option>
+
                 <option value="En mantenimiento">
                   En mantenimiento
                 </option>
+
                 <option value="Fuera de servicio">
                   Fuera de servicio
                 </option>
@@ -180,13 +242,33 @@ export default async function VehiculosPage() {
               <table className="w-full min-w-[1150px] text-left">
                 <thead className="bg-slate-50 text-sm text-slate-600">
                   <tr>
-                    <th className="px-5 py-4">Nombre</th>
-                    <th className="px-5 py-4">Placa</th>
-                    <th className="px-5 py-4">Marca</th>
-                    <th className="px-5 py-4">Modelo</th>
-                    <th className="px-5 py-4">Estado</th>
-                    <th className="px-5 py-4">Activo</th>
-                    <th className="px-5 py-4">Acciones</th>
+                    <th className="px-5 py-4">
+                      Nombre
+                    </th>
+
+                    <th className="px-5 py-4">
+                      Placa
+                    </th>
+
+                    <th className="px-5 py-4">
+                      Marca
+                    </th>
+
+                    <th className="px-5 py-4">
+                      Modelo
+                    </th>
+
+                    <th className="px-5 py-4">
+                      Estado
+                    </th>
+
+                    <th className="px-5 py-4">
+                      Activo
+                    </th>
+
+                    <th className="px-5 py-4">
+                      Acciones
+                    </th>
                   </tr>
                 </thead>
 
@@ -245,10 +327,6 @@ export default async function VehiculosPage() {
                           >
                             <option value="Disponible">
                               Disponible
-                            </option>
-
-                            <option value="En ruta">
-                              En ruta
                             </option>
 
                             <option value="En mantenimiento">
