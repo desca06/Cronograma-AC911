@@ -198,6 +198,7 @@ export default async function UsuariosPage({
               >
                 <option value="TECNICO">Técnico</option>
                 <option value="SUPERVISOR">Supervisor</option>
+                <option value="ADMIN">Administrador</option>
               </select>
             </div>
 
@@ -335,9 +336,8 @@ export default async function UsuariosPage({
                         className="w-full rounded-xl border border-slate-300 px-4 py-3 disabled:bg-slate-100"
                       >
                         <option value="TECNICO">Técnico</option>
-                        <option value="SUPERVISOR">
-                          Supervisor
-                        </option>
+                        <option value="SUPERVISOR">Supervisor</option>
+                        <option value="ADMIN">Administrador</option>
                       </select>
                     </div>
 

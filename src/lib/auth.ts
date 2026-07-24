@@ -132,9 +132,22 @@ export async function eliminarSesion(): Promise<void> {
 export async function requerirSupervisor(): Promise<DatosSesion> {
   const sesion = await requerirSesion();
 
-  if (sesion.rol !== "SUPERVISOR") {
+  if (
+    sesion.rol !== "SUPERVISOR" &&
+    sesion.rol !== "ADMIN"
+  ) {
     redirect("/mis-trabajos");
   }
 
   return sesion;
 }
+
+export async function requerirAdmin(): Promise<DatosSesion> {
+  const sesion = await requerirSesion();
+
+  if (sesion.rol !== "ADMIN") {
+    redirect("/dashboard");
+  }
+
+  return sesion;
+} 

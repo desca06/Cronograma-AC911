@@ -62,7 +62,9 @@ export async function crearUsuario(
   }
 
   const rolFinal =
-    rolRecibido === "SUPERVISOR"
+    rolRecibido === "ADMIN"
+      ? "ADMIN"
+      : rolRecibido === "SUPERVISOR"
       ? "SUPERVISOR"
       : "TECNICO";
 
@@ -186,8 +188,9 @@ export async function actualizarUsuario(
     id === sesion.usuarioId;
 
   const rolFinal = esUsuarioActual
-    ? "SUPERVISOR"
-    : rolRecibido === "SUPERVISOR"
+    rolRecibido === "ADMIN"
+      ? "ADMIN"
+      : rolRecibido === "SUPERVISOR"
       ? "SUPERVISOR"
       : "TECNICO";
 
