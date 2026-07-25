@@ -1,5 +1,4 @@
 import {
-  CalendarDays,
   CheckCircle2,
   Clock3,
   HeartPulse,
@@ -10,13 +9,14 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { requerirAdmin } from "@/lib/auth";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
 const resumen = [
   {
     titulo: "Presentes hoy",
-    cantidad: 8,
+    cantidad: 0,
     icono: UserRoundCheck,
     estilos: {
       borde: "border-emerald-200",
@@ -28,7 +28,7 @@ const resumen = [
   },
   {
     titulo: "Tardanzas",
-    cantidad: 2,
+    cantidad: 0,
     icono: Clock3,
     estilos: {
       borde: "border-amber-200",
@@ -40,7 +40,7 @@ const resumen = [
   },
   {
     titulo: "Ausentes",
-    cantidad: 1,
+    cantidad: 0,
     icono: UserMinus,
     estilos: {
       borde: "border-red-200",
@@ -52,7 +52,7 @@ const resumen = [
   },
   {
     titulo: "Permisos",
-    cantidad: 1,
+    cantidad: 0,
     icono: HeartPulse,
     estilos: {
       borde: "border-blue-200",
@@ -64,44 +64,15 @@ const resumen = [
   },
 ];
 
-const asistenciasEjemplo = [
-  {
-    id: 1,
-    empleado: "Carlos Godoy",
-    fecha: "25/07/2026",
-    entrada: "07:55",
-    salida: "17:05",
-    estado: "PRESENTE",
-    observacion: "Jornada completa",
-  },
-  {
-    id: 2,
-    empleado: "Rubén López",
-    fecha: "25/07/2026",
-    entrada: "08:18",
-    salida: "17:00",
-    estado: "TARDE",
-    observacion: "18 minutos de retraso",
-  },
-  {
-    id: 3,
-    empleado: "José Martínez",
-    fecha: "25/07/2026",
-    entrada: "—",
-    salida: "—",
-    estado: "AUSENTE",
-    observacion: "Sin justificación",
-  },
-  {
-    id: 4,
-    empleado: "Luis Pérez",
-    fecha: "25/07/2026",
-    entrada: "—",
-    salida: "—",
-    estado: "PERMISO",
-    observacion: "Cita médica",
-  },
-];
+const asistenciasEjemplo : {
+    id: number;
+    empleado: string;
+    fecha: string;
+    entrada: string;
+    salida: string;
+    estado: string;
+    observacion: string;
+}[] = [];
 
 function obtenerEstiloEstado(estado: string) {
   switch (estado) {
@@ -147,13 +118,13 @@ export default async function AsistenciasPage() {
             </p>
           </div>
 
-          <button
-            type="button"
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-700"
-          >
-            <CheckCircle2 size={18} />
-            Registrar asistencia
-          </button>
+          <Link
+                href="/administracion/rh/asistencias/nueva"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-700"
+                >
+                <CheckCircle2 size={18} />
+                Registrar asistencia
+            </Link>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
