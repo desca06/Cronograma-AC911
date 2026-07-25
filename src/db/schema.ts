@@ -6,6 +6,9 @@ import {
   serial,
   text,
   timestamp,
+  date,
+  time,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const empleados = pgTable("empleados", {
@@ -119,6 +122,44 @@ export const evidencias = pgTable("evidencias", {
   creadoEn: timestamp("creado_en", { mode: "string" }).notNull().defaultNow(),
 });
 
+export const asistencias = pgTable(
+  "asistencias",
+  {
+    id: serial("id").primaryKey(),
+
+    empleadoId: integer("empleado_id")
+      .notNull()
+      .references(() => empleados.id, {
+        onDelete: "restrict",
+      }),
+
+    fecha: date("fecha", { mode: "string" }).notNull(),
+
+    horaEntrada: time("hora_entrada", {
+      withTimezone: false,
+    }),
+
+    horaSalida: time("hora_salida", {
+      withTimezone: false,
+    }),
+
+    estado: text("estado").notNull().default("PRESENTE"),
+
+    observacion: text("observacion"),
+
+    creadoEn: timestamp("creado_en", {
+      mode: "string",
+    })
+      .notNull()
+      .defaultNow(),
+  },
+  (tabla) => ({
+    empleadoFechaUnica: uniqueIndex(
+      "asistencias_empleado_fecha_unique",
+    ).on(tabla.empleadoId, tabla.fecha),
+  }),
+);
+
 export type Notificacion = typeof notificaciones.$inferSelect;
 export type NuevaNotificacion = typeof notificaciones.$inferInsert;
 export type Evidencia = typeof evidencias.$inferSelect;
@@ -135,3 +176,5 @@ export type Trabajo = typeof trabajos.$inferSelect;
 export type NuevoTrabajo = typeof trabajos.$inferInsert;
 export type SuscripcionPush = typeof suscripcionesPush.$inferSelect;
 export type NuevaSuscripcionPush = typeof suscripcionesPush.$inferInsert;
+export type Asistencia = typeof asistencias.$inferSelect;
+export type NuevaAsistencia = typeof asistencias.$inferInsert;
