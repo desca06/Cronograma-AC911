@@ -187,7 +187,7 @@ export async function actualizarUsuario(
   const esUsuarioActual =
     id === sesion.usuarioId;
 
-  const rolFinal = esUsuarioActual
+  const rolFinal = 
     rolRecibido === "ADMIN"
       ? "ADMIN"
       : rolRecibido === "SUPERVISOR"
