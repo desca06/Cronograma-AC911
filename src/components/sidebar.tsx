@@ -81,7 +81,7 @@ const opciones = [
     roles: ["TECNICO", "SUPERVISOR" ],
   },
   {
-    href: "/Administración",
+    href: "/administracion",
     nombre: "Administración",
     icono: Folders,
     roles: ["ADMIN"],
