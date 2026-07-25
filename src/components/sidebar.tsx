@@ -2,17 +2,17 @@
 
 import {
   BriefcaseBusiness,
-  Building2,
-  CalendarDays,
+  CalendarCheck,
   CarFront,
   ClipboardList,
-  Gauge,
+  Folders,
+  Handshake,
+  House,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
-  Settings,
   UserCog,
-  UsersRound,
+  UserPlus,
   Wrench,
 } from "lucide-react";
 import Link from "next/link";
@@ -29,7 +29,7 @@ const opciones = [
   {
     href: "/dashboard",
     nombre: "Dashboard",
-    icono: Gauge,
+    icono: House,
     roles: ["ADMIN", "SUPERVISOR"],
   },
   {
@@ -41,19 +41,19 @@ const opciones = [
   {
     href: "/cronograma",
     nombre: "Cronograma",
-    icono: CalendarDays,
+    icono: CalendarCheck,
     roles: ["ADMIN", "SUPERVISOR"],
   },
   {
     href: "/empleados",
     nombre: "Empleados",
-    icono: UsersRound,
+    icono: UserPlus,
     roles: ["ADMIN"],
   },
   {
     href: "/clientes",
     nombre: "Clientes",
-    icono: Building2,
+    icono: Handshake,
     roles: ["ADMIN"],
   },
   {
@@ -79,6 +79,12 @@ const opciones = [
     nombre: "Historial",
     icono: ClipboardList,
     roles: ["TECNICO", "SUPERVISOR" ],
+  },
+  {
+    href: "/Adminitrativa",
+    nombre: "Área Administrativa",
+    icono: Folders,
+    roles: ["ADMIN"],
   }
 ];
 

@@ -3,14 +3,19 @@
 import {
   BriefcaseBusiness,
   Building2,
+  CalendarCheck,
   CalendarDays,
   CarFront,
   ClipboardList,
+  Folders,
   Gauge,
+  Handshake,
+  House,
   LogOut,
   Menu,
   Settings,
   UserCog,
+  UserPlus,
   UsersRound,
   X,
 } from "lucide-react";
@@ -27,7 +32,7 @@ const opciones = [
   {
     href: "/dashboard",
     nombre: "Dashboard",
-    icono: Gauge,
+    icono: House,
     roles: ["ADMIN", "SUPERVISOR"],
   },
   {
@@ -39,19 +44,19 @@ const opciones = [
   {
     href: "/cronograma",
     nombre: "Cronograma",
-    icono: CalendarDays,
+    icono: CalendarCheck,
     roles: ["ADMIN", "SUPERVISOR"],
   },
   {
     href: "/empleados",
     nombre: "Empleados",
-    icono: UsersRound,
+    icono: UserPlus,
     roles: ["ADMIN",],
   },
   {
     href: "/clientes",
     nombre: "Clientes",
-    icono: Building2,
+    icono: Handshake,
     roles: ["ADMIN"],
   },
   {
@@ -77,7 +82,13 @@ const opciones = [
     nombre: "Historial",
     icono: ClipboardList,
     roles: ["TECNICO", "SUPERVISOR"],
-  }
+  },
+  {
+      href: "/Adminitrativa",
+      nombre: "Área Administrativa",
+      icono: Folders,
+      roles: ["ADMIN"],
+    }
 ];
 
 export function MobileSidebar({
