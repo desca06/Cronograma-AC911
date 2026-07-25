@@ -32,7 +32,7 @@ const modulosRH = [
       "Controla las entradas, salidas y jornadas laborales de los empleados.",
     href: "/administracion/rh/asistencias",
     icono: Clock3,
-    disponible: false,
+    disponible: true,
     estilos: {
       borde: "border-emerald-200",
       fondoIcono: "bg-emerald-100",
