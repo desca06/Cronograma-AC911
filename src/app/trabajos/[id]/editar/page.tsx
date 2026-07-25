@@ -188,25 +188,14 @@ export default async function EditarTrabajoPage({
               <option value="Instalación">
                 Instalación
               </option>
-
               <option value="Mantenimiento">
                 Mantenimiento
               </option>
-
               <option value="Reparación">
                 Reparación
               </option>
-
-              <option value="Diagnóstico">
-                Diagnóstico
-              </option>
-
-              <option value="Supervisión">
-                Supervisión
-              </option>
-
-              <option value="Otro">
-                Otro
+              <option value="Visita Técnica">
+                Visita Técnica
               </option>
             </select>
           </div>

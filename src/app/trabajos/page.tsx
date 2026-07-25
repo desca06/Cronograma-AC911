@@ -369,14 +369,8 @@ export default async function TrabajosPage({
                 <option value="Reparación">
                   Reparación
                 </option>
-                <option value="Diagnóstico">
-                  Diagnóstico
-                </option>
-                <option value="Supervisión">
-                  Supervisión
-                </option>
-                <option value="Otro">
-                  Otro
+                <option value="Visita Técnica">
+                  Visita Técnica
                 </option>
               </select>
             </div>
