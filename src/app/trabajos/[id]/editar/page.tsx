@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, desc, inArray } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -57,11 +57,21 @@ export default async function EditarTrabajoPage({
 ;
 
   const listaEmpleados = await db
-    .select()
-    .from(empleados)
-    .where(eq(empleados.activo, true))
-    .orderBy(asc(empleados.nombre))
-;
+  .select()
+  .from(empleados)
+  .where(
+    and(
+      eq(empleados.activo, true),
+      inArray(
+        empleados.puesto,
+        [
+          "Técnico",
+          "Supervisor",
+        ],
+      ),
+    ),
+  )
+  .orderBy(asc(empleados.nombre));
 
   const asignaciones = await db
     .select({

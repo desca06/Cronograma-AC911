@@ -1,4 +1,4 @@
-import { asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import Link from "next/link";
 
 import { db } from "@/db";
@@ -102,12 +102,22 @@ export default async function TrabajosPage({
     .orderBy(asc(vehiculos.nombre))
 ;
 
-  const listaEmpleados = await db
-    .select()
-    .from(empleados)
-    .where(eq(empleados.activo, true))
-    .orderBy(asc(empleados.nombre))
-;
+ const listaEmpleados = await db
+  .select()
+  .from(empleados)
+  .where(
+    and(
+      eq(empleados.activo, true),
+      inArray(
+        empleados.puesto,
+        [
+          "Técnico",
+          "Supervisor",
+        ],
+      ),
+    ),
+  )
+  .orderBy(asc(empleados.nombre));
 
   const listaTrabajos = await db
     .select({
