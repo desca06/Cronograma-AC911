@@ -84,11 +84,11 @@ const opciones = [
     roles: ["TECNICO", "SUPERVISOR"],
   },
   {
-      href: "/Administración",
-      nombre: "Administración",
-      icono: Folders,
-      roles: ["ADMIN"],
-    }
+    href: "/administracion",
+    nombre: "Administración",
+    icono: Folders,
+    roles: ["ADMIN"],
+  }
 ];
 
 export function MobileSidebar({
