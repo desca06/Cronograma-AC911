@@ -10,13 +10,43 @@ import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { requerirAdmin } from "@/lib/auth";
 import Link from "next/link";
+import { eq, desc, sql} from "drizzle-orm";
+
+import { db } from "@/db";
+import { asistencias, empleados } from "@/db/schema";
+
 
 export const dynamic = "force-dynamic";
+const fechaHoy = new Date().toISOString().split("T")[0];
 
+const resumenHoy = await db
+  .select({
+    estado: asistencias.estado,
+    cantidad: sql<number>`count(*)::int`,
+  })
+  .from(asistencias)
+  .where(eq(asistencias.fecha, fechaHoy))
+  .groupBy(asistencias.estado);
+
+const cantidades = {
+  PRESENTE: 0,
+  TARDE: 0,
+  AUSENTE: 0,
+  PERMISO: 0,
+  VACACIONES: 0,
+};
+
+for (const registro of resumenHoy) {
+  if (registro.estado in cantidades) {
+    cantidades[
+      registro.estado as keyof typeof cantidades
+    ] = registro.cantidad;
+  }
+}
 const resumen = [
   {
     titulo: "Presentes hoy",
-    cantidad: 0,
+    cantidad: cantidades.PRESENTE,
     icono: UserRoundCheck,
     estilos: {
       borde: "border-emerald-200",
@@ -28,7 +58,7 @@ const resumen = [
   },
   {
     titulo: "Tardanzas",
-    cantidad: 0,
+    cantidad: cantidades.TARDE,
     icono: Clock3,
     estilos: {
       borde: "border-amber-200",
@@ -40,7 +70,7 @@ const resumen = [
   },
   {
     titulo: "Ausentes",
-    cantidad: 0,
+    cantidad: cantidades.AUSENTE,
     icono: UserMinus,
     estilos: {
       borde: "border-red-200",
@@ -52,7 +82,7 @@ const resumen = [
   },
   {
     titulo: "Permisos",
-    cantidad: 0,
+    cantidad: cantidades.PERMISO,
     icono: HeartPulse,
     estilos: {
       borde: "border-blue-200",
@@ -98,6 +128,27 @@ function obtenerEstiloEstado(estado: string) {
 
 export default async function AsistenciasPage() {
   await requerirAdmin();
+  const listaAsistencias = await db
+  .select({
+    id: asistencias.id,
+    empleado: empleados.nombre,
+    fecha: asistencias.fecha,
+    horaEntrada: asistencias.horaEntrada,
+    horaSalida: asistencias.horaSalida,
+    estado: asistencias.estado,
+    observacion: asistencias.observacion,
+  })
+  .from(asistencias)
+  .innerJoin(
+    empleados,
+    eq(asistencias.empleadoId, empleados.id),
+  )
+  .orderBy(
+    desc(asistencias.fecha),
+    desc(asistencias.id),
+  );
+
+  
 
   return (
     <AppShell>
@@ -186,39 +237,39 @@ export default async function AsistenciasPage() {
               </thead>
 
               <tbody className="divide-y divide-slate-100">
-                {asistenciasEjemplo.map((asistencia) => (
+                {listaAsistencias.map((asistencia) => (
                   <tr
                     key={asistencia.id}
                     className="text-sm text-slate-700 transition hover:bg-slate-50"
                   >
                     <td className="whitespace-nowrap px-5 py-4 font-semibold text-slate-900">
-                      {asistencia.empleado}
+                        {asistencia.empleado}
                     </td>
 
                     <td className="whitespace-nowrap px-5 py-4">
-                      {asistencia.fecha}
+                        {asistencia.fecha}
                     </td>
 
                     <td className="whitespace-nowrap px-5 py-4">
-                      {asistencia.entrada}
+                        {asistencia.horaEntrada || "—"}
                     </td>
 
                     <td className="whitespace-nowrap px-5 py-4">
-                      {asistencia.salida}
+                        {asistencia.horaSalida || "—"}
                     </td>
 
                     <td className="whitespace-nowrap px-5 py-4">
-                      <span
+                    <span
                         className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${obtenerEstiloEstado(
-                          asistencia.estado,
+                        asistencia.estado,
                         )}`}
-                      >
+                    >
                         {asistencia.estado}
-                      </span>
+                    </span>
                     </td>
 
                     <td className="min-w-[220px] px-5 py-4">
-                      {asistencia.observacion}
+                    {asistencia.observacion || "Sin observación"}
                     </td>
 
                     <td className="whitespace-nowrap px-5 py-4">
