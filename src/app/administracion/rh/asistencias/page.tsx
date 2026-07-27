@@ -116,8 +116,19 @@ function obtenerEstiloEstado(estado: string) {
   }
 }
 
-export default async function AsistenciasPage() {
+type AsistenciasPageProps = {
+  searchParams: Promise<{
+    eliminada?: string;
+  }>;
+};
+
+export default async function AsistenciasPage({
+  searchParams,
+}: AsistenciasPageProps){
   await requerirAdmin();
+
+  const parametros = await searchParams;
+
   const listaAsistencias = await db
   .select({
     id: asistencias.id,
@@ -133,12 +144,8 @@ export default async function AsistenciasPage() {
     empleados,
     eq(asistencias.empleadoId, empleados.id),
   )
-  .orderBy(
-    desc(asistencias.fecha),
-    desc(asistencias.id),
-  );
+  .orderBy(desc(asistencias.fecha));
 
-  
 
   return (
     <AppShell>
@@ -146,6 +153,12 @@ export default async function AsistenciasPage() {
         title="Control de Asistencias"
         description="Gestiona entradas, salidas y estados laborales del personal"
       />
+
+      {parametros.eliminada === "true" && (
+        <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+          La asistencia fue eliminada correctamente.
+        </div>
+      )}
 
       <section className="space-y-6 p-5 md:p-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

@@ -7,7 +7,6 @@ import {
   Clock3,
   FileText,
   Pencil,
-  Trash2,
   UserRound,
 } from "lucide-react";
 import { eq } from "drizzle-orm";
@@ -17,6 +16,7 @@ import { asistencias, empleados } from "@/db/schema";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { requerirAdmin } from "@/lib/auth";
+import { BotonEliminar } from "./boton-eliminar";
 
 export const dynamic = "force-dynamic";
 
@@ -114,15 +114,10 @@ export default async function DetalleAsistenciaPage({
                 Editar
               </Link>
 
-              <button
-                type="button"
-                disabled
-                title="Lo activaremos en el siguiente paso"
-                className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white opacity-50"
-              >
-                <Trash2 size={17} />
-                Eliminar
-              </button>
+              <BotonEliminar
+                asistenciaId={asistencia.id}
+                empleado={asistencia.empleado}
+              />
             </div>
           </div>
 
