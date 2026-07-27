@@ -46,7 +46,7 @@ const modulosRH = [
       "Gestiona solicitudes, días disponibles y vacaciones aprobadas.",
     href: "/administracion/rh/vacaciones",
     icono: CalendarDays,
-    disponible: false,
+    disponible: true,
     estilos: {
       borde: "border-orange-200",
       fondoIcono: "bg-orange-100",
