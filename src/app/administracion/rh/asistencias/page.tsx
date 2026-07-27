@@ -94,16 +94,6 @@ const resumen = [
   },
 ];
 
-const asistenciasEjemplo : {
-    id: number;
-    empleado: string;
-    fecha: string;
-    entrada: string;
-    salida: string;
-    estado: string;
-    observacion: string;
-}[] = [];
-
 function obtenerEstiloEstado(estado: string) {
   switch (estado) {
     case "PRESENTE":
