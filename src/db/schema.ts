@@ -160,6 +160,51 @@ export const asistencias = pgTable(
   }),
 );
 
+export const vacaciones = pgTable("vacaciones", {
+  id: serial("id").primaryKey(),
+
+  empleadoId: integer("empleado_id")
+    .notNull()
+    .references(() => empleados.id, {
+      onDelete: "restrict",
+    }),
+
+  fechaInicio: date("fecha_inicio", {
+    mode: "string",
+  }).notNull(),
+
+  fechaFin: date("fecha_fin", {
+    mode: "string",
+  }).notNull(),
+
+  cantidadDias: integer("cantidad_dias").notNull(),
+
+  estado: text("estado")
+    .notNull()
+    .default("PENDIENTE"),
+
+  observacion: text("observacion"),
+
+  autorizadoPor: integer("autorizado_por").references(
+    () => usuarios.id,
+    {
+      onDelete: "set null",
+    },
+  ),
+
+  creadoEn: timestamp("creado_en", {
+    mode: "string",
+  })
+    .notNull()
+    .defaultNow(),
+
+  actualizadoEn: timestamp("actualizado_en", {
+    mode: "string",
+  })
+    .notNull()
+    .defaultNow(),
+});
+
 export type Notificacion = typeof notificaciones.$inferSelect;
 export type NuevaNotificacion = typeof notificaciones.$inferInsert;
 export type Evidencia = typeof evidencias.$inferSelect;
@@ -178,3 +223,5 @@ export type SuscripcionPush = typeof suscripcionesPush.$inferSelect;
 export type NuevaSuscripcionPush = typeof suscripcionesPush.$inferInsert;
 export type Asistencia = typeof asistencias.$inferSelect;
 export type NuevaAsistencia = typeof asistencias.$inferInsert;
+export type Vacacion = typeof vacaciones.$inferInsert;
+export type NuevaVacacion = typeof vacaciones.$inferInsert;
