@@ -9,7 +9,6 @@ import { actualizarPermiso } from "../../actions";
 type Empleado = {
   id: number;
   nombre: string;
-  puesto: string;
 };
 
 type FormularioEditarPermisoProps = {
@@ -85,7 +84,7 @@ export function FormularioEditarPermiso({
                 key={empleado.id}
                 value={empleado.id}
               >
-                {empleado.nombre} — {empleado.puesto}
+                {empleado.nombre}
               </option>
             ))}
           </select>

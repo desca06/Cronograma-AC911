@@ -73,8 +73,7 @@ export default async function EditarPermisoPage({
   const listaEmpleados = await db
     .select({
       id: empleados.id,
-      nombre: empleados.nombre,
-      puesto: empleados.puesto,
+      nombre: empleados.nombre
     })
     .from(empleados)
     .where(eq(empleados.activo, true))
