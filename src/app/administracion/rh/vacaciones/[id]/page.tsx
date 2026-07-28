@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   Clock3,
   Edit,
-  Trash2,
   UserRound,
   XCircle,
 } from "lucide-react";
@@ -22,6 +21,7 @@ import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { requerirAdmin } from "@/lib/auth";
 import { BotonesAutorizacion } from "./botones-autorizacion";
+import { BotonEliminar } from "./boton-eliminar";
 
 export const dynamic = "force-dynamic";
 
@@ -176,6 +176,12 @@ export default async function DetalleVacacionPage({
           </div>
         )}
 
+        {parametros.error === "eliminar" && (
+          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+            La solicitud no pudo eliminarse. Solo se pueden eliminar solicitudes pendientes.
+          </div>
+        )}
+
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <Link
             href="/administracion/rh/vacaciones"
@@ -194,15 +200,11 @@ export default async function DetalleVacacionPage({
               Editar
             </Link>
 
-            <button
-              type="button"
-              disabled
-              title="Lo activaremos en el siguiente paso"
-              className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-400 opacity-70"
-            >
-              <Trash2 size={17} />
-              Eliminar
-            </button>
+            <BotonEliminar
+              vacacionId={vacacion.id}
+              empleado={vacacion.empleado}
+              permitido={vacacion.estado === "PENDIENTE"}
+            />
           </div>
         </div>
 

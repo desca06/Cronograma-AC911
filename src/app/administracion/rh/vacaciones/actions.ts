@@ -246,3 +246,35 @@ export async function actualizarVacacion(
     `/administracion/rh/vacaciones/${vacacionId}?actualizada=true`,
   );
 }
+
+export async function eliminarVacacion(vacacionId: number) {
+  await requerirAdmin();
+
+  if (!Number.isInteger(vacacionId) || vacacionId <= 0) {
+    redirect("/administracion/rh/vacaciones");
+  }
+
+  const resultado = await db
+    .delete(vacaciones)
+    .where(
+      and(
+        eq(vacaciones.id, vacacionId),
+        eq(vacaciones.estado, "PENDIENTE"),
+      ),
+    )
+    .returning({
+      id: vacaciones.id,
+    });
+
+  if (!resultado[0]) {
+    redirect(
+      `/administracion/rh/vacaciones/${vacacionId}?error=eliminar`,
+    );
+  }
+
+  revalidatePath("/administracion/rh/vacaciones");
+
+  redirect(
+    "/administracion/rh/vacaciones?eliminada=true",
+  );
+} 
