@@ -1,6 +1,6 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -123,5 +123,95 @@ export async function eliminarPermiso(
 
   redirect(
     "/administracion/rh/permisos?eliminado=true",
+  );
+}
+
+export async function aprobarPermiso(
+  permisoId: number,
+) {
+  const sesion = await requerirAdmin();
+
+  if (
+    !Number.isInteger(permisoId) ||
+    permisoId <= 0
+  ) {
+    redirect("/administracion/rh/permisos");
+  }
+
+  const resultado = await db
+    .update(permisos)
+    .set({
+      estado: "APROBADO",
+      autorizadoPor: sesion.usuarioId,
+      actualizadoEn: new Date().toISOString(),
+    })
+    .where(
+      and(
+        eq(permisos.id, permisoId),
+        eq(permisos.estado, "PENDIENTE"),
+      ),
+    )
+    .returning({
+      id: permisos.id,
+    });
+
+  if (!resultado[0]) {
+    redirect(
+      `/administracion/rh/permisos/${permisoId}?error=estado`,
+    );
+  }
+
+  revalidatePath("/administracion/rh/permisos");
+  revalidatePath(
+    `/administracion/rh/permisos/${permisoId}`,
+  );
+
+  redirect(
+    `/administracion/rh/permisos/${permisoId}?aprobado=true`,
+  );
+}
+
+export async function rechazarPermiso(
+  permisoId: number,
+) {
+  const sesion = await requerirAdmin();
+
+  if (
+    !Number.isInteger(permisoId) ||
+    permisoId <= 0
+  ) {
+    redirect("/administracion/rh/permisos");
+  }
+
+  const resultado = await db
+    .update(permisos)
+    .set({
+      estado: "RECHAZADO",
+      autorizadoPor: sesion.usuarioId,
+      actualizadoEn: new Date().toISOString(),
+    })
+    .where(
+      and(
+        eq(permisos.id, permisoId),
+        eq(permisos.estado, "PENDIENTE"),
+      ),
+    )
+    .returning({
+      id: permisos.id,
+    });
+
+  if (!resultado[0]) {
+    redirect(
+      `/administracion/rh/permisos/${permisoId}?error=estado`,
+    );
+  }
+
+  revalidatePath("/administracion/rh/permisos");
+  revalidatePath(
+    `/administracion/rh/permisos/${permisoId}`,
+  );
+
+  redirect(
+    `/administracion/rh/permisos/${permisoId}?rechazado=true`,
   );
 }
