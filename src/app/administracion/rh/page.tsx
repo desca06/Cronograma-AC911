@@ -74,7 +74,7 @@ const modulosRH = [
       "Consulta documentos, contratos y datos laborales de cada empleado.",
     href: "/administracion/rh/expedientes",
     icono: IdCard,
-    disponible: false,
+    disponible: true,
     estilos: {
       borde: "border-rose-200",
       fondoIcono: "bg-rose-100",
