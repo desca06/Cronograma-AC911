@@ -1,0 +1,83 @@
+"use server";
+
+import { and, eq } from "drizzle-orm";
+import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+
+import { db } from "@/db";
+import { empleados, vacaciones } from "@/db/schema";
+import { requerirAdmin } from "@/lib/auth";
+
+function calcularCantidadDias(
+  fechaInicio: string,
+  fechaFin: string,
+) {
+  const inicio = new Date(`${fechaInicio}T00:00:00Z`);
+  const fin = new Date(`${fechaFin}T00:00:00Z`);
+
+  const diferencia = fin.getTime() - inicio.getTime();
+
+  return Math.floor(diferencia / 86_400_000) + 1;
+}
+
+export async function crearVacacion(formData: FormData) {
+  await requerirAdmin();
+
+  const empleadoId = Number(formData.get("empleadoId"));
+  const fechaInicio = String(formData.get("fechaInicio") ?? "");
+  const fechaFin = String(formData.get("fechaFin") ?? "");
+  const observacion =
+    String(formData.get("observacion") ?? "").trim() || null;
+
+  if (
+    !Number.isInteger(empleadoId) ||
+    empleadoId <= 0 ||
+    !fechaInicio ||
+    !fechaFin
+  ) {
+    redirect(
+      "/administracion/rh/vacaciones/nueva?error=datos",
+    );
+  }
+
+  const cantidadDias = calcularCantidadDias(
+    fechaInicio,
+    fechaFin,
+  );
+
+  if (cantidadDias <= 0) {
+    redirect(
+      "/administracion/rh/vacaciones/nueva?error=fechas",
+    );
+  }
+
+  const empleado = await db
+    .select({ id: empleados.id })
+    .from(empleados)
+    .where(
+      and(
+        eq(empleados.id, empleadoId),
+        eq(empleados.activo, true),
+      ),
+    )
+    .limit(1);
+
+  if (!empleado[0]) {
+    redirect(
+      "/administracion/rh/vacaciones/nueva?error=empleado",
+    );
+  }
+
+  await db.insert(vacaciones).values({
+    empleadoId,
+    fechaInicio,
+    fechaFin,
+    cantidadDias,
+    estado: "PENDIENTE",
+    observacion,
+  });
+
+  revalidatePath("/administracion/rh/vacaciones");
+
+  redirect("/administracion/rh/vacaciones?creada=true");
+}
