@@ -256,6 +256,58 @@ export const permisos = pgTable("permisos", {
     .defaultNow(),
 });
 
+export const expedientes = pgTable("expedientes", {
+  id: serial("id").primaryKey(),
+
+  empleadoId: integer("empleado_id")
+    .notNull()
+    .unique()
+    .references(() => empleados.id, {
+      onDelete: "restrict",
+    }),
+
+  codigo: text("codigo").unique(),
+
+  dpi: text("dpi").notNull(),
+
+  nit: text("nit"),
+
+  igss: text("igss"),
+
+  fechaIngreso: date("fecha_ingreso", {
+    mode: "string",
+  }).notNull(),
+
+  contactoEmergencia: text(
+    "contacto_emergencia",
+  ).notNull(),
+
+  telefonoEmergencia: text(
+    "telefono_emergencia",
+  ).notNull(),
+
+  direccion: text("direccion").notNull(),
+
+  observaciones: text("observaciones"),
+
+  estado: text("estado")
+    .notNull()
+    .default("ACTIVO"),
+
+  creadoEn: timestamp("creado_en", {
+    mode: "string",
+  })
+    .notNull()
+    .defaultNow(),
+
+  actualizadoEn: timestamp("actualizado_en", {
+    mode: "string",
+  })
+    .notNull()
+    .defaultNow(),
+});
+
+
 export type Notificacion = typeof notificaciones.$inferSelect;
 export type NuevaNotificacion = typeof notificaciones.$inferInsert;
 export type Evidencia = typeof evidencias.$inferSelect;
@@ -278,3 +330,5 @@ export type Vacacion = typeof vacaciones.$inferSelect;
 export type NuevaVacacion = typeof vacaciones.$inferInsert;
 export type Permiso = typeof permisos.$inferSelect;
 export type NuevoPermiso = typeof permisos.$inferInsert;
+export type Expediente = typeof expedientes.$inferSelect;
+export type NuevoExpediente = typeof expedientes.$inferInsert;
