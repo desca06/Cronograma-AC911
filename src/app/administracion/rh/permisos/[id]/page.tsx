@@ -20,6 +20,7 @@ import {
 import { requerirAdmin } from "@/lib/auth";
 
 import { BotonesAutorizacion } from "./botones-autorizacion";
+import { BotonEliminar } from "./boton-eliminar";
 
 export const dynamic = "force-dynamic";
 
@@ -142,7 +143,7 @@ export default async function DetallePermisoPage({
     <AppShell>
       <PageHeader
         title="Detalle del permiso"
-        description="Consultá la información completa de la solicitud."
+        description="Consulte la información completa de la solicitud."
       />
 
       <section className="p-5 md:p-8">
@@ -202,6 +203,7 @@ export default async function DetallePermisoPage({
 
             <div className="flex flex-col gap-3 sm:flex-row">
               {permiso.estado === "PENDIENTE" &&(
+                <>
                 <Link
                   href={`/administracion/rh/permisos/${permiso.id}/editar`}
                   className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
@@ -209,6 +211,13 @@ export default async function DetallePermisoPage({
                   <FilePenLine size={17} />
                   Editar
                 </Link>
+
+                <BotonEliminar
+                  permisoId={permiso.id}
+                  empleado={permiso.empleado}
+                  permitido={true}
+                  />
+                </>
               )}
 
               <BotonesAutorizacion
