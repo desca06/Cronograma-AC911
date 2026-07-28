@@ -60,7 +60,7 @@ const modulosRH = [
       "Registra y administra permisos laborales y ausencias justificadas.",
     href: "/administracion/rh/permisos",
     icono: FileText,
-    disponible: false,
+    disponible: true,
     estilos: {
       borde: "border-purple-200",
       fondoIcono: "bg-purple-100",
