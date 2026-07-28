@@ -161,3 +161,88 @@ export async function rechazarVacacion(vacacionId: number) {
     `/administracion/rh/vacaciones/${vacacionId}?rechazada=true`,
   );
 }
+
+export async function actualizarVacacion(
+  vacacionId: number,
+  formData: FormData,
+) {
+  await requerirAdmin();
+
+  const empleadoId = Number(formData.get("empleadoId"));
+  const fechaInicio = String(
+    formData.get("fechaInicio") ?? "",
+  ).trim();
+  const fechaFin = String(
+    formData.get("fechaFin") ?? "",
+  ).trim();
+  const observacion = String(
+    formData.get("observacion") ?? "",
+  ).trim();
+
+  if (!Number.isInteger(vacacionId) || vacacionId <= 0) {
+    redirect("/administracion/rh/vacaciones");
+  }
+
+  if (
+    !Number.isInteger(empleadoId) ||
+    empleadoId <= 0 ||
+    !fechaInicio ||
+    !fechaFin
+  ) {
+    redirect(
+      `/administracion/rh/vacaciones/${vacacionId}/editar?error=campos`,
+    );
+  }
+
+  const inicio = new Date(`${fechaInicio}T00:00:00`);
+  const fin = new Date(`${fechaFin}T00:00:00`);
+
+  if (
+    Number.isNaN(inicio.getTime()) ||
+    Number.isNaN(fin.getTime())
+  ) {
+    redirect(
+      `/administracion/rh/vacaciones/${vacacionId}/editar?error=fechas`,
+    );
+  }
+
+  if (fin < inicio) {
+    redirect(
+      `/administracion/rh/vacaciones/${vacacionId}/editar?error=rango`,
+    );
+  }
+
+  const diferencia =
+    fin.getTime() - inicio.getTime();
+
+  const cantidadDias =
+    Math.floor(diferencia / 86_400_000) + 1;
+
+  const resultado = await db
+    .update(vacaciones)
+    .set({
+      empleadoId,
+      fechaInicio,
+      fechaFin,
+      cantidadDias,
+      observacion: observacion || null,
+      actualizadoEn: new Date().toISOString(),
+    })
+    .where(eq(vacaciones.id, vacacionId))
+    .returning({
+      id: vacaciones.id,
+    });
+
+  if (!resultado[0]) {
+    redirect("/administracion/rh/vacaciones");
+  }
+
+  revalidatePath("/administracion/rh/vacaciones");
+  revalidatePath(
+    `/administracion/rh/vacaciones/${vacacionId}`,
+  );
+
+  redirect(
+    `/administracion/rh/vacaciones/${vacacionId}?actualizada=true`,
+  );
+}
