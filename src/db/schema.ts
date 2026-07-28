@@ -205,6 +205,57 @@ export const vacaciones = pgTable("vacaciones", {
     .defaultNow(),
 });
 
+export const permisos = pgTable("permisos", {
+  id: serial("id").primaryKey(),
+
+  empleadoId: integer("empleado_id")
+    .notNull()
+    .references(() => empleados.id, {
+      onDelete: "restrict",
+    }),
+
+  tipo: text("tipo").notNull(),
+
+  fecha: date("fecha", {
+    mode: "string",
+  }).notNull(),
+
+  horaInicio: time("hora_inicio", {
+    withTimezone: false,
+  }).notNull(),
+
+  horaFin: time("hora_fin", {
+    withTimezone: false,
+  }).notNull(),
+
+  motivo: text("motivo").notNull(),
+
+  observacion: text("observacion"),
+
+  estado: text("estado")
+    .notNull()
+    .default("PENDIENTE"),
+
+  autorizadoPor: integer("autorizado_por").references(
+    () => usuarios.id,
+    {
+      onDelete: "set null",
+    },
+  ),
+
+  creadoEn: timestamp("creado_en", {
+    mode: "string",
+  })
+    .notNull()
+    .defaultNow(),
+
+  actualizadoEn: timestamp("actualizado_en", {
+    mode: "string",
+  })
+    .notNull()
+    .defaultNow(),
+});
+
 export type Notificacion = typeof notificaciones.$inferSelect;
 export type NuevaNotificacion = typeof notificaciones.$inferInsert;
 export type Evidencia = typeof evidencias.$inferSelect;
@@ -223,5 +274,7 @@ export type SuscripcionPush = typeof suscripcionesPush.$inferSelect;
 export type NuevaSuscripcionPush = typeof suscripcionesPush.$inferInsert;
 export type Asistencia = typeof asistencias.$inferSelect;
 export type NuevaAsistencia = typeof asistencias.$inferInsert;
-export type Vacacion = typeof vacaciones.$inferInsert;
+export type Vacacion = typeof vacaciones.$inferSelect;
 export type NuevaVacacion = typeof vacaciones.$inferInsert;
+export type Permiso = typeof permisos.$inferSelect;
+export type NuevoPermiso = typeof permisos.$inferInsert;
