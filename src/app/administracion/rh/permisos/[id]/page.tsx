@@ -201,13 +201,15 @@ export default async function DetallePermisoPage({
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Link
-                href={`/administracion/rh/permisos/${permiso.id}/editar`}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-              >
-                <FilePenLine size={17} />
-                Editar
-              </Link>
+              {permiso.estado === "PENDIENTE" &&(
+                <Link
+                  href={`/administracion/rh/permisos/${permiso.id}/editar`}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                >
+                  <FilePenLine size={17} />
+                  Editar
+                </Link>
+              )}
 
               <BotonesAutorizacion
                 permisoId={permiso.id}
