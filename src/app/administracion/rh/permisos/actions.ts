@@ -215,3 +215,94 @@ export async function rechazarPermiso(
     `/administracion/rh/permisos/${permisoId}?rechazado=true`,
   );
 }
+
+export async function actualizarPermiso(
+  permisoId: number,
+  formData: FormData,
+) {
+  await requerirAdmin();
+
+  const empleadoId = Number(formData.get("empleadoId"));
+  const tipo = String(formData.get("tipo") ?? "").trim();
+  const fecha = String(formData.get("fecha") ?? "").trim();
+  const horaInicio = String(
+    formData.get("horaInicio") ?? "",
+  ).trim();
+  const horaFin = String(
+    formData.get("horaFin") ?? "",
+  ).trim();
+  const motivo = String(formData.get("motivo") ?? "").trim();
+  const observacion = String(
+    formData.get("observacion") ?? "",
+  ).trim();
+
+  if (
+    !Number.isInteger(permisoId) ||
+    permisoId <= 0
+  ) {
+    redirect("/administracion/rh/permisos");
+  }
+
+  if (
+    !Number.isInteger(empleadoId) ||
+    empleadoId <= 0 ||
+    !tipo ||
+    !fecha ||
+    !horaInicio ||
+    !horaFin ||
+    !motivo
+  ) {
+    redirect(
+      `/administracion/rh/permisos/${permisoId}/editar?error=campos`,
+    );
+  }
+
+  if (!esTipoPermitido(tipo)) {
+    redirect(
+      `/administracion/rh/permisos/${permisoId}/editar?error=tipo`,
+    );
+  }
+
+  if (horaFin <= horaInicio) {
+    redirect(
+      `/administracion/rh/permisos/${permisoId}/editar?error=horario`,
+    );
+  }
+
+  const resultado = await db
+    .update(permisos)
+    .set({
+      empleadoId,
+      tipo,
+      fecha,
+      horaInicio,
+      horaFin,
+      motivo,
+      observacion: observacion || null,
+      actualizadoEn: new Date().toISOString(),
+    })
+    .where(
+      and(
+        eq(permisos.id, permisoId),
+        eq(permisos.estado, "PENDIENTE"),
+      ),
+    )
+    .returning({
+      id: permisos.id,
+    });
+
+  if (!resultado[0]) {
+    redirect(
+      `/administracion/rh/permisos/${permisoId}?error=estado`,
+    );
+  }
+
+  revalidatePath("/administracion/rh/permisos");
+  revalidatePath(
+    `/administracion/rh/permisos/${permisoId}`,
+  );
+
+  redirect(
+    `/administracion/rh/permisos/${permisoId}?actualizado=true`,
+  );
+}
