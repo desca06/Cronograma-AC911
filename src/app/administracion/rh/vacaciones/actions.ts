@@ -81,3 +81,83 @@ export async function crearVacacion(formData: FormData) {
 
   redirect("/administracion/rh/vacaciones?creada=true");
 }
+
+export async function aprobarVacacion(vacacionId: number) {
+  const sesion = await requerirAdmin();
+
+  if (!Number.isInteger(vacacionId) || vacacionId <= 0) {
+    redirect("/administracion/rh/vacaciones");
+  }
+
+  const resultado = await db
+    .update(vacaciones)
+    .set({
+      estado: "APROBADA",
+      autorizadoPor: sesion.usuarioId,
+      actualizadoEn: new Date().toISOString(),
+    })
+    .where(
+      and(
+        eq(vacaciones.id, vacacionId),
+        eq(vacaciones.estado, "PENDIENTE"),
+      ),
+    )
+    .returning({
+      id: vacaciones.id,
+    });
+
+  if (!resultado[0]) {
+    redirect(
+      `/administracion/rh/vacaciones/${vacacionId}?error=estado`,
+    );
+  }
+
+  revalidatePath("/administracion/rh/vacaciones");
+  revalidatePath(
+    `/administracion/rh/vacaciones/${vacacionId}`,
+  );
+
+  redirect(
+    `/administracion/rh/vacaciones/${vacacionId}?aprobada=true`,
+  );
+}
+
+export async function rechazarVacacion(vacacionId: number) {
+  const sesion = await requerirAdmin();
+
+  if (!Number.isInteger(vacacionId) || vacacionId <= 0) {
+    redirect("/administracion/rh/vacaciones");
+  }
+
+  const resultado = await db
+    .update(vacaciones)
+    .set({
+      estado: "RECHAZADA",
+      autorizadoPor: sesion.usuarioId,
+      actualizadoEn: new Date().toISOString(),
+    })
+    .where(
+      and(
+        eq(vacaciones.id, vacacionId),
+        eq(vacaciones.estado, "PENDIENTE"),
+      ),
+    )
+    .returning({
+      id: vacaciones.id,
+    });
+
+  if (!resultado[0]) {
+    redirect(
+      `/administracion/rh/vacaciones/${vacacionId}?error=estado`,
+    );
+  }
+
+  revalidatePath("/administracion/rh/vacaciones");
+  revalidatePath(
+    `/administracion/rh/vacaciones/${vacacionId}`,
+  );
+
+  redirect(
+    `/administracion/rh/vacaciones/${vacacionId}?rechazada=true`,
+  );
+}
