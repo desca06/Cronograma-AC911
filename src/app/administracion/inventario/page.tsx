@@ -18,10 +18,10 @@ const modulosInventario = [
     icono: Boxes,
     disponible: true,
     estilos: {
-      borde: "border-blue-200",
-      fondoIcono: "bg-blue-100",
-      textoIcono: "text-blue-700",
-      boton: "bg-blue-600 hover:bg-blue-700",
+      borde: "border-red-200",
+      fondoIcono: "bg-red-100",
+      textoIcono: "text-red-700",
+      boton: "bg-red-600 hover:bg-red-700",
     },
   },
   {
