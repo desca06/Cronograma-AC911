@@ -31,9 +31,9 @@ const modulos = [
     nombre: "Inventario",
     descripcion:
       "Control de herramientas, materiales, existencias y responsables.",
-    href: "#",
+    href: "/administracion/inventario",
     icono: Boxes,
-    disponible: false,
+    disponible: true,
     estilos: {
       borde: "border-orange-200",
       fondoIcono: "bg-orange-100",
