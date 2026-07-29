@@ -18,7 +18,7 @@ export const empleados = pgTable("empleados", {
   telefono: text("telefono"),
   puesto: text("puesto").notNull().default("Técnico"),
   activo: boolean("activo").notNull().default(true),
-  creadoEn: timestamp("creado_en", { mode: "date" }).notNull().defaultNow(),
+  creadoEn: timestamp("creado_en", { mode: "string" }).notNull().defaultNow(),
 });
 
 export const clientes = pgTable("clientes", {
@@ -28,7 +28,7 @@ export const clientes = pgTable("clientes", {
   direccion: text("direccion"),
   notas: text("notas"),
   activo: boolean("activo").notNull().default(true),
-  creadoEn: timestamp("creado_en", { mode: "date" }).notNull().defaultNow(),
+  creadoEn: timestamp("creado_en", { mode: "string" }).notNull().defaultNow(),
 });
 
 export const vehiculos = pgTable("vehiculos", {
@@ -39,7 +39,7 @@ export const vehiculos = pgTable("vehiculos", {
   modelo: text("modelo"),
   estado: text("estado").notNull().default("Disponible"),
   activo: boolean("activo").notNull().default(true),
-  creadoEn: timestamp("creado_en", { mode: "date" }).notNull().defaultNow(),
+  creadoEn: timestamp("creado_en", { mode: "string" }).notNull().defaultNow(),
 });
 
 export const trabajos = pgTable("trabajos", {
@@ -55,7 +55,7 @@ export const trabajos = pgTable("trabajos", {
   horaFin: text("hora_fin"),
   observaciones: text("observaciones"),
   observacionesTecnico: text("observaciones_tecnico"),
-  creadoEn: timestamp("creado_en", { mode: "date" }).notNull().defaultNow(),
+  creadoEn: timestamp("creado_en", { mode: "string" }).notNull().defaultNow(),
 });
 
 export const trabajoEmpleados = pgTable(
@@ -79,7 +79,7 @@ export const usuarios = pgTable("usuarios", {
   passwordHash: text("password_hash").notNull(),
   rol: text("rol").notNull().default("TECNICO"),
   activo: boolean("activo").notNull().default(true),
-  creadoEn: timestamp("creado_en", { mode: "date" }).notNull().defaultNow(),
+  creadoEn: timestamp("creado_en", { mode: "string" }).notNull().defaultNow(),
 });
 
 export const notificaciones = pgTable("notificaciones", {
@@ -93,7 +93,7 @@ export const notificaciones = pgTable("notificaciones", {
   mensaje: text("mensaje").notNull(),
   tipo: text("tipo").notNull().default("ASIGNACION"),
   leida: boolean("leida").notNull().default(false),
-  creadoEn: timestamp("creado_en", { mode: "date" }).notNull().defaultNow(),
+  creadoEn: timestamp("creado_en", { mode: "string" }).notNull().defaultNow(),
 });
 
 export const suscripcionesPush = pgTable("suscripciones_push", {
@@ -105,8 +105,8 @@ export const suscripcionesPush = pgTable("suscripciones_push", {
   p256dh: text("p256dh").notNull(),
   auth: text("auth").notNull(),
   navegador: text("navegador"),
-  creadoEn: timestamp("creado_en", { mode: "date" }).notNull().defaultNow(),
-  actualizadoEn: timestamp("actualizado_en", { mode: "date" })
+  creadoEn: timestamp("creado_en", { mode: "string" }).notNull().defaultNow(),
+  actualizadoEn: timestamp("actualizado_en", { mode: "string" })
     .notNull()
     .defaultNow(),
 });
@@ -120,7 +120,7 @@ export const evidencias = pgTable("evidencias", {
   archivoUrl: text("archivo_url").notNull(),
   nombreOriginal: text("nombre_original").notNull(),
   descripcion: text("descripcion"),
-  creadoEn: timestamp("creado_en", { mode: "date" }).notNull().defaultNow(),
+  creadoEn: timestamp("creado_en", { mode: "string" }).notNull().defaultNow(),
 });
 
 export const asistencias = pgTable(
@@ -149,7 +149,7 @@ export const asistencias = pgTable(
     observacion: text("observacion"),
 
     creadoEn: timestamp("creado_en", {
-      mode: "date",
+      mode: "string",
     })
       .notNull()
       .defaultNow(),
@@ -194,13 +194,13 @@ export const vacaciones = pgTable("vacaciones", {
   ),
 
   creadoEn: timestamp("creado_en", {
-    mode: "date",
+    mode: "string",
   })
     .notNull()
     .defaultNow(),
 
   actualizadoEn: timestamp("actualizado_en", {
-    mode: "date",
+    mode: "string",
   })
     .notNull()
     .defaultNow(),
@@ -245,13 +245,13 @@ export const permisos = pgTable("permisos", {
   ),
 
   creadoEn: timestamp("creado_en", {
-    mode: "date",
+    mode: "string",
   })
     .notNull()
     .defaultNow(),
 
   actualizadoEn: timestamp("actualizado_en", {
-    mode: "date",
+    mode: "string",
   })
     .notNull()
     .defaultNow(),
@@ -296,13 +296,13 @@ export const expedientes = pgTable("expedientes", {
     .default("ACTIVO"),
 
   creadoEn: timestamp("creado_en", {
-    mode: "date",
+    mode: "string",
   })
     .notNull()
     .defaultNow(),
 
   actualizadoEn: timestamp("actualizado_en", {
-    mode: "date",
+    mode: "string",
   })
     .notNull()
     .defaultNow(),
@@ -324,13 +324,13 @@ export const categoriasInventario = pgTable(
       .default("ACTIVO"),
 
     creadoEn: timestamp("creado_en", {
-      mode: "date",
+      mode: "string",
     })
       .notNull()
       .defaultNow(),
 
     actualizadoEn: timestamp("actualizado_en", {
-      mode: "date",
+      mode: "string",
     })
       .notNull()
       .defaultNow(),
@@ -375,7 +375,7 @@ export const articulosInventario = pgTable(
       .notNull()
       .default(0),
 
-    controlaStock: boolean("controla_stock")
+     controlaStock: boolean("controla_stock")
       .notNull()
       .default(true),
 
