@@ -307,6 +307,133 @@ export const expedientes = pgTable("expedientes", {
     .defaultNow(),
 });
 
+export const categoriasInventario = pgTable(
+  "categorias_inventario",
+  {
+    id: serial("id").primaryKey(),
+
+    nombre: text("nombre")
+      .notNull()
+      .unique(),
+
+    descripcion: text("descripcion"),
+
+    estado: text("estado")
+      .notNull()
+      .default("ACTIVO"),
+
+    creadoEn: timestamp("creado_en", {
+      mode: "string",
+    })
+      .notNull()
+      .defaultNow(),
+
+    actualizadoEn: timestamp("actualizado_en", {
+      mode: "string",
+    })
+      .notNull()
+      .defaultNow(),
+  },
+);
+
+export const articulosInventario = pgTable(
+  "articulos_inventario",
+  {
+    id: serial("id").primaryKey(),
+
+    codigo: text("codigo").unique(),
+
+    nombre: text("nombre").notNull(),
+
+    descripcion: text("descripcion"),
+
+    categoriaId: integer("categoria_id")
+      .notNull()
+      .references(() => categoriasInventario.id, {
+        onDelete: "restrict",
+      }),
+
+    tipo: text("tipo").notNull(),
+
+    unidadMedida: text("unidad_medida")
+      .notNull(),
+
+    marca: text("marca"),
+
+    modelo: text("modelo"),
+
+    capacidad: text("capacidad"),
+
+    costoReferencia: integer(
+      "costo_referencia",
+    )
+      .notNull()
+      .default(0),
+
+    stockMinimo: integer("stock_minimo")
+      .notNull()
+      .default(0),
+
+    controlaStock: boolean("controla_stock")
+      .notNull()
+      .default(true),
+
+    estado: text("estado")
+      .notNull()
+      .default("ACTIVO"),
+
+    creadoEn: timestamp("creado_en", {
+      mode: "string",
+    })
+      .notNull()
+      .defaultNow(),
+
+    actualizadoEn: timestamp("actualizado_en", {
+      mode: "string",
+    })
+      .notNull()
+      .defaultNow(),
+  },
+);
+
+export const existenciasInventario = pgTable(
+  "existencias_inventario",
+  {
+    id: serial("id").primaryKey(),
+
+    articuloId: integer("articulo_id")
+      .notNull()
+      .unique()
+      .references(() => articulosInventario.id, {
+        onDelete: "cascade",
+      }),
+
+    cantidadActual: integer("cantidad_actual")
+      .notNull()
+      .default(0),
+
+    cantidadReservada: integer(
+      "cantidad_reservada",
+    )
+      .notNull()
+      .default(0),
+
+    ultimaEntrada: timestamp("ultima_entrada", {
+      mode: "string",
+    }),
+
+    ultimaSalida: timestamp("ultima_salida", {
+      mode: "string",
+    }),
+
+    actualizadoEn: timestamp("actualizado_en", {
+      mode: "string",
+    })
+      .notNull()
+      .defaultNow(),
+  },
+);
+
 
 export type Notificacion = typeof notificaciones.$inferSelect;
 export type NuevaNotificacion = typeof notificaciones.$inferInsert;
@@ -332,3 +459,9 @@ export type Permiso = typeof permisos.$inferSelect;
 export type NuevoPermiso = typeof permisos.$inferInsert;
 export type Expediente = typeof expedientes.$inferSelect;
 export type NuevoExpediente = typeof expedientes.$inferInsert;
+export type CategoriaInventario = typeof categoriasInventario.$inferSelect;
+export type NuevaCategoriaInventario = typeof categoriasInventario.$inferInsert;
+export type ArticuloInventario = typeof articulosInventario.$inferSelect;
+export type NuevoArticuloInventario = typeof articulosInventario.$inferInsert;
+export type ExistenciaInventario = typeof existenciasInventario.$inferSelect;
+export type NuevaExistenciaInventario = typeof existenciasInventario.$inferInsert;
