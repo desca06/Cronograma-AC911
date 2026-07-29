@@ -64,7 +64,7 @@ export default async function CategoriasPage({
                   Total de categorías
                 </p>
 
-                <p className="text-2xl font-bold text-slate-900">
+                <p className="text-2xl font-bold text-blue-900">
                   {categorias.length}
                 </p>
               </div>
@@ -82,7 +82,7 @@ export default async function CategoriasPage({
                   Categorías activas
                 </p>
 
-                <p className="text-2xl font-bold text-slate-900">
+                <p className="text-2xl font-bold text-green-900">
                   {categoriasActivas}
                 </p>
               </div>
@@ -91,7 +91,7 @@ export default async function CategoriasPage({
 
           <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex items-center gap-4">
-              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-slate-100 text-slate-700">
+              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-red-100 text-red-700">
                 <PowerOff size={24} />
               </div>
 
@@ -100,7 +100,7 @@ export default async function CategoriasPage({
                   Categorías inactivas
                 </p>
 
-                <p className="text-2xl font-bold text-slate-900">
+                <p className="text-2xl font-bold text-red-900">
                   {categoriasInactivas}
                 </p>
               </div>
