@@ -6,6 +6,7 @@ import {
   Plus,
   Power,
   PowerOff,
+  ArrowLeft
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
@@ -52,6 +53,16 @@ export default async function CategoriasPage({
       />
 
       <section className="space-y-6 p-5 md:p-8">
+        <div>
+          <Link
+            href="/administracion/inventario"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-blue-700"
+          >
+          <ArrowLeft size={18} />
+            Regresar a Inventario
+          </Link>
+        </div>
+
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <article className="rounded-2xl border border-blue-200 bg-white p-5 shadow-sm">
             <div className="flex items-center gap-4">
