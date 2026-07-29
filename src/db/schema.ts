@@ -123,34 +123,18 @@ export const evidencias = pgTable("evidencias", {
   creadoEn: timestamp("creado_en", { mode: "string" }).notNull().defaultNow(),
 });
 
-export const asistencias = pgTable(
-  "asistencias",
-  {
+export const asistencias = pgTable("asistencias",  {
     id: serial("id").primaryKey(),
-
     empleadoId: integer("empleado_id")
       .notNull()
       .references(() => empleados.id, {
-        onDelete: "restrict",
-      }),
-
+        onDelete: "restrict",}),
     fecha: date("fecha", { mode: "string" }).notNull(),
-
-    horaEntrada: time("hora_entrada", {
-      withTimezone: false,
-    }),
-
-    horaSalida: time("hora_salida", {
-      withTimezone: false,
-    }),
-
+    horaEntrada: time("hora_entrada", {withTimezone: false,}),
+    horaSalida: time("hora_salida", { withTimezone: false,}),
     estado: text("estado").notNull().default("PRESENTE"),
-
     observacion: text("observacion"),
-
-    creadoEn: timestamp("creado_en", {
-      mode: "string",
-    })
+    creadoEn: timestamp("creado_en", {mode: "string"})
       .notNull()
       .defaultNow(),
   },
@@ -163,42 +147,33 @@ export const asistencias = pgTable(
 
 export const vacaciones = pgTable("vacaciones", {
   id: serial("id").primaryKey(),
-
   empleadoId: integer("empleado_id")
     .notNull()
     .references(() => empleados.id, {
       onDelete: "restrict",
     }),
-
   fechaInicio: date("fecha_inicio", {
     mode: "string",
   }).notNull(),
-
   fechaFin: date("fecha_fin", {
     mode: "string",
   }).notNull(),
-
   cantidadDias: integer("cantidad_dias").notNull(),
-
   estado: text("estado")
     .notNull()
     .default("PENDIENTE"),
-
   observacion: text("observacion"),
-
   autorizadoPor: integer("autorizado_por").references(
     () => usuarios.id,
     {
       onDelete: "set null",
     },
   ),
-
   creadoEn: timestamp("creado_en", {
     mode: "string",
   })
     .notNull()
     .defaultNow(),
-
   actualizadoEn: timestamp("actualizado_en", {
     mode: "string",
   })
@@ -208,48 +183,37 @@ export const vacaciones = pgTable("vacaciones", {
 
 export const permisos = pgTable("permisos", {
   id: serial("id").primaryKey(),
-
   empleadoId: integer("empleado_id")
     .notNull()
     .references(() => empleados.id, {
       onDelete: "restrict",
     }),
-
   tipo: text("tipo").notNull(),
-
   fecha: date("fecha", {
     mode: "string",
   }).notNull(),
-
   horaInicio: time("hora_inicio", {
     withTimezone: false,
   }).notNull(),
-
   horaFin: time("hora_fin", {
     withTimezone: false,
   }).notNull(),
-
   motivo: text("motivo").notNull(),
-
   observacion: text("observacion"),
-
   estado: text("estado")
     .notNull()
     .default("PENDIENTE"),
-
   autorizadoPor: integer("autorizado_por").references(
     () => usuarios.id,
     {
       onDelete: "set null",
     },
   ),
-
   creadoEn: timestamp("creado_en", {
     mode: "string",
   })
     .notNull()
     .defaultNow(),
-
   actualizadoEn: timestamp("actualizado_en", {
     mode: "string",
   })
@@ -259,48 +223,35 @@ export const permisos = pgTable("permisos", {
 
 export const expedientes = pgTable("expedientes", {
   id: serial("id").primaryKey(),
-
   empleadoId: integer("empleado_id")
     .notNull()
     .unique()
     .references(() => empleados.id, {
       onDelete: "restrict",
     }),
-
   codigo: text("codigo").unique(),
-
   dpi: text("dpi").notNull(),
-
   nit: text("nit"),
-
   igss: text("igss"),
-
   fechaIngreso: date("fecha_ingreso", {
     mode: "string",
   }).notNull(),
-
   contactoEmergencia: text(
     "contacto_emergencia",
   ).notNull(),
-
   telefonoEmergencia: text(
     "telefono_emergencia",
   ).notNull(),
-
   direccion: text("direccion").notNull(),
-
   observaciones: text("observaciones"),
-
   estado: text("estado")
     .notNull()
     .default("ACTIVO"),
-
   creadoEn: timestamp("creado_en", {
     mode: "string",
   })
     .notNull()
     .defaultNow(),
-
   actualizadoEn: timestamp("actualizado_en", {
     mode: "string",
   })
@@ -312,23 +263,18 @@ export const categoriasInventario = pgTable(
   "categorias_inventario",
   {
     id: serial("id").primaryKey(),
-
     nombre: text("nombre")
       .notNull()
       .unique(),
-
     descripcion: text("descripcion"),
-
     estado: text("estado")
       .notNull()
       .default("ACTIVO"),
-
     creadoEn: timestamp("creado_en", {
       mode: "string",
     })
       .notNull()
       .defaultNow(),
-
     actualizadoEn: timestamp("actualizado_en", {
       mode: "string",
     })
@@ -341,54 +287,40 @@ export const articulosInventario = pgTable(
   "articulos_inventario",
   {
     id: serial("id").primaryKey(),
-
     codigo: text("codigo").unique(),
-
     nombre: text("nombre").notNull(),
-
     descripcion: text("descripcion"),
-
     categoriaId: integer("categoria_id")
       .notNull()
       .references(() => categoriasInventario.id, {
         onDelete: "restrict",
       }),
-
     tipo: varchar("tipo", {length:20})
       .$type<"ACTIVO"| "CONSUMIBLE">()
       .notNull(),
-
     unidadMedida: text("unidad_medida")
       .notNull(),
-
     marca: text("marca"),
-
     modelo: text("modelo"),
-
     costoReferencia: integer(
       "costo_referencia",
     )
       .notNull()
       .default(0),
-
     stockMinimo: integer("stock_minimo")
       .notNull()
       .default(0),
-
      controlaStock: boolean("controla_stock")
       .notNull()
       .default(true),
-
     estado: text("estado")
       .notNull()
       .default("ACTIVO"),
-
     creadoEn: timestamp("creado_en", {
       mode: "date",
     })
       .notNull()
       .defaultNow(),
-
     actualizadoEn: timestamp("actualizado_en", {
       mode: "date",
     })
@@ -401,32 +333,26 @@ export const existenciasInventario = pgTable(
   "existencias_inventario",
   {
     id: serial("id").primaryKey(),
-
     articuloId: integer("articulo_id")
       .notNull()
       .unique()
       .references(() => articulosInventario.id, {
         onDelete: "cascade",
       }),
-
     cantidadActual: integer("cantidad_actual")
       .notNull()
       .default(0),
-
     cantidadReservada: integer(
       "cantidad_reservada",
     )
       .notNull()
       .default(0),
-
     ultimaEntrada: timestamp("ultima_entrada", {
       mode: "date",
     }),
-
     ultimaSalida: timestamp("ultima_salida", {
       mode: "date",
     }),
-
     actualizadoEn: timestamp("actualizado_en", {
       mode: "date",
     })
