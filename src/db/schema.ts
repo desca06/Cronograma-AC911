@@ -9,6 +9,7 @@ import {
   date,
   time,
   uniqueIndex,
+  varchar
 } from "drizzle-orm/pg-core";
 
 export const empleados = pgTable("empleados", {
@@ -353,7 +354,9 @@ export const articulosInventario = pgTable(
         onDelete: "restrict",
       }),
 
-    tipo: text("tipo").notNull(),
+    tipo: varchar("tipo", {length:20})
+      .$type<"ACTIVO"| "CONSUMIBLE">()
+      .notNull(),
 
     unidadMedida: text("unidad_medida")
       .notNull(),
@@ -361,8 +364,6 @@ export const articulosInventario = pgTable(
     marca: text("marca"),
 
     modelo: text("modelo"),
-
-    capacidad: text("capacidad"),
 
     costoReferencia: integer(
       "costo_referencia",
