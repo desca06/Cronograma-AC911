@@ -1,7 +1,7 @@
 "use client";
 
-import { LoaderCircle, Trash2 } from "lucide-react";
-import { useFormStatus } from "react-dom";
+import { useState } from "react";
+import { Trash2, X } from "lucide-react";
 
 import { eliminarExpediente } from "../actions";
 
@@ -10,60 +10,81 @@ type BotonEliminarProps = {
   codigo: string;
 };
 
-function BotonConfirmar() {
-  const { pending } = useFormStatus();
-
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-    >
-      {pending ? (
-        <>
-          <LoaderCircle
-            size={17}
-            className="animate-spin"
-          />
-          Eliminando...
-        </>
-      ) : (
-        <>
-          <Trash2 size={17} />
-          Eliminar expediente
-        </>
-      )}
-    </button>
-  );
-}
-
 export function BotonEliminar({
   expedienteId,
   codigo,
 }: BotonEliminarProps) {
-  const eliminarActual = eliminarExpediente.bind(
-    null,
-    expedienteId,
-  );
+  const [confirmando, setConfirmando] = useState(false);
 
-  function confirmarEliminacion(
-    evento: React.FormEvent<HTMLFormElement>,
-  ) {
-    const confirmado = window.confirm(
-      `¿Estás seguro de eliminar el expediente ${codigo}?\n\nEsta acción no se puede deshacer.`,
+  const eliminarRegistro = 
+  eliminarExpediente.bind(null,expedienteId);
+
+  if (!confirmando) {
+    return (
+      <button
+        type="button"
+        onClick={() => setConfirmando(true)}
+        className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-100"
+      >
+        <Trash2 size={17} />
+        Eliminar expediente
+      </button>
     );
-
-    if (!confirmado) {
-      evento.preventDefault();
-    }
   }
 
   return (
-    <form
-      action={eliminarActual}
-      onSubmit={confirmarEliminacion}
-    >
-      <BotonConfirmar />
-    </form>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">
+              Eliminar expediente
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              ¿Estás seguro de eliminar el expediente{" "}
+              <span className="font-semibold text-slate-900">
+                {codigo}
+              </span>
+              ?
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setConfirmando(false)}
+            className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+            aria-label="Cerrar confirmación"
+          >
+            <X size={19} />
+          </button>
+        </div>
+
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm leading-6 text-red-700">
+          Esta acción eliminará permanentemente toda la
+          información del expediente y no se puede deshacer.
+        </div>
+
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={() => setConfirmando(false)}
+            className="inline-flex justify-center rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+          >
+            Cancelar
+          </button>
+
+          <form action={eliminarRegistro}>
+            <button
+              type="submit"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700"
+            >
+              <Trash2 size={17} />
+              Sí, eliminar
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
   );
 }
