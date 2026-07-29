@@ -30,7 +30,7 @@ const modulosInventario = [
       "Registra y administra los materiales, equipos, repuestos y consumibles del inventario.",
     href: "/administracion/inventario/articulos",
     icono: PackageSearch,
-    disponible: false,
+    disponible: true,
     estilos: {
       borde: "border-emerald-200",
       fondoIcono: "bg-emerald-100",
@@ -44,7 +44,7 @@ const modulosInventario = [
       "Consulta las cantidades disponibles, el stock mínimo y los artículos agotados.",
     href: "/administracion/inventario/existencias",
     icono: Warehouse,
-    disponible: false,
+    disponible: true,
     estilos: {
       borde: "border-orange-200",
       fondoIcono: "bg-orange-100",
