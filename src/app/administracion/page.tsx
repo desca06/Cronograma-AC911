@@ -69,6 +69,7 @@ const modulos = [
       boton: "bg-purple-600",
     },
   },
+  /*
   {
     nombre: "Configuración",
     descripcion:
@@ -82,7 +83,7 @@ const modulos = [
       textoIcono: "text-slate-700",
       boton: "bg-slate-700",
     },
-  },
+  },*/
 ];
 
 export const dynamic = "force-dynamic";
