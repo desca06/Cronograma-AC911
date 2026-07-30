@@ -99,8 +99,7 @@ export default async function ArticulosPage({
   ).length;
 
   const valorReferencia = articulos.reduce(
-    (total, articulo) =>
-      total + (articulo.costoReferencia ?? 0),
+    (total, articulo) => total + Number(articulo.costoReferencia) * Number(articulo.cantidadActual),
     0,
   );
 
@@ -196,7 +195,7 @@ export default async function ArticulosPage({
 
               <div className="min-w-0">
                 <p className="text-sm font-medium text-slate-500">
-                  Valor de referencia
+                  Valor total de Inventario
                 </p>
 
                 <p className="truncate text-xl font-bold text-slate-900">
@@ -279,6 +278,10 @@ export default async function ArticulosPage({
 
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
                     Costo
+                  </th>
+
+                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                    Total de unidades
                   </th>
 
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
@@ -436,6 +439,12 @@ export default async function ArticulosPage({
                           {formatearDinero(
                             articulo.costoReferencia,
                           )}
+                        </td>
+
+                        <td className="px-5 py-4 font-bold text-orange-900">
+                            {formatearDinero(
+                              Number(articulo.costoReferencia) * Number(articulo.cantidadActual)
+                            )}
                         </td>
 
                         <td className="px-6 py-4">
