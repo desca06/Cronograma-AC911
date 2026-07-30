@@ -9,7 +9,8 @@ import {
   date,
   time,
   uniqueIndex,
-  varchar
+  varchar,
+  index
 } from "drizzle-orm/pg-core";
 
 export const empleados = pgTable("empleados", {
@@ -147,79 +148,29 @@ export const asistencias = pgTable("asistencias",  {
 
 export const vacaciones = pgTable("vacaciones", {
   id: serial("id").primaryKey(),
-  empleadoId: integer("empleado_id")
-    .notNull()
-    .references(() => empleados.id, {
-      onDelete: "restrict",
-    }),
-  fechaInicio: date("fecha_inicio", {
-    mode: "string",
-  }).notNull(),
-  fechaFin: date("fecha_fin", {
-    mode: "string",
-  }).notNull(),
+  empleadoId: integer("empleado_id").notNull().references(() => empleados.id, {onDelete: "restrict"}),
+  fechaInicio: date("fecha_inicio", {mode: "string"}).notNull(),
+  fechaFin: date("fecha_fin", {mode: "string",}).notNull(),
   cantidadDias: integer("cantidad_dias").notNull(),
-  estado: text("estado")
-    .notNull()
-    .default("PENDIENTE"),
+  estado: text("estado").notNull().default("PENDIENTE"),
   observacion: text("observacion"),
-  autorizadoPor: integer("autorizado_por").references(
-    () => usuarios.id,
-    {
-      onDelete: "set null",
-    },
-  ),
-  creadoEn: timestamp("creado_en", {
-    mode: "string",
-  })
-    .notNull()
-    .defaultNow(),
-  actualizadoEn: timestamp("actualizado_en", {
-    mode: "string",
-  })
-    .notNull()
-    .defaultNow(),
-});
+  autorizadoPor: integer("autorizado_por").references(() => usuarios.id,{onDelete: "set null"}),
+  creadoEn: timestamp("creado_en", {mode: "string"}).notNull().defaultNow(),
+  actualizadoEn: timestamp("actualizado_en",{mode: "string"}).notNull().defaultNow()});
 
 export const permisos = pgTable("permisos", {
   id: serial("id").primaryKey(),
-  empleadoId: integer("empleado_id")
-    .notNull()
-    .references(() => empleados.id, {
-      onDelete: "restrict",
-    }),
+  empleadoId: integer("empleado_id").notNull().references(() => empleados.id, {onDelete: "restrict"}),
   tipo: text("tipo").notNull(),
-  fecha: date("fecha", {
-    mode: "string",
-  }).notNull(),
-  horaInicio: time("hora_inicio", {
-    withTimezone: false,
-  }).notNull(),
-  horaFin: time("hora_fin", {
-    withTimezone: false,
-  }).notNull(),
+  fecha: date("fecha", {mode: "string",}).notNull(),
+  horaInicio: time("hora_inicio", {withTimezone: false,}).notNull(),
+  horaFin: time("hora_fin", {withTimezone: false}).notNull(),
   motivo: text("motivo").notNull(),
   observacion: text("observacion"),
-  estado: text("estado")
-    .notNull()
-    .default("PENDIENTE"),
-  autorizadoPor: integer("autorizado_por").references(
-    () => usuarios.id,
-    {
-      onDelete: "set null",
-    },
-  ),
-  creadoEn: timestamp("creado_en", {
-    mode: "string",
-  })
-    .notNull()
-    .defaultNow(),
-  actualizadoEn: timestamp("actualizado_en", {
-    mode: "string",
-  })
-    .notNull()
-    .defaultNow(),
-});
+  estado: text("estado").notNull().default("PENDIENTE"),
+  autorizadoPor: integer("autorizado_por").references(() => usuarios.id,{onDelete: "set null"}),
+  creadoEn: timestamp("creado_en", {mode: "string"}).notNull().defaultNow(),
+  actualizadoEn: timestamp("actualizado_en", {mode: "string"}).notNull().defaultNow()});
 
 export const expedientes = pgTable("expedientes", {
   id: serial("id").primaryKey(),
@@ -361,6 +312,52 @@ export const existenciasInventario = pgTable(
   },
 );
 
+export const movimientosInventario = pgTable("movimientos_inventario",{
+  id: serial("id").primaryKey(),
+    articuloId: integer("articulo_id")
+      .notNull()
+      .references(() => articulosInventario.id, {onDelete: "restrict"}),
+    usuarioId: integer("usuario_id").references(() => usuarios.id,{onDelete: "set null"}),
+    tipoMovimiento: varchar("tipo_movimiento",{length: 30})
+      .$type<
+        | "ENTRADA"
+        | "SALIDA"
+        | "AJUSTE_POSITIVO"
+        | "AJUSTE_NEGATIVO"
+      >()
+      .notNull(),
+    cantidad: integer("cantidad").notNull(),
+    existenciaAnterior: integer(
+      "existencia_anterior",
+    ).notNull(),
+    existenciaNueva: integer(
+      "existencia_nueva",
+    ).notNull(),
+    motivo: text("motivo").notNull(),
+    observaciones: text("observaciones"),
+    documentoReferencia: text(
+      "documento_referencia",
+    ),
+    creadoEn: timestamp("creado_en", {mode: "date"})
+      .notNull()
+      .defaultNow(),
+  },
+  (tabla) => [
+    index("movimientos_inventario_articulo_idx").on(
+      tabla.articuloId,
+    ),
+    index("movimientos_inventario_usuario_idx").on(
+      tabla.usuarioId,
+    ),
+    index("movimientos_inventario_tipo_idx").on(
+      tabla.tipoMovimiento,
+    ),
+    index("movimientos_inventario_fecha_idx").on(
+      tabla.creadoEn,
+    ),
+  ],
+);
+
 
 export type Notificacion = typeof notificaciones.$inferSelect;
 export type NuevaNotificacion = typeof notificaciones.$inferInsert;
@@ -392,3 +389,10 @@ export type ArticuloInventario = typeof articulosInventario.$inferSelect;
 export type NuevoArticuloInventario = typeof articulosInventario.$inferInsert;
 export type ExistenciaInventario = typeof existenciasInventario.$inferSelect;
 export type NuevaExistenciaInventario = typeof existenciasInventario.$inferInsert;
+export type MovimientoInventario = typeof movimientosInventario.$inferSelect;
+export type NuevoMovimientoInventario = typeof movimientosInventario.$inferInsert
+export type TipoMovimientoInventario =
+  | "ENTRADA"
+  | "SALIDA"
+  | "AJUSTE_POSITIVO"
+  | "AJUSTE_NEGATIVO";
