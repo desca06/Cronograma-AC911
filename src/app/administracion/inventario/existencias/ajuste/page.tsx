@@ -85,10 +85,11 @@ export default async function AjusteInventarioPage(){
               <div className="md:col-span-2">
                 <label className="mb-2 block text-sm font-semibold">Motivo</label>
                 <select name="motivo" required className="w-full rounded-xl border px-4 py-3">
-                  <option value="">Seleccione...</option>
-                  <option>Conteo físico</option>
-                  <option>Corrección de inventario</option>
-                  <option>Material encontrado</option>
+                  <option value=""> Seleccione...</option>
+                  <option> Conteo físico </option>
+                  <option> Corrección de inventario </option>
+                  <option> Material encontrado </option>
+                  <option> Otro </option>
                 </select>
               </div>
             </div>
