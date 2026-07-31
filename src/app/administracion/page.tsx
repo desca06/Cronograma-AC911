@@ -47,7 +47,7 @@ const modulos = [
       "Registro de proveedores, solicitudes, órdenes y costos.",
     href: "#",
     icono: ShoppingCart,
-    disponible: false,
+    disponible: true,
     estilos: {
       borde: "border-blue-200",
       fondoIcono: "bg-blue-100",
@@ -61,7 +61,7 @@ const modulos = [
       "Indicadores administrativos, productividad y rendimiento.",
     href: "#",
     icono: ChartNoAxesCombined,
-    disponible: false,
+    disponible: true,
     estilos: {
       borde: "border-purple-200",
       fondoIcono: "bg-purple-100",
