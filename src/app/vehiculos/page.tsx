@@ -10,6 +10,9 @@ import {
   eliminarVehiculo,
 } from "./actions";
 
+import { AppShell } from "@/components/app-shell";
+import { PageHeader } from "@/components/page-header";
+
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
@@ -31,31 +34,13 @@ export default async function VehiculosPage({
     .orderBy(desc(vehiculos.id));
 
   return (
+    <AppShell>
+      <PageHeader
+      title="Vehículos"
+      description="Adminitra los vehículos que utiliza nuestro equipo"
+      />
     <main className="min-h-screen bg-slate-100 p-4 md:p-8">
       <div className="mx-auto max-w-7xl">
-        <header className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-blue-700">
-              Cronogramas
-            </p>
-
-            <h1 className="text-3xl font-bold text-slate-900">
-              Vehículos
-            </h1>
-
-            <p className="mt-1 text-slate-500">
-              Administra los vehículos utilizados por los equipos.
-            </p>
-          </div>
-
-          <Link
-            href="/dashboard"
-            className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-center font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            Volver al dashboard
-          </Link>
-        </header>
-
         {params.error === "vehiculo-con-trabajos" && (
           <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-red-800 shadow-sm">
             <p className="font-bold">
@@ -402,5 +387,6 @@ export default async function VehiculosPage({
         </section>
       </div>
     </main>
+    </AppShell>
   );
 }

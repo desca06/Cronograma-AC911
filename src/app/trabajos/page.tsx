@@ -17,6 +17,9 @@ import {
   eliminarTrabajo,
 } from "./actions";
 
+import { AppShell } from "@/components/app-shell";
+import { PageHeader } from "@/components/page-header";
+
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
@@ -238,31 +241,13 @@ export default async function TrabajosPage({
     Boolean(fechaFiltro);
 
   return (
-    <main className="min-h-screen bg-slate-100 p-4 md:p-8">
-      <div className="mx-auto max-w-7xl">
-        <header className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-blue-700">
-              Cronogramas
-            </p>
+  <AppShell>
+    <PageHeader
+      title="Trabajos"
+      description="Crea, administra y consulta las órdenes de trabajo."
+    />
 
-            <h1 className="text-3xl font-bold text-slate-900">
-              Trabajos
-            </h1>
-
-            <p className="mt-1 text-slate-500">
-              Crea, administra y consulta las órdenes de trabajo.
-            </p>
-          </div>
-
-          <Link
-            href="/dashboard"
-            className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-center font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            Volver al dashboard
-          </Link>
-        </header>
-
+    <section className="space-y-8 p-5 md:p-8">
         <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-xl font-bold text-slate-900">
             Crear nuevo trabajo
@@ -881,7 +866,7 @@ export default async function TrabajosPage({
             ))
           )}
         </section>
-      </div>
-    </main>
+      </section>
+    </AppShell>
   );
 }

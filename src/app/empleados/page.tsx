@@ -9,6 +9,8 @@ import {
   crearEmpleado,
   eliminarEmpleado,
 } from "./actions";
+import { AppShell } from "@/components/app-shell";
+import { PageHeader } from "@/components/page-header";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -21,31 +23,13 @@ export default async function EmpleadosPage() {
 ;
 
   return (
+    <AppShell>
+      <PageHeader
+      title="Empleados"
+      description="Administra personal de la empresa"
+      />
     <main className="min-h-screen bg-slate-100 p-4 md:p-8">
       <div className="mx-auto max-w-7xl">
-        <header className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-blue-700">
-              Cronogramas
-            </p>
-
-            <h1 className="text-3xl font-bold text-slate-900">
-              Empleados
-            </h1>
-
-            <p className="mt-1 text-slate-500">
-              Administra el personal de la empresa.
-            </p>
-          </div>
-
-          <Link
-            href="/dashboard"
-            className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-center font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            Volver al dashboard
-          </Link>
-        </header>
-
         <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-bold text-slate-900">
             Registrar empleado
@@ -267,5 +251,6 @@ export default async function EmpleadosPage() {
         </section>
       </div>
     </main>
+    </AppShell>
   );
 }
