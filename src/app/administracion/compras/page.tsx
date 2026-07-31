@@ -1,106 +1,105 @@
-import {
-  Boxes,
-  ChartNoAxesCombined,
-  Settings,
-  ShoppingCart,
-  UsersRound,
-} from "lucide-react";
 import Link from "next/link";
+import {
+  Building2,
+  ClipboardList,
+  FileText,
+  History,
+  PackageCheck,
+  ShoppingCart,
+} from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { requerirAdmin } from "@/lib/auth";
 
-const modulos = [
+const modulosCompras = [
   {
-    nombre: "Recursos Humanos",
+    nombre: "Cotizaciones",
     descripcion:
-      "Gestiona empleados, asistencias, permisos, vacaciones y expedientes.",
-    href: "/administracion/rh",
-    icono: UsersRound,
-    disponible: true,
-    estilos: {
-      borde: "border-emerald-200",
-      fondoIcono: "bg-emerald-100",
-      textoIcono: "text-emerald-700",
-      boton:
-        "bg-emerald-600 hover:bg-emerald-700",
-    },
-  },
-  {
-    nombre: "Inventario",
-    descripcion:
-      "Control de herramientas, materiales, existencias y responsables.",
-    href: "/administracion/inventario",
-    icono: Boxes,
-    disponible: true,
-    estilos: {
-      borde: "border-orange-200",
-      fondoIcono: "bg-orange-100",
-      textoIcono: "text-orange-700",
-      boton: "bg-orange-600",
-    },
-  },
-  {
-    nombre: "Compras",
-    descripcion:
-      "Registro de proveedores, solicitudes, órdenes y costos.",
-    href: "/administracion/compras",
-    icono: ShoppingCart,
+      "Crea cotizaciones para clientes, administra sus estados y genera documentos en PDF.",
+    href: "/administracion/compras/cotizaciones",
+    icono: FileText,
     disponible: true,
     estilos: {
       borde: "border-blue-200",
       fondoIcono: "bg-blue-100",
       textoIcono: "text-blue-700",
-      boton: "bg-blue-600",
+      boton: "bg-blue-600 hover:bg-blue-700",
     },
   },
   {
-    nombre: "Reportes",
+    nombre: "Órdenes de compra",
     descripcion:
-      "Indicadores administrativos, productividad y rendimiento.",
-    href: "#",
-    icono: ChartNoAxesCombined,
-    disponible: true,
+      "Registra las compras internas de materiales, equipos, productos y servicios.",
+    href: "/administracion/compras/ordenes",
+    icono: ShoppingCart,
+    disponible: false,
+    estilos: {
+      borde: "border-orange-200",
+      fondoIcono: "bg-orange-100",
+      textoIcono: "text-orange-700",
+      boton: "bg-orange-600 hover:bg-orange-700",
+    },
+  },
+  {
+    nombre: "Proveedores",
+    descripcion:
+      "Administra la información comercial, fiscal y de contacto de los proveedores.",
+    href: "/administracion/compras/proveedores",
+    icono: Building2,
+    disponible: false,
     estilos: {
       borde: "border-purple-200",
       fondoIcono: "bg-purple-100",
       textoIcono: "text-purple-700",
-      boton: "bg-purple-600",
+      boton: "bg-purple-600 hover:bg-purple-700",
     },
   },
-  /*
   {
-    nombre: "Configuración",
+    nombre: "Recepciones",
     descripcion:
-      "Configura puestos, estados, datos de empresa y preferencias.",
-    href: "#",
-    icono: Settings,
+      "Confirma la recepción de compras y registra automáticamente las entradas al inventario.",
+    href: "/administracion/compras/recepciones",
+    icono: PackageCheck,
     disponible: false,
     estilos: {
-      borde: "border-slate-300",
+      borde: "border-emerald-200",
+      fondoIcono: "bg-emerald-100",
+      textoIcono: "text-emerald-700",
+      boton: "bg-emerald-600 hover:bg-emerald-700",
+    },
+  },
+  {
+    nombre: "Historial de compras",
+    descripcion:
+      "Consulta cotizaciones, órdenes, recepciones, montos y movimientos realizados.",
+    href: "/administracion/compras/historial",
+    icono: History,
+    disponible: false,
+    estilos: {
+      borde: "border-slate-200",
       fondoIcono: "bg-slate-100",
       textoIcono: "text-slate-700",
-      boton: "bg-slate-700",
+      boton: "bg-slate-700 hover:bg-slate-800",
     },
-  },*/
+  },
 ];
 
 export const dynamic = "force-dynamic";
 
-export default async function AdministracionPage() {
+export default async function ComprasPage() {
   await requerirAdmin();
 
   return (
     <AppShell>
       <PageHeader
-        title="Administración"
-        description="Gestiona las áreas administrativas de AC911"
+        title="Compras"
+        description="Gestiona cotizaciones, órdenes de compra, proveedores y recepciones de AC911"
       />
 
       <section className="p-5 md:p-8">
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-          {modulos.map((modulo) => {
+          {modulosCompras.map((modulo) => {
             const Icono = modulo.icono;
 
             return (
@@ -137,8 +136,9 @@ export default async function AdministracionPage() {
                 {modulo.disponible ? (
                   <Link
                     href={modulo.href}
-                    className={`mt-6 inline-flex w-fit rounded-xl px-5 py-3 text-sm font-semibold text-white transition ${modulo.estilos.boton}`}
+                    className={`mt-6 inline-flex w-fit items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-white transition ${modulo.estilos.boton}`}
                   >
+                    <ClipboardList size={17} />
                     Ingresar
                   </Link>
                 ) : (
