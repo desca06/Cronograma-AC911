@@ -358,41 +358,230 @@ export const movimientosInventario = pgTable("movimientos_inventario",{
   ],
 );
 
+export const cotizaciones = pgTable(
+  "cotizaciones",
+  {
+    id: serial("id").primaryKey(),
+
+    codigo: text("codigo")
+      .notNull()
+      .unique(),
+
+    clienteId: integer("cliente_id")
+      .notNull()
+      .references(() => clientes.id, {
+        onDelete: "restrict",
+      }),
+
+    creadoPorId: integer("creado_por_id")
+      .references(() => usuarios.id, {
+        onDelete: "set null",
+      }),
+
+    colaborador: text("colaborador")
+      .notNull()
+      .default("PROYECTOS"),
+
+    titulo: text("titulo")
+      .notNull(),
+
+    fechaSolicitud: timestamp("fecha_solicitud", {
+      mode: "date",
+    })
+      .notNull()
+      .defaultNow(),
+
+    validaHasta: timestamp("valida_hasta", {
+      mode: "date",
+    }),
+
+    diasVigencia: integer("dias_vigencia")
+      .notNull()
+      .default(5),
+
+    estado: varchar("estado", {
+      length: 20,
+    })
+      .$type<EstadoCotizacion>()
+      .notNull()
+      .default("PENDIENTE"),
+
+    observaciones: text("observaciones"),
+
+    condicionesPago: text("condiciones_pago"),
+
+    porcentajeAnticipo: integer(
+      "porcentaje_anticipo",
+    )
+      .notNull()
+      .default(70),
+
+    porcentajeFinal: integer(
+      "porcentaje_final",
+    )
+      .notNull()
+      .default(30),
+
+    incluyeIva: boolean("incluye_iva")
+      .notNull()
+      .default(true),
+
+    subtotalProductos: integer(
+      "subtotal_productos",
+    )
+      .notNull()
+      .default(0),
+
+    subtotalServicios: integer(
+      "subtotal_servicios",
+    )
+      .notNull()
+      .default(0),
+
+    subtotalCostosAdicionales: integer(
+      "subtotal_costos_adicionales",
+    )
+      .notNull()
+      .default(0),
+
+    total: integer("total")
+      .notNull()
+      .default(0),
+
+    creadoEn: timestamp("creado_en", {
+      mode: "date",
+    })
+      .notNull()
+      .defaultNow(),
+
+    actualizadoEn: timestamp("actualizado_en", {
+      mode: "date",
+    })
+      .notNull()
+      .defaultNow(),
+  },
+  (tabla) => [
+    index("cotizaciones_cliente_idx").on(
+      tabla.clienteId,
+    ),
+
+    index("cotizaciones_estado_idx").on(
+      tabla.estado,
+    ),
+
+    index("cotizaciones_fecha_idx").on(
+      tabla.fechaSolicitud,
+    ),
+  ],
+);
+
+export const cotizacionItems = pgTable(
+  "cotizacion_items",
+  {
+    id: serial("id").primaryKey(),
+
+    cotizacionId: integer("cotizacion_id")
+      .notNull()
+      .references(() => cotizaciones.id, {
+        onDelete: "cascade",
+      }),
+
+    tipo: varchar("tipo", {
+      length: 25,
+    })
+      .$type<TipoItemCotizacion>()
+      .notNull(),
+
+    nombre: text("nombre")
+      .notNull(),
+
+    descripcion: text("descripcion"),
+
+    cantidad: integer("cantidad")
+      .notNull()
+      .default(1),
+
+    precioUnitario: integer(
+      "precio_unitario",
+    )
+      .notNull()
+      .default(0),
+
+    subtotal: integer("subtotal")
+      .notNull()
+      .default(0),
+
+    orden: integer("orden")
+      .notNull()
+      .default(0),
+
+    creadoEn: timestamp("creado_en", {
+      mode: "date",
+    })
+      .notNull()
+      .defaultNow(),
+  },
+  (tabla) => [
+    index("cotizacion_items_cotizacion_idx").on(
+      tabla.cotizacionId,
+    ),
+
+    index("cotizacion_items_tipo_idx").on(
+      tabla.tipo,
+    ),
+  ],
+);
 
 export type Notificacion = typeof notificaciones.$inferSelect;
 export type NuevaNotificacion = typeof notificaciones.$inferInsert;
+
 export type Evidencia = typeof evidencias.$inferSelect;
 export type NuevaEvidencia = typeof evidencias.$inferInsert;
+
 export type Usuario = typeof usuarios.$inferSelect;
 export type NuevoUsuario = typeof usuarios.$inferInsert;
+
 export type Empleado = typeof empleados.$inferSelect;
 export type NuevoEmpleado = typeof empleados.$inferInsert;
+
 export type Cliente = typeof clientes.$inferSelect;
 export type NuevoCliente = typeof clientes.$inferInsert;
+
 export type Vehiculo = typeof vehiculos.$inferSelect;
 export type NuevoVehiculo = typeof vehiculos.$inferInsert;
+
 export type Trabajo = typeof trabajos.$inferSelect;
 export type NuevoTrabajo = typeof trabajos.$inferInsert;
+
 export type SuscripcionPush = typeof suscripcionesPush.$inferSelect;
 export type NuevaSuscripcionPush = typeof suscripcionesPush.$inferInsert;
+
 export type Asistencia = typeof asistencias.$inferSelect;
 export type NuevaAsistencia = typeof asistencias.$inferInsert;
+
 export type Vacacion = typeof vacaciones.$inferSelect;
 export type NuevaVacacion = typeof vacaciones.$inferInsert;
+
 export type Permiso = typeof permisos.$inferSelect;
 export type NuevoPermiso = typeof permisos.$inferInsert;
+
 export type Expediente = typeof expedientes.$inferSelect;
 export type NuevoExpediente = typeof expedientes.$inferInsert;
+
 export type CategoriaInventario = typeof categoriasInventario.$inferSelect;
 export type NuevaCategoriaInventario = typeof categoriasInventario.$inferInsert;
+
 export type ArticuloInventario = typeof articulosInventario.$inferSelect;
 export type NuevoArticuloInventario = typeof articulosInventario.$inferInsert;
+
 export type ExistenciaInventario = typeof existenciasInventario.$inferSelect;
 export type NuevaExistenciaInventario = typeof existenciasInventario.$inferInsert;
+
 export type MovimientoInventario = typeof movimientosInventario.$inferSelect;
 export type NuevoMovimientoInventario = typeof movimientosInventario.$inferInsert
-export type TipoMovimientoInventario =
-  | "ENTRADA"
-  | "SALIDA"
-  | "AJUSTE_POSITIVO"
-  | "AJUSTE_NEGATIVO";
+
+export type TipoMovimientoInventario =| "ENTRADA"  | "SALIDA"| "AJUSTE_POSITIVO"  | "AJUSTE_NEGATIVO";
+
+export type EstadoCotizacion =  | "PENDIENTE"  | "APROBADA" | "RECHAZADA"  | "VENCIDA";
+
+export type TipoItemCotizacion =| "PRODUCTO"| "SERVICIO"| "COSTO_ADICIONAL";
