@@ -47,7 +47,7 @@ const modulosCompras = [
       "Administra la información comercial, fiscal y de contacto de los proveedores.",
     href: "/administracion/compras/proveedores",
     icono: Building2,
-    disponible: false,
+    disponible: true,
     estilos: {
       borde: "border-purple-200",
       fondoIcono: "bg-purple-100",
