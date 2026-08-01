@@ -352,14 +352,20 @@ export default async function TrabajosPage({
                 id="tipo"
                 name="tipo"
                 required
-                defaultValue="Mantenimiento"
+                defaultValue="disabled"
                 className="w-full rounded-xl border border-slate-300 px-4 py-3"
               >
+                <option value="disabled" disabled>
+                  Selecciona un tipo de trabajo
+                </option>
                 <option value="Instalación">
                   Instalación
                 </option>
                 <option value="Mantenimiento">
-                  Mantenimiento
+                  Mantenimiento Correctivo
+                </option>
+                <option value="Mantenimiento Preventivo">
+                  Mantenimiento Preventivo
                 </option>
                 <option value="Reparación">
                   Reparación
