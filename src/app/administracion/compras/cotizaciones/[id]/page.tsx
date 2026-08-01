@@ -262,17 +262,24 @@ export default async function DetalleCotizacionPage({
             <ArrowLeft size={18} />
             Regresar a Cotizaciones
           </Link>
-
-          <div className="flex flex-wrap gap-2">
+          
             <Link
-              href={`/administracion/compras/cotizaciones/${cotizacion.id}/pdf`}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                href={`/administracion/compras/cotizaciones/${cotizacion.id}/pdf`}
+                target="_blank"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-300 bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
             >
-              <Download size={17} />
-              Descargar PDF
+                <FileText size={17} />
+                Ver PDF
             </Link>
-          </div>
-        </div>
+
+            <Link
+                href={`/administracion/compras/cotizaciones/${cotizacion.id}/pdf?download=1`}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+            >
+                <Download size={17} />
+                Descargar PDF
+            </Link>
+            </div>
 
         {parametros.creada === "1" && (
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
