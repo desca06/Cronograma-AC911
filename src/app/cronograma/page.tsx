@@ -9,6 +9,8 @@ import {
   trabajoEmpleados,
   vehiculos,
 } from "@/db/schema";
+import { PageHeader } from "@/components/page-header";
+import { AppShell } from "@/components/app-shell";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -140,23 +142,15 @@ export default async function CronogramaPage({
   ).length;
 
   return (
-    <main className="min-h-screen bg-slate-100 p-4 md:p-8">
-      <div className="mx-auto max-w-7xl">
-        <header className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-blue-700">
-              Cronograma
-            </p>
-
-            <h1 className="text-3xl font-bold text-slate-900">
-              Cronograma diario
-            </h1>
-
-            <p className="mt-1 capitalize text-slate-500">
-              {formatearFecha(fechaSeleccionada)}
-            </p>
-          </div>
-
+    <AppShell>
+      <PageHeader
+        title="Cronograma diario"
+        description={`Visualiza los trabajos programados para el ${formatearFecha(
+          fechaSeleccionada
+        )}`}
+      />
+      
+      <section className="mb-7 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex flex-col gap-3 sm:flex-row">
             <Link
               href="/trabajos"
@@ -172,7 +166,6 @@ export default async function CronogramaPage({
               Volver al inicio
             </Link>
           </div>
-        </header>
 
         <section className="mb-7 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <form
@@ -410,7 +403,7 @@ export default async function CronogramaPage({
             })}
           </section>
         )}
-      </div>
-    </main>
+      </section>
+    </AppShell>
   );
 }
