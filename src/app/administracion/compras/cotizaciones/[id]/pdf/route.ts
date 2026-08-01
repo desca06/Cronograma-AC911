@@ -1033,7 +1033,7 @@ export async function GET(
     x: MARGIN + 12,
     y: y - 40,
     width: boxWidth - 24,
-    font: normal,
+    font: bold,
     size: 8,
     lineHeight: 11,
   });
