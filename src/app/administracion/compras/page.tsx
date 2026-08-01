@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  ArrowLeft,
   Building2,
   ClipboardList,
   FileText,
@@ -98,6 +99,15 @@ export default async function ComprasPage() {
       />
 
       <section className="p-5 md:p-8">
+        <div>
+          <Link
+             href="/administracion"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-blue-700"
+            >
+            <ArrowLeft size={18} />
+              Regresar a Administración
+          </Link>
+        </div>
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {modulosCompras.map((modulo) => {
             const Icono = modulo.icono;
