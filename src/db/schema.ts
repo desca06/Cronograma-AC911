@@ -532,6 +532,44 @@ export const cotizacionItems = pgTable(
   ],
 );
 
+export const proveedores = pgTable("proveedores",
+  {
+    id: serial("id").primaryKey(),
+    codigo: text("codigo").notNull().unique(),
+    nombreComercial: text("nombre_comercial").notNull(),
+    razonSocial: text("razon_social"),
+    nit: text("nit").notNull().unique(),
+    telefono: text("telefono"),
+    correo: text("correo"),
+    direccion: text("direccion"),
+    contactoPrincipal: text("contacto_principal"),
+    telefonoContacto: text("telefono_contacto"),
+    tipo: varchar("tipo", {length: 20,})
+      .$type<TipoProveedor>()
+      .notNull()
+      .default("PRODUCTOS"),
+    observaciones: text("observaciones"),
+    creadoEn: timestamp("creado_en", {mode: "date",}).notNull().defaultNow(),
+    actualizadoEn: timestamp("actualizado_en",{mode: "date",},).notNull().defaultNow(),
+  },
+  (tabla) => [
+    index("proveedores_codigo_idx").on(
+      tabla.codigo,
+    ),
+
+    index("proveedores_nombre_idx").on(
+      tabla.nombreComercial,
+    ),
+
+    index("proveedores_nit_idx").on(
+      tabla.nit,
+    ),
+    index("proveedores_tipo_idx").on(
+      tabla.tipo,
+    ),
+  ],
+);
+
 export type Notificacion = typeof notificaciones.$inferSelect;
 export type NuevaNotificacion = typeof notificaciones.$inferInsert;
 
@@ -582,6 +620,8 @@ export type NuevoMovimientoInventario = typeof movimientosInventario.$inferInser
 
 export type TipoMovimientoInventario =| "ENTRADA"  | "SALIDA"| "AJUSTE_POSITIVO"  | "AJUSTE_NEGATIVO";
 
-export type EstadoCotizacion =  | "PENDIENTE"  | "APROBADA" | "RECHAZADA"  | "VENCIDA";
+export type EstadoCotizacion =  |"PENDIENTE"  | "APROBADA" | "RECHAZADA"  | "VENCIDA";
 
-export type TipoItemCotizacion =| "PRODUCTO"| "SERVICIO"| "COSTO_ADICIONAL";
+export type TipoItemCotizacion = |"PRODUCTO"| "SERVICIO"| "COSTO_ADICIONAL";
+
+export type TipoProveedor = |"PRODUCTOS"  | "SERVICIOS" | "MIXTO";
