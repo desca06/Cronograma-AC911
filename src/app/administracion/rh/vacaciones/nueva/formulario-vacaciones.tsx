@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
+  BadgeInfo,
   CalendarDays,
   LoaderCircle,
   Save,
@@ -112,6 +113,26 @@ export function FormularioVacaciones({
             </option>
           ))}
         </select>
+      </div>
+
+      <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
+            <BadgeInfo size={21} />
+          </div>
+
+          <div>
+            <p className="font-bold text-blue-900">
+              Derecho anual de vacaciones
+            </p>
+
+            <p className="mt-1 text-sm leading-6 text-blue-800">
+              Todo trabajador tiene derecho a un período
+              mínimo de 15 días hábiles de vacaciones
+         
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-5 md:grid-cols-2">
