@@ -4,7 +4,9 @@ import {
   BriefcaseBusiness,
   CalendarDays,
   ContactRound,
+  Download,
   Edit,
+  ExternalLink,
   FileText,
   Hash,
   HeartPulse,
@@ -171,6 +173,9 @@ export default async function ExpedienteDetallePage({
     notFound();
   }
 
+  const rutaPdf =
+    `/administracion/rh/expedientes/${expediente.id}/pdf`;
+
   return (
     <AppShell>
       <PageHeader
@@ -180,7 +185,7 @@ export default async function ExpedienteDetallePage({
 
       <section className="p-5 md:p-8">
         <div className="mx-auto max-w-6xl">
-          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <Link
               href="/administracion/rh/expedientes"
               className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900"
@@ -189,7 +194,25 @@ export default async function ExpedienteDetallePage({
               Volver a expedientes
             </Link>
 
-            <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href={rutaPdf}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
+              >
+                <ExternalLink size={17} />
+                Ver PDF
+              </Link>
+
+              <Link
+                href={`${rutaPdf}?download=1`}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+              >
+                <Download size={17} />
+                Descargar PDF
+              </Link>
+
               <Link
                 href={`/administracion/rh/expedientes/${expediente.id}/editar`}
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
@@ -406,14 +429,35 @@ export default async function ExpedienteDetallePage({
                 />
 
                 <h2 className="mt-3 font-bold text-blue-950">
-                  Documentos del empleado
+                  Expediente en PDF
                 </h2>
 
                 <p className="mt-2 text-sm leading-6 text-blue-800">
-                  Próximamente acá podremos adjuntar el CV
-                  del empleado y generar el expediente en
-                  PDF.
+                  Generá el documento con los datos registrados,
+                  un espacio reservado para la fotografía del
+                  trabajador y áreas de firma para el empleado y
+                  Recursos Humanos.
                 </p>
+
+                <div className="mt-5 flex flex-col gap-3">
+                  <Link
+                    href={rutaPdf}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-300 bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
+                  >
+                    <ExternalLink size={17} />
+                    Abrir PDF
+                  </Link>
+
+                  <Link
+                    href={`${rutaPdf}?download=1`}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                  >
+                    <Download size={17} />
+                    Descargar expediente
+                  </Link>
+                </div>
               </article>
             </aside>
           </div>
