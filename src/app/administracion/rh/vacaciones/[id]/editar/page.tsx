@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 
 import { db } from "@/db";
-import { empleados, vacaciones } from "@/db/schema";
+import {
+  empleados,
+  vacaciones,
+} from "@/db/schema";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { requerirAdmin } from "@/lib/auth";
@@ -49,6 +52,7 @@ export default async function EditarVacacionPage({
       fechaFin: vacaciones.fechaFin,
       cantidadDias: vacaciones.cantidadDias,
       observacion: vacaciones.observacion,
+      estado: vacaciones.estado,
     })
     .from(vacaciones)
     .where(eq(vacaciones.id, vacacionId))
@@ -66,13 +70,14 @@ export default async function EditarVacacionPage({
       nombre: empleados.nombre,
       puesto: empleados.puesto,
     })
-    .from(empleados);
+    .from(empleados)
+    .orderBy(asc(empleados.nombre));
 
   return (
     <AppShell>
       <PageHeader
         title="Editar vacaciones"
-        description="Modificá la información de la solicitud seleccionada."
+        description="Modificá la información del registro seleccionado."
       />
 
       <section className="p-5 md:p-8">

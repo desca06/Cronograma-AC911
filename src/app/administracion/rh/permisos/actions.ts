@@ -1,11 +1,23 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  gt,
+  isNull,
+  notLike,
+  or,
+  sql,
+} from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { db } from "@/db";
-import { permisos } from "@/db/schema";
+import {
+  permisos,
+  vacaciones,
+} from "@/db/schema";
 import { requerirAdmin } from "@/lib/auth";
 
 const TIPOS_PERMITIDOS = [
@@ -14,16 +26,25 @@ const TIPOS_PERMITIDOS = [
   "ENFERMEDAD",
 ] as const;
 
-type TipoPermiso = (typeof TIPOS_PERMITIDOS)[number];
+type TipoPermiso =
+  (typeof TIPOS_PERMITIDOS)[number];
 
-function esTipoPermitido(tipo: string): tipo is TipoPermiso {
-  return TIPOS_PERMITIDOS.includes(tipo as TipoPermiso);
+function esTipoPermitido(
+  tipo: string,
+): tipo is TipoPermiso {
+  return TIPOS_PERMITIDOS.includes(
+    tipo as TipoPermiso,
+  );
 }
 
-export async function crearPermiso(formData: FormData) {
+export async function crearPermiso(
+  formData: FormData,
+) {
   await requerirAdmin();
 
-  const empleadoId = Number(formData.get("empleadoId"));
+  const empleadoId = Number(
+    formData.get("empleadoId"),
+  );
 
   const tipo = String(
     formData.get("tipo") ?? "",
@@ -87,7 +108,9 @@ export async function crearPermiso(formData: FormData) {
     actualizadoEn: new Date().toISOString(),
   });
 
-  revalidatePath("/administracion/rh/permisos");
+  revalidatePath(
+    "/administracion/rh/permisos",
+  );
 
   redirect(
     "/administracion/rh/permisos?creado=true",
@@ -103,12 +126,22 @@ export async function eliminarPermiso(
     !Number.isInteger(permisoId) ||
     permisoId <= 0
   ) {
-    redirect("/administracion/rh/permisos");
+    redirect(
+      "/administracion/rh/permisos",
+    );
   }
 
   const resultado = await db
     .delete(permisos)
-    .where(eq(permisos.id, permisoId))
+    .where(
+      and(
+        eq(permisos.id, permisoId),
+        eq(
+          permisos.estado,
+          "PENDIENTE",
+        ),
+      ),
+    )
     .returning({
       id: permisos.id,
     });
@@ -119,7 +152,9 @@ export async function eliminarPermiso(
     );
   }
 
-  revalidatePath("/administracion/rh/permisos");
+  revalidatePath(
+    "/administracion/rh/permisos",
+  );
 
   redirect(
     "/administracion/rh/permisos?eliminado=true",
@@ -135,39 +170,242 @@ export async function aprobarPermiso(
     !Number.isInteger(permisoId) ||
     permisoId <= 0
   ) {
-    redirect("/administracion/rh/permisos");
+    redirect(
+      "/administracion/rh/permisos",
+    );
   }
 
-  const resultado = await db
-    .update(permisos)
-    .set({
-      estado: "APROBADO",
-      autorizadoPor: sesion.usuarioId,
-      actualizadoEn: new Date().toISOString(),
-    })
-    .where(
-      and(
-        eq(permisos.id, permisoId),
-        eq(permisos.estado, "PENDIENTE"),
-      ),
-    )
-    .returning({
-      id: permisos.id,
-    });
+  let resultado:
+    | {
+        permisoId: number;
+        vacacionId: number;
+        diasRestantes: number;
+      }
+    | null = null;
 
-  if (!resultado[0]) {
+  try {
+    resultado = await db.transaction(
+      async (tx) => {
+        /*
+         * Buscamos el permiso.
+         * Solamente puede procesarse si está pendiente.
+         */
+        const permisosEncontrados = await tx
+          .select({
+            id: permisos.id,
+            empleadoId: permisos.empleadoId,
+          })
+          .from(permisos)
+          .where(
+            and(
+              eq(permisos.id, permisoId),
+              eq(
+                permisos.estado,
+                "PENDIENTE",
+              ),
+            ),
+          )
+          .limit(1);
+
+        const permiso =
+          permisosEncontrados[0];
+
+        if (!permiso) {
+          return null;
+        }
+
+        /*
+         * Buscamos el registro aprobado de vacaciones
+         * del mismo empleado que todavía tenga días.
+         *
+         * Se ignoran las filas antiguas creadas por la
+         * lógica anterior, cuya observación comenzaba
+         * con [PERMISO:...].
+         */
+        const vacacionesEncontradas = await tx
+          .select({
+            id: vacaciones.id,
+            cantidadDias:
+              vacaciones.cantidadDias,
+          })
+          .from(vacaciones)
+          .where(
+            and(
+              eq(
+                vacaciones.empleadoId,
+                permiso.empleadoId,
+              ),
+              eq(
+                vacaciones.estado,
+                "APROBADA",
+              ),
+              gt(
+                vacaciones.cantidadDias,
+                0,
+              ),
+              or(
+                isNull(
+                  vacaciones.observacion,
+                ),
+                notLike(
+                  vacaciones.observacion,
+                  "[PERMISO:%",
+                ),
+              ),
+            ),
+          )
+          .orderBy(
+            desc(vacaciones.creadoEn),
+          )
+          .limit(1);
+
+        const vacacion =
+          vacacionesEncontradas[0];
+
+        if (!vacacion) {
+          throw new Error(
+            "SIN_DIAS_VACACIONES",
+          );
+        }
+
+        /*
+         * Restamos un día al registro existente.
+         * Aquí ya no se inserta otra fila.
+         */
+        const vacacionesActualizadas =
+          await tx
+            .update(vacaciones)
+            .set({
+              cantidadDias: sql<number>`
+                ${vacaciones.cantidadDias} - 1
+              `,
+              actualizadoEn:
+                new Date().toISOString(),
+            })
+            .where(
+              and(
+                eq(
+                  vacaciones.id,
+                  vacacion.id,
+                ),
+                gt(
+                  vacaciones.cantidadDias,
+                  0,
+                ),
+              ),
+            )
+            .returning({
+              id: vacaciones.id,
+              cantidadDias:
+                vacaciones.cantidadDias,
+            });
+
+        const vacacionActualizada =
+          vacacionesActualizadas[0];
+
+        if (!vacacionActualizada) {
+          throw new Error(
+            "SIN_DIAS_VACACIONES",
+          );
+        }
+
+        /*
+         * El permiso se aprueba solamente después
+         * de descontar correctamente el día.
+         */
+        const permisosActualizados =
+          await tx
+            .update(permisos)
+            .set({
+              estado: "APROBADO",
+              autorizadoPor:
+                sesion.usuarioId,
+              actualizadoEn:
+                new Date().toISOString(),
+            })
+            .where(
+              and(
+                eq(
+                  permisos.id,
+                  permisoId,
+                ),
+                eq(
+                  permisos.estado,
+                  "PENDIENTE",
+                ),
+              ),
+            )
+            .returning({
+              id: permisos.id,
+            });
+
+        const permisoActualizado =
+          permisosActualizados[0];
+
+        if (!permisoActualizado) {
+          throw new Error(
+            "PERMISO_YA_PROCESADO",
+          );
+        }
+
+        return {
+          permisoId:
+            permisoActualizado.id,
+          vacacionId:
+            vacacionActualizada.id,
+          diasRestantes:
+            vacacionActualizada.cantidadDias,
+        };
+      },
+    );
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message ===
+        "SIN_DIAS_VACACIONES"
+    ) {
+      redirect(
+        `/administracion/rh/permisos/${permisoId}?error=sin-vacaciones`,
+      );
+    }
+
+    if (
+      error instanceof Error &&
+      error.message ===
+        "PERMISO_YA_PROCESADO"
+    ) {
+      redirect(
+        `/administracion/rh/permisos/${permisoId}?error=estado`,
+      );
+    }
+
+    throw error;
+  }
+
+  if (!resultado) {
     redirect(
       `/administracion/rh/permisos/${permisoId}?error=estado`,
     );
   }
 
-  revalidatePath("/administracion/rh/permisos");
+  revalidatePath(
+    "/administracion/rh/permisos",
+  );
+
   revalidatePath(
     `/administracion/rh/permisos/${permisoId}`,
   );
 
+  revalidatePath(
+    "/administracion/rh/vacaciones",
+  );
+
+  revalidatePath(
+    `/administracion/rh/vacaciones/${resultado.vacacionId}`,
+  );
+
   redirect(
-    `/administracion/rh/permisos/${permisoId}?aprobado=true`,
+    `/administracion/rh/permisos/${permisoId}?aprobado=true&diasRestantes=${resultado.diasRestantes}`,
   );
 }
 
@@ -180,20 +418,27 @@ export async function rechazarPermiso(
     !Number.isInteger(permisoId) ||
     permisoId <= 0
   ) {
-    redirect("/administracion/rh/permisos");
+    redirect(
+      "/administracion/rh/permisos",
+    );
   }
 
   const resultado = await db
     .update(permisos)
     .set({
       estado: "RECHAZADO",
-      autorizadoPor: sesion.usuarioId,
-      actualizadoEn: new Date().toISOString(),
+      autorizadoPor:
+        sesion.usuarioId,
+      actualizadoEn:
+        new Date().toISOString(),
     })
     .where(
       and(
         eq(permisos.id, permisoId),
-        eq(permisos.estado, "PENDIENTE"),
+        eq(
+          permisos.estado,
+          "PENDIENTE",
+        ),
       ),
     )
     .returning({
@@ -206,7 +451,10 @@ export async function rechazarPermiso(
     );
   }
 
-  revalidatePath("/administracion/rh/permisos");
+  revalidatePath(
+    "/administracion/rh/permisos",
+  );
+
   revalidatePath(
     `/administracion/rh/permisos/${permisoId}`,
   );
@@ -222,16 +470,30 @@ export async function actualizarPermiso(
 ) {
   await requerirAdmin();
 
-  const empleadoId = Number(formData.get("empleadoId"));
-  const tipo = String(formData.get("tipo") ?? "").trim();
-  const fecha = String(formData.get("fecha") ?? "").trim();
+  const empleadoId = Number(
+    formData.get("empleadoId"),
+  );
+
+  const tipo = String(
+    formData.get("tipo") ?? "",
+  ).trim();
+
+  const fecha = String(
+    formData.get("fecha") ?? "",
+  ).trim();
+
   const horaInicio = String(
     formData.get("horaInicio") ?? "",
   ).trim();
+
   const horaFin = String(
     formData.get("horaFin") ?? "",
   ).trim();
-  const motivo = String(formData.get("motivo") ?? "").trim();
+
+  const motivo = String(
+    formData.get("motivo") ?? "",
+  ).trim();
+
   const observacion = String(
     formData.get("observacion") ?? "",
   ).trim();
@@ -240,7 +502,9 @@ export async function actualizarPermiso(
     !Number.isInteger(permisoId) ||
     permisoId <= 0
   ) {
-    redirect("/administracion/rh/permisos");
+    redirect(
+      "/administracion/rh/permisos",
+    );
   }
 
   if (
@@ -278,13 +542,18 @@ export async function actualizarPermiso(
       horaInicio,
       horaFin,
       motivo,
-      observacion: observacion || null,
-      actualizadoEn: new Date().toISOString(),
+      observacion:
+        observacion || null,
+      actualizadoEn:
+        new Date().toISOString(),
     })
     .where(
       and(
         eq(permisos.id, permisoId),
-        eq(permisos.estado, "PENDIENTE"),
+        eq(
+          permisos.estado,
+          "PENDIENTE",
+        ),
       ),
     )
     .returning({
@@ -297,7 +566,10 @@ export async function actualizarPermiso(
     );
   }
 
-  revalidatePath("/administracion/rh/permisos");
+  revalidatePath(
+    "/administracion/rh/permisos",
+  );
+
   revalidatePath(
     `/administracion/rh/permisos/${permisoId}`,
   );

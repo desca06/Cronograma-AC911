@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { empleados, vacaciones } from "@/db/schema";
 import { requerirAdmin } from "@/lib/auth";
+import { esVacacionGeneradaPorPermiso } from "@/lib/vacaciones";
 
 function calcularCantidadDias(
   fechaInicio: string,
@@ -183,6 +184,31 @@ export async function actualizarVacacion(
     redirect("/administracion/rh/vacaciones");
   }
 
+  const vacacionesEncontradas = await db
+    .select({
+      id: vacaciones.id,
+      observacion: vacaciones.observacion,
+    })
+    .from(vacaciones)
+    .where(eq(vacaciones.id, vacacionId))
+    .limit(1);
+
+  const vacacionActual = vacacionesEncontradas[0];
+
+  if (!vacacionActual) {
+    redirect("/administracion/rh/vacaciones");
+  }
+
+  if (
+    esVacacionGeneradaPorPermiso(
+      vacacionActual.observacion,
+    )
+  ) {
+    redirect(
+      `/administracion/rh/vacaciones/${vacacionId}?error=automatico`,
+    );
+  }
+
   if (
     !Number.isInteger(empleadoId) ||
     empleadoId <= 0 ||
@@ -212,8 +238,7 @@ export async function actualizarVacacion(
     );
   }
 
-  const diferencia =
-    fin.getTime() - inicio.getTime();
+  const diferencia = fin.getTime() - inicio.getTime();
 
   const cantidadDias =
     Math.floor(diferencia / 86_400_000) + 1;
@@ -277,4 +302,4 @@ export async function eliminarVacacion(vacacionId: number) {
   redirect(
     "/administracion/rh/vacaciones?eliminada=true",
   );
-} 
+}

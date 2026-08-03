@@ -11,7 +11,10 @@ import {
 import { desc, eq, sql } from "drizzle-orm";
 
 import { db } from "@/db";
-import { empleados, vacaciones } from "@/db/schema";
+import {
+  empleados,
+  vacaciones,
+} from "@/db/schema";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { requerirAdmin } from "@/lib/auth";
@@ -60,7 +63,9 @@ function textoEstado(estado: string) {
 }
 
 function formatearFecha(fecha: string) {
-  const [anio, mes, dia] = fecha.split("-").map(Number);
+  const [anio, mes, dia] = fecha
+    .split("-")
+    .map(Number);
 
   if (!anio || !mes || !dia) {
     return fecha;
@@ -255,54 +260,62 @@ export default async function VacacionesPage({
                   </thead>
 
                   <tbody>
-                    {listaVacaciones.map((vacacion) => (
-                      <tr
-                        key={vacacion.id}
-                        className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50"
-                      >
-                        <td className="px-5 py-4">
-                          <p className="font-semibold text-slate-900">
-                            {vacacion.empleado}
-                          </p>
+                    {listaVacaciones.map(
+                      (vacacion) => (
+                        <tr
+                          key={vacacion.id}
+                          className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50"
+                        >
+                          <td className="px-5 py-4">
+                            <p className="font-semibold text-slate-900">
+                              {vacacion.empleado}
+                            </p>
 
-                          <p className="mt-1 text-xs text-slate-500">
-                            {vacacion.puesto}
-                          </p>
-                        </td>
+                            <p className="mt-1 text-xs text-slate-500">
+                              {vacacion.puesto}
+                            </p>
+                          </td>
 
-                        <td className="whitespace-nowrap px-5 py-4 text-sm text-slate-700">
-                          {formatearFecha(vacacion.fechaInicio)}
-                        </td>
+                          <td className="whitespace-nowrap px-5 py-4 text-sm text-slate-700">
+                            {formatearFecha(
+                              vacacion.fechaInicio,
+                            )}
+                          </td>
 
-                        <td className="whitespace-nowrap px-5 py-4 text-sm text-slate-700">
-                          {formatearFecha(vacacion.fechaFin)}
-                        </td>
+                          <td className="whitespace-nowrap px-5 py-4 text-sm text-slate-700">
+                            {formatearFecha(
+                              vacacion.fechaFin,
+                            )}
+                          </td>
 
-                        <td className="whitespace-nowrap px-5 py-4 text-sm font-semibold text-slate-700">
-                          {vacacion.cantidadDias}
-                        </td>
+                          <td className="whitespace-nowrap px-5 py-4 text-sm font-semibold text-slate-700">
+                            {vacacion.cantidadDias}
+                          </td>
 
-                        <td className="whitespace-nowrap px-5 py-4">
-                          <span
-                            className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${estiloEstado(
-                              vacacion.estado,
-                            )}`}
-                          >
-                            {textoEstado(vacacion.estado)}
-                          </span>
-                        </td>
+                          <td className="whitespace-nowrap px-5 py-4">
+                            <span
+                              className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${estiloEstado(
+                                vacacion.estado,
+                              )}`}
+                            >
+                              {textoEstado(
+                                vacacion.estado,
+                              )}
+                            </span>
+                          </td>
 
-                        <td className="whitespace-nowrap px-5 py-4 text-right">
-                          <Link
-                            href={`/administracion/rh/vacaciones/${vacacion.id}`}
-                            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-100"
-                          >
-                            <Eye size={15} />
-                            Ver detalle
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
+                          <td className="whitespace-nowrap px-5 py-4 text-right">
+                            <Link
+                              href={`/administracion/rh/vacaciones/${vacacion.id}`}
+                              className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-100"
+                            >
+                              <Eye size={15} />
+                              Ver detalle
+                            </Link>
+                          </td>
+                        </tr>
+                      ),
+                    )}
                   </tbody>
                 </table>
               </div>

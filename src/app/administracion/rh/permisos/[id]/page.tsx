@@ -4,9 +4,10 @@ import {
   CalendarDays,
   Clock3,
   FilePenLine,
+  Link2,
   UserRound,
 } from "lucide-react";
-import { eq } from "drizzle-orm";
+import { eq, like } from "drizzle-orm";
 import { notFound } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
@@ -16,8 +17,10 @@ import {
   empleados,
   permisos,
   usuarios,
+  vacaciones,
 } from "@/db/schema";
 import { requerirAdmin } from "@/lib/auth";
+import { crearPrefijoVacacionPorPermiso } from "@/lib/vacaciones";
 
 import { BotonesAutorizacion } from "./botones-autorizacion";
 import { BotonEliminar } from "./boton-eliminar";
@@ -139,6 +142,31 @@ export default async function DetallePermisoPage({
     notFound();
   }
 
+  let vacacionGenerada:
+    | {
+        id: number;
+      }
+    | undefined;
+
+  if (permiso.estado === "APROBADO") {
+    const vacacionesEncontradas = await db
+      .select({
+        id: vacaciones.id,
+      })
+      .from(vacaciones)
+      .where(
+        like(
+          vacaciones.observacion,
+          `${crearPrefijoVacacionPorPermiso(
+            permiso.id,
+          )}%`,
+        ),
+      )
+      .limit(1);
+
+    vacacionGenerada = vacacionesEncontradas[0];
+  }
+
   return (
     <AppShell>
       <PageHeader
@@ -158,13 +186,13 @@ export default async function DetallePermisoPage({
 
           {parametros.aprobado === "true" && (
             <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-              El permiso fue aprobado correctamente.
+              El permiso fue aprobado correctamente y se descontó 1 día de vacaciones.
             </div>
           )}
 
           {parametros.rechazado === "true" && (
             <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-              El permiso fue rechazado correctamente.
+              El permiso fue rechazado correctamente. No se descontaron días de vacaciones.
             </div>
           )}
 
@@ -179,6 +207,43 @@ export default async function DetallePermisoPage({
               El permiso ya fue procesado y no puede cambiarse.
             </div>
           )}
+
+          {permiso.estado === "APROBADO" &&
+            vacacionGenerada && (
+              <div className="mb-6 rounded-2xl border border-blue-200 bg-blue-50 p-5">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-xl bg-blue-100 p-2.5 text-blue-700">
+                      <Link2 size={22} />
+                    </div>
+
+                    <div>
+                      <h3 className="font-bold text-blue-900">
+                        Día de vacaciones descontado
+                      </h3>
+
+                      <p className="mt-1 text-sm leading-6 text-blue-800">
+                        Este permiso generó automáticamente un registro aprobado de 1 día en vacaciones.
+                      </p>
+                    </div>
+                  </div>
+
+                  <Link
+                    href={`/administracion/rh/vacaciones/${vacacionGenerada.id}`}
+                    className="inline-flex items-center justify-center rounded-xl border border-blue-300 bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
+                  >
+                    Ver descuento
+                  </Link>
+                </div>
+              </div>
+            )}
+
+          {permiso.estado === "APROBADO" &&
+            !vacacionGenerada && (
+              <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+                Este permiso fue aprobado antes de activar el descuento automático y todavía no tiene un día de vacaciones asociado.
+              </div>
+            )}
 
           <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
             <div>
@@ -202,20 +267,20 @@ export default async function DetallePermisoPage({
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row">
-              {permiso.estado === "PENDIENTE" &&(
+              {permiso.estado === "PENDIENTE" && (
                 <>
-                <Link
-                  href={`/administracion/rh/permisos/${permiso.id}/editar`}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-                >
-                  <FilePenLine size={17} />
-                  Editar
-                </Link>
+                  <Link
+                    href={`/administracion/rh/permisos/${permiso.id}/editar`}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                  >
+                    <FilePenLine size={17} />
+                    Editar
+                  </Link>
 
-                <BotonEliminar
-                  permisoId={permiso.id}
-                  empleado={permiso.empleado}
-                  permitido={true}
+                  <BotonEliminar
+                    permisoId={permiso.id}
+                    empleado={permiso.empleado}
+                    permitido={true}
                   />
                 </>
               )}
@@ -384,6 +449,18 @@ export default async function DetallePermisoPage({
                 <p className="mt-1 font-semibold text-slate-900">
                   {permiso.autorizador ||
                     "Pendiente de autorización"}
+                </p>
+
+                <p className="mt-5 text-sm text-slate-500">
+                  Descuento de vacaciones
+                </p>
+
+                <p className="mt-1 font-semibold text-slate-900">
+                  {permiso.estado === "APROBADO"
+                    ? vacacionGenerada
+                      ? "1 día descontado"
+                      : "Pendiente de registrar"
+                    : "No aplicado"}
                 </p>
               </div>
             </div>
