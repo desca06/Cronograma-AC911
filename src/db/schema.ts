@@ -570,6 +570,45 @@ export const proveedores = pgTable("proveedores",
   ],
 );
 
+export const cronogramaNotas = pgTable(
+  "cronograma_notas",
+  {
+    id: serial("id").primaryKey(),
+
+    fecha: date("fecha", {
+      mode: "string",
+    })
+      .notNull()
+      .unique(),
+
+    contenido: text("contenido")
+      .notNull()
+      .default(""),
+
+    importancia: varchar("importancia", {
+      length: 20,
+    })
+      .notNull()
+      .default("PENDIENTE"),
+
+    creadoEn: timestamp("creado_en", {
+      withTimezone: true,
+      mode: "string",
+    })
+      .notNull()
+      .defaultNow(),
+
+    actualizadoEn: timestamp(
+      "actualizado_en",
+      {
+        withTimezone: true,
+        mode: "string",
+      },
+    )
+      .notNull()
+      .defaultNow(),
+  },
+);
 export type Notificacion = typeof notificaciones.$inferSelect;
 export type NuevaNotificacion = typeof notificaciones.$inferInsert;
 

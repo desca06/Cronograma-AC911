@@ -1,131 +1,148 @@
-import { asc, eq } from "drizzle-orm";
 import Link from "next/link";
+import {
+  CalendarDays,
+  CheckCircle2,
+  Clock3,
+  Home,
+  Plus,
+  TriangleAlert,
+} from "lucide-react";
+import {
+  and,
+  asc,
+  eq,
+  gte,
+  lte,
+} from "drizzle-orm";
 
+import { AppShell } from "@/components/app-shell";
+import { PageHeader } from "@/components/page-header";
 import { db } from "@/db";
 import {
   clientes,
-  empleados,
+  cronogramaNotas,
   trabajos,
-  trabajoEmpleados,
-  vehiculos,
 } from "@/db/schema";
-import { PageHeader } from "@/components/page-header";
-import { AppShell } from "@/components/app-shell";
+import { requerirAdmin } from "@/lib/auth";
+
+import { CalendarioEditable } from "./calendario-editable";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const coloresEstado: Record<string, string> = {
-  Pendiente: "bg-amber-100 text-amber-800",
-  "En camino": "bg-purple-100 text-purple-800",
-  "En proceso": "bg-blue-100 text-blue-800",
-  Finalizado: "bg-emerald-100 text-emerald-800",
-  Cancelado: "bg-red-100 text-red-800",
-};
-
-function obtenerFechaHoy(): string {
-  return new Date().toLocaleDateString("en-CA", {
-    timeZone: "America/Guatemala",
-  });
-}
-
-function formatearFecha(fecha: string): string {
-  return new Date(`${fecha}T12:00:00`).toLocaleDateString(
-    "es-GT",
-    {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    },
-  );
-}
-
 type CronogramaPageProps = {
   searchParams: Promise<{
-    fecha?: string | string[];
+    mes?: string | string[];
   }>;
 };
+
+function obtenerMesActual(): string {
+  return new Date()
+    .toLocaleDateString("en-CA", {
+      timeZone: "America/Guatemala",
+    })
+    .slice(0, 7);
+}
+
+function normalizarMes(valor: string) {
+  return /^\d{4}-(0[1-9]|1[0-2])$/.test(valor)
+    ? valor
+    : obtenerMesActual();
+}
+
+function obtenerRangoMes(mes: string) {
+  const [anio, numeroMes] = mes
+    .split("-")
+    .map(Number);
+
+  const diasMes = new Date(
+    Date.UTC(anio, numeroMes, 0),
+  ).getUTCDate();
+
+  return {
+    fechaInicio: `${mes}-01`,
+    fechaFin: `${mes}-${String(diasMes).padStart(2, "0")}`,
+    diasMes,
+  };
+}
+
+function formatearMes(mes: string) {
+  const [anio, numeroMes] = mes
+    .split("-")
+    .map(Number);
+
+  const texto = new Intl.DateTimeFormat("es-GT", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(
+    new Date(Date.UTC(anio, numeroMes - 1, 1)),
+  );
+
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
 
 export default async function CronogramaPage({
   searchParams,
 }: CronogramaPageProps) {
+  await requerirAdmin();
+
   const parametros = await searchParams;
 
-  const fechaParametro =
-    typeof parametros.fecha === "string"
-      ? parametros.fecha
+  const mesParametro =
+    typeof parametros.mes === "string"
+      ? parametros.mes
       : "";
 
-  const fechaSeleccionada =
-    fechaParametro || obtenerFechaHoy();
+  const mesSeleccionado =
+    normalizarMes(mesParametro);
+
+  const {
+    fechaInicio,
+    fechaFin,
+    diasMes,
+  } = obtenerRangoMes(mesSeleccionado);
 
   const listaTrabajos = await db
     .select({
       id: trabajos.id,
       fecha: trabajos.fecha,
       tipo: trabajos.tipo,
-      descripcion: trabajos.descripcion,
-      direccion: trabajos.direccion,
       estado: trabajos.estado,
-      horaInicio: trabajos.horaInicio,
-      horaFin: trabajos.horaFin,
-      observaciones: trabajos.observaciones,
       clienteNombre: clientes.nombre,
-      clienteTelefono: clientes.telefono,
-      vehiculoNombre: vehiculos.nombre,
-      vehiculoPlaca: vehiculos.placa,
     })
     .from(trabajos)
     .innerJoin(
       clientes,
       eq(trabajos.clienteId, clientes.id),
     )
-    .leftJoin(
-      vehiculos,
-      eq(trabajos.vehiculoId, vehiculos.id),
+    .where(
+      and(
+        gte(trabajos.fecha, fechaInicio),
+        lte(trabajos.fecha, fechaFin),
+      ),
     )
-    .where(eq(trabajos.fecha, fechaSeleccionada))
     .orderBy(
-      asc(trabajos.horaInicio),
+      asc(trabajos.fecha),
       asc(trabajos.id),
-    )
-;
+    );
 
-  const asignaciones = await db
+  const notas = await db
     .select({
-      trabajoId: trabajoEmpleados.trabajoId,
-      empleadoNombre: empleados.nombre,
-      empleadoPuesto: empleados.puesto,
+      id: cronogramaNotas.id,
+      fecha: cronogramaNotas.fecha,
+      contenido: cronogramaNotas.contenido,
+      importancia: cronogramaNotas.importancia,
+      actualizadoEn: cronogramaNotas.actualizadoEn,
     })
-    .from(trabajoEmpleados)
-    .innerJoin(
-      empleados,
-      eq(trabajoEmpleados.empleadoId, empleados.id),
+    .from(cronogramaNotas)
+    .where(
+      and(
+        gte(cronogramaNotas.fecha, fechaInicio),
+        lte(cronogramaNotas.fecha, fechaFin),
+      ),
     )
-;
-
-  const empleadosPorTrabajo =
-    asignaciones.reduce<
-      Record<
-        number,
-        Array<{
-          nombre: string;
-          puesto: string;
-        }>
-      >
-    >((resultado, asignacion) => {
-      if (!resultado[asignacion.trabajoId]) {
-        resultado[asignacion.trabajoId] = [];
-      }
-
-      resultado[asignacion.trabajoId].push({
-        nombre: asignacion.empleadoNombre,
-        puesto: asignacion.empleadoPuesto,
-      });
-
-      return resultado;
-    }, {});
+    .orderBy(asc(cronogramaNotas.fecha));
 
   const totalPendientes = listaTrabajos.filter(
     (trabajo) => trabajo.estado === "Pendiente",
@@ -141,268 +158,162 @@ export default async function CronogramaPage({
     (trabajo) => trabajo.estado === "Finalizado",
   ).length;
 
+  const totalUrgentes = notas.filter(
+    (nota) => nota.importancia === "URGENTE",
+  ).length;
+
   return (
     <AppShell>
       <PageHeader
-        title="Cronograma diario"
-        description={`Visualiza los trabajos programados para el ${formatearFecha(
-          fechaSeleccionada
-        )}`}
+        title="Cronograma mensual"
+        description={`Organiza y edita la programación de ${formatearMes(
+          mesSeleccionado,
+        )}.`}
       />
-      
-      <section className="mb-7 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Link
-              href="/trabajos"
-              className="rounded-xl bg-blue-600 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-blue-700"
-            >
-              + Crear trabajo
-            </Link>
 
-            <Link
-              href="/dashboard"
-              className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-center text-sm font-semibold text-slate-700 hover:bg-slate-50"
+      <section className="space-y-7 p-5 md:p-8">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-end">
+            <form
+              method="GET"
+              className="flex flex-col gap-3 sm:flex-row sm:items-end"
             >
-              Volver al inicio
-            </Link>
-          </div>
+              <div>
+                <label
+                  htmlFor="mes"
+                  className="mb-2 block text-sm font-semibold text-slate-700"
+                >
+                  Mes del cronograma
+                </label>
 
-        <section className="mb-7 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <form
-            method="GET"
-            className="flex flex-col gap-4 sm:flex-row sm:items-end"
-          >
-            <div className="w-full sm:max-w-xs">
-              <label
-                htmlFor="fecha"
-                className="mb-2 block text-sm font-semibold text-slate-700"
+                <input
+                  id="mes"
+                  name="mes"
+                  type="month"
+                  defaultValue={mesSeleccionado}
+                  className="form-control w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 sm:w-52"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="btn btn-primary inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
               >
-                Seleccionar fecha
-              </label>
+                <CalendarDays size={17} />
+                Ver cronograma
+              </button>
 
-              <input
-                id="fecha"
-                name="fecha"
-                type="date"
-                defaultValue={fechaSeleccionada}
-                className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
+              <Link
+                href="/cronograma"
+                className="btn btn-outline-primary inline-flex items-center justify-center gap-2 rounded-xl border border-blue-300 bg-white px-5 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
+              >
+                <Clock3 size={17} />
+                Ver hoy
+              </Link>
+            </form>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Link
+                href="/trabajos"
+                className="btn btn-primary inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+              >
+                <Plus size={17} />
+                Crear trabajo
+              </Link>
+
+              <Link
+                href="/dashboard"
+                className="btn btn-outline-secondary inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                <Home size={17} />
+                Volver al inicio
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-slate-500">
+                Trabajos programados
+              </p>
+
+              <CalendarDays
+                size={21}
+                className="text-blue-600"
               />
             </div>
-
-            <button
-              type="submit"
-              className="rounded-xl bg-slate-900 px-6 py-3 font-semibold text-white hover:bg-slate-800"
-            >
-              Ver cronograma
-            </button>
-
-            <Link
-              href="/cronograma"
-              className="rounded-xl border border-slate-300 px-6 py-3 text-center font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              Ver hoy
-            </Link>
-          </form>
-        </section>
-
-        <section className="mb-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">
-              Trabajos programados
-            </p>
 
             <p className="mt-2 text-3xl font-bold text-slate-900">
               {listaTrabajos.length}
             </p>
           </article>
 
-          <article className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
-            <p className="text-sm font-medium text-amber-700">
-              Pendientes
-            </p>
+          <article className="rounded-2xl border border-blue-200 bg-blue-50 p-5">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-blue-700">
+                Pendientes
+              </p>
 
-            <p className="mt-2 text-3xl font-bold text-amber-900">
+              <Clock3 size={21} />
+            </div>
+
+            <p className="mt-2 text-3xl font-bold text-blue-900">
               {totalPendientes}
             </p>
           </article>
 
-          <article className="rounded-2xl border border-blue-200 bg-blue-50 p-5">
-            <p className="text-sm font-medium text-blue-700">
-              En camino o proceso
-            </p>
+          <article className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-amber-700">
+                En camino o proceso
+              </p>
 
-            <p className="mt-2 text-3xl font-bold text-blue-900">
+              <TriangleAlert size={21} />
+            </div>
+
+            <p className="mt-2 text-3xl font-bold text-amber-900">
               {totalEnProceso}
             </p>
           </article>
 
           <article className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
-            <p className="text-sm font-medium text-emerald-700">
-              Finalizados
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-emerald-700">
+                Finalizados
+              </p>
+
+              <CheckCircle2 size={21} />
+            </div>
 
             <p className="mt-2 text-3xl font-bold text-emerald-900">
               {totalFinalizados}
             </p>
           </article>
+
+          <article className="rounded-2xl border border-red-200 bg-red-50 p-5">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-red-700">
+                Alertas urgentes
+              </p>
+
+              <TriangleAlert size={21} />
+            </div>
+
+            <p className="mt-2 text-3xl font-bold text-red-900">
+              {totalUrgentes}
+            </p>
+          </article>
         </section>
 
-        {listaTrabajos.length === 0 ? (
-          <section className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center">
-            <h2 className="text-xl font-bold text-slate-900">
-              No hay trabajos para esta fecha
-            </h2>
-
-            <p className="mt-2 text-slate-500">
-              Selecciona otra fecha o crea un nuevo trabajo.
-            </p>
-
-            <Link
-              href="/trabajos"
-              className="mt-6 inline-block rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700"
-            >
-              Crear trabajo
-            </Link>
-          </section>
-        ) : (
-          <section className="grid gap-5 xl:grid-cols-2">
-            {listaTrabajos.map((trabajo, indice) => {
-              const equipo =
-                empleadosPorTrabajo[trabajo.id] ?? [];
-
-              return (
-                <article
-                  key={trabajo.id}
-                  className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
-                >
-                  <div className="border-b border-slate-200 bg-slate-50 px-6 py-4">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <p className="text-xs font-bold uppercase tracking-wide text-blue-700">
-                          Trabajo {indice + 1}
-                        </p>
-
-                        <h2 className="mt-1 text-xl font-bold text-slate-900">
-                          {trabajo.clienteNombre}
-                        </h2>
-                      </div>
-
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-bold ${
-                          coloresEstado[trabajo.estado] ??
-                          "bg-slate-100 text-slate-700"
-                        }`}
-                      >
-                        {trabajo.estado}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-5 p-6">
-                    <div>
-                      <p className="text-sm font-medium text-slate-500">
-                        Actividad
-                      </p>
-
-                      <p className="mt-1 font-bold text-slate-900">
-                        {trabajo.tipo}
-                      </p>
-
-                      <p className="mt-1 text-sm text-slate-600">
-                        {trabajo.descripcion}
-                      </p>
-                    </div>
-
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div>
-                        <p className="text-sm font-medium text-slate-500">
-                          Vehículo
-                        </p>
-
-                        <p className="mt-1 font-semibold text-slate-900">
-                          {trabajo.vehiculoNombre ??
-                            "Sin vehículo"}
-                        </p>
-
-                        {trabajo.vehiculoPlaca && (
-                          <p className="text-xs text-slate-500">
-                            Placa: {trabajo.vehiculoPlaca}
-                          </p>
-                        )}
-                      </div>
-
-                      <div>
-                        <p className="text-sm font-medium text-slate-500">
-                          Horario
-                        </p>
-
-                        <p className="mt-1 font-semibold text-slate-900">
-                          {trabajo.horaInicio || "Sin definir"}
-                          {trabajo.horaFin
-                            ? ` - ${trabajo.horaFin}`
-                            : ""}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div>
-                      <p className="text-sm font-medium text-slate-500">
-                        Equipo asignado
-                      </p>
-
-                      {equipo.length === 0 ? (
-                        <p className="mt-2 text-sm text-slate-500">
-                          Sin empleados asignados
-                        </p>
-                      ) : (
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {equipo.map((empleado) => (
-                            <span
-                              key={`${trabajo.id}-${empleado.nombre}`}
-                              className="rounded-full bg-blue-50 px-3 py-1.5 text-sm font-semibold text-blue-800"
-                            >
-                              {empleado.nombre}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    <div>
-                      <p className="text-sm font-medium text-slate-500">
-                        Dirección
-                      </p>
-
-                      <p className="mt-1 text-sm text-slate-700">
-                        {trabajo.direccion ||
-                          "Sin dirección registrada"}
-                      </p>
-                    </div>
-
-                    {trabajo.observaciones && (
-                      <div className="rounded-xl bg-slate-50 p-4">
-                        <p className="text-sm font-medium text-slate-500">
-                          Observaciones
-                        </p>
-
-                        <p className="mt-1 text-sm text-slate-700">
-                          {trabajo.observaciones}
-                        </p>
-                      </div>
-                    )}
-
-                    <Link
-                      href="/trabajos"
-                      className="block w-full rounded-xl border border-slate-300 px-4 py-3 text-center text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                    >
-                      Administrar trabajo
-                    </Link>
-                  </div>
-                </article>
-              );
-            })}
-          </section>
-        )}
+        <CalendarioEditable
+          key={mesSeleccionado}
+          mes={mesSeleccionado}
+          diasMes={diasMes}
+          notasIniciales={notas}
+          trabajos={listaTrabajos}
+        />
       </section>
     </AppShell>
   );
