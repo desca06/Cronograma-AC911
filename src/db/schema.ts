@@ -13,14 +13,46 @@ import {
   index
 } from "drizzle-orm/pg-core";
 
-export const empleados = pgTable("empleados", {
-  id: serial("id").primaryKey(),
-  nombre: text("nombre").notNull(),
-  telefono: text("telefono"),
-  puesto: text("puesto").notNull().default("Técnico"),
-  activo: boolean("activo").notNull().default(true),
-  creadoEn: timestamp("creado_en", { mode: "string" }).notNull().defaultNow(),
-});
+export const empleados = pgTable(
+  "empleados",
+  {
+    id: serial("id").primaryKey(),
+    nombre: text("nombre").notNull(),
+    telefono: text("telefono"),
+    puesto: text("puesto")
+      .notNull()
+      .default("Técnico"),
+    activo: boolean("activo")
+      .notNull()
+      .default(true),
+
+    /*
+     * Límite mensual de horas extra expresado
+     * en minutos.
+     *
+     * Ejemplos:
+     * 300 = 5 horas
+     * 600 = 10 horas
+     * 900 = 15 horas
+     */
+    limiteMinutosExtraMensuales: integer(
+      "limite_minutos_extra_mensuales",
+    )
+      .notNull()
+      .default(0),
+
+    creadoEn: timestamp("creado_en", {
+      mode: "string",
+    })
+      .notNull()
+      .defaultNow(),
+  },
+  (tabla) => [
+    index("empleados_activo_idx").on(
+      tabla.activo,
+    ),
+  ],
+);
 
 export const clientes = pgTable("clientes", {
   id: serial("id").primaryKey(),
@@ -124,26 +156,75 @@ export const evidencias = pgTable("evidencias", {
   creadoEn: timestamp("creado_en", { mode: "string" }).notNull().defaultNow(),
 });
 
-export const asistencias = pgTable("asistencias",  {
+export const asistencias = pgTable(
+  "asistencias",
+  {
     id: serial("id").primaryKey(),
+
     empleadoId: integer("empleado_id")
       .notNull()
       .references(() => empleados.id, {
-        onDelete: "restrict",}),
-    fecha: date("fecha", { mode: "string" }).notNull(),
-    horaEntrada: time("hora_entrada", {withTimezone: false,}),
-    horaSalida: time("hora_salida", { withTimezone: false,}),
-    estado: text("estado").notNull().default("PRESENTE"),
+        onDelete: "restrict",
+      }),
+
+    fecha: date("fecha", {
+      mode: "string",
+    }).notNull(),
+
+    horaEntrada: time("hora_entrada", {
+      withTimezone: false,
+    }),
+
+    horaSalida: time("hora_salida", {
+      withTimezone: false,
+    }),
+
+    estado: text("estado")
+      .notNull()
+      .default("PRESENTE"),
+
+    /*
+     * Minutos de hora extra reconocidos para
+     * esta asistencia.
+     *
+     * Solo deben registrarse minutos posteriores
+     * a las 17:00 y sin superar el límite mensual
+     * configurado en empleados.
+     */
+    minutosHoraExtra: integer(
+      "minutos_hora_extra",
+    )
+      .notNull()
+      .default(0),
+
     observacion: text("observacion"),
-    creadoEn: timestamp("creado_en", {mode: "string"})
+
+    creadoEn: timestamp("creado_en", {
+      mode: "string",
+    })
       .notNull()
       .defaultNow(),
   },
-  (tabla) => ({
-    empleadoFechaUnica: uniqueIndex(
+  (tabla) => [
+    uniqueIndex(
       "asistencias_empleado_fecha_unique",
-    ).on(tabla.empleadoId, tabla.fecha),
-  }),
+    ).on(
+      tabla.empleadoId,
+      tabla.fecha,
+    ),
+
+    index("asistencias_fecha_idx").on(
+      tabla.fecha,
+    ),
+
+    index("asistencias_estado_idx").on(
+      tabla.estado,
+    ),
+
+    index("asistencias_empleado_idx").on(
+      tabla.empleadoId,
+    ),
+  ],
 );
 
 export const vacaciones = pgTable("vacaciones", {
@@ -678,6 +759,9 @@ export type NuevaSuscripcionPush = typeof suscripcionesPush.$inferInsert;
 
 export type Asistencia = typeof asistencias.$inferSelect;
 export type NuevaAsistencia = typeof asistencias.$inferInsert;
+
+export type CronogramaNota = typeof cronogramaNotas.$inferSelect;
+export type NuevaCronogramaNota = typeof cronogramaNotas.$inferInsert;
 
 export type Vacacion = typeof vacaciones.$inferSelect;
 export type NuevaVacacion = typeof vacaciones.$inferInsert;
