@@ -10,7 +10,7 @@ import { db } from "@/db";
 import { empleadoQr, empleados } from "@/db/schema";
 import { requerirAdmin } from "@/lib/auth";
 
-const RUTA_EMPLEADOS = "/administracion/rh/empleados";
+const RUTA_EMPLEADOS = "/empleados";
 
 function generarTokenSeguro() {
   return randomBytes(32).toString("hex");

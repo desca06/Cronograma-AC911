@@ -238,6 +238,15 @@ export default async function EmpleadosPage() {
                               >
                                 Eliminar
                               </button>
+
+                              <button
+                              type= "button"
+                              className="rounded-lg bg-green-100 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200"
+                              >
+                                <Link href={`/empleados/${empleado.id}`}>
+                                  Ver
+                                </Link>
+                              </button>
                             </form>
                           </div>
                         </td>
