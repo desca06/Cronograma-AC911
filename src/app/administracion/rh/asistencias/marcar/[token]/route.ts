@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { and, eq, sql } from "drizzle-orm";
-
+import { ENV } from "@/config/env";
 import { db } from "@/db";
 import {
     asistencias,
@@ -47,21 +47,20 @@ function obtenerHoraGuatemala() {
 }
 
 function crearUrlResultado(
-    request: Request,
-    parametros: Record<string, string>,
+  parametros: Record<string, string>,
 ) {
-    const url = new URL(
-        "/asistencia/resultado",
-        request.url,
-    );
+  const url = new URL(
+    "/asistencia/resultado",
+    ENV.appUrl,
+  );
 
-    for (const [clave, valor] of Object.entries(
-        parametros,
-    )) {
-        url.searchParams.set(clave, valor);
-    }
+  for (const [clave, valor] of Object.entries(
+    parametros,
+  )) {
+    url.searchParams.set(clave, valor);
+  }
 
-    return url;
+  return url;
 }
 
 export async function GET(
@@ -72,10 +71,10 @@ export async function GET(
 
     if (!token || token.length < 32) {
         return NextResponse.redirect(
-            crearUrlResultado(request, {
-                estado: "ERROR",
-                mensaje: "El código QR no es válido.",
-            }),
+            crearUrlResultado({
+  estado: "ERROR",
+  mensaje: "El código QR no es válido.",
+})
         );
     }
 
@@ -83,10 +82,10 @@ export async function GET(
 
     if (!red.autorizado) {
         return NextResponse.redirect(
-            crearUrlResultado(request, {
-                estado: "RED_NO_AUTORIZADA",
-                mensaje: red.motivo,
-            }),
+            crearUrlResultado({
+  estado: "ERROR",
+  mensaje: "El código QR no es válido.",
+})
         );
     }
 
@@ -106,21 +105,19 @@ export async function GET(
 
     if (!empleado) {
         return NextResponse.redirect(
-            crearUrlResultado(request, {
-                estado: "ERROR",
-                mensaje:
-                    "El código QR no existe o fue reemplazado.",
-            }),
+           crearUrlResultado({
+  estado: "ERROR",
+  mensaje: "El código QR no es válido.",
+})
         );
     }
 
     if (!empleado.activo) {
         return NextResponse.redirect(
-            crearUrlResultado(request, {
-                estado: "ERROR",
-                mensaje:
-                    "El empleado está inactivo y no puede registrar asistencia.",
-            }),
+            crearUrlResultado({
+  estado: "ERROR",
+  mensaje: "El código QR no es válido.",
+})
         );
     }
 
@@ -129,10 +126,7 @@ export async function GET(
 
     const resultado = await db.transaction(
         async (tx) => {
-            /*
-             * Bloqueamos temporalmente la marcación de este
-             * empleado para evitar dos registros simultáneos.
-             */
+
             await tx.execute(
                 sql`select pg_advisory_xact_lock(${empleado.id})`,
             );
@@ -173,10 +167,7 @@ export async function GET(
             }
 
             if (!registro.horaSalida) {
-                /*
-                 * Evita que un doble escaneo inmediato registre
-                 * una salida accidental.
-                 */
+
                 if (registro.horaEntrada) {
                     const entrada = new Date(
                         `${fecha}T${registro.horaEntrada}`,
@@ -231,7 +222,7 @@ export async function GET(
     } as const;
 
     return NextResponse.redirect(
-        crearUrlResultado(request, {
+        crearUrlResultado( {
             estado: resultado.tipo,
             nombre: empleado.nombre,
             hora: resultado.hora ?? hora,
