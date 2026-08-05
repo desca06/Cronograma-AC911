@@ -609,6 +609,49 @@ export const cronogramaNotas = pgTable(
       .defaultNow(),
   },
 );
+
+export const empleadoQr = pgTable(
+  "empleado_qr",
+  {
+    id: serial("id").primaryKey(),
+
+    empleadoId: integer("empleado_id")
+      .notNull()
+      .unique()
+      .references(() => empleados.id, {
+        onDelete: "cascade",
+      }),
+
+    token: text("token")
+      .notNull()
+      .unique(),
+
+    generadoEn: timestamp("generado_en", {
+      mode: "date",
+    })
+      .notNull()
+      .defaultNow(),
+
+    actualizadoEn: timestamp("actualizado_en", {
+      mode: "date",
+    })
+      .notNull()
+      .defaultNow(),
+  },
+  (tabla) => [
+    index("empleado_qr_empleado_idx").on(
+      tabla.empleadoId,
+    ),
+
+    index("empleado_qr_token_idx").on(
+      tabla.token,
+    ),
+  ],
+);
+
+export type EmpleadoQr = typeof empleadoQr.$inferSelect;
+export type NuevoEmpleadoQr = typeof empleadoQr.$inferInsert;
+
 export type Notificacion = typeof notificaciones.$inferSelect;
 export type NuevaNotificacion = typeof notificaciones.$inferInsert;
 
