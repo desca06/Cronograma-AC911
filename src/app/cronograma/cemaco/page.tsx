@@ -1,16 +1,13 @@
 import Link from "next/link";
 import {
   CalendarDays,
-  CheckCircle2,
   Clock3,
   Home,
-  Plus,
   TriangleAlert,
 } from "lucide-react";
 import {
   and,
   asc,
-  eq,
   gte,
   lte,
 } from "drizzle-orm";
@@ -19,18 +16,18 @@ import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { db } from "@/db";
 import {
-  clientes,
-  cronogramaNotas,
-  trabajos,
+  cronogramaNotasCemaco,
 } from "@/db/schema";
 import { requerirAdmin } from "@/lib/auth";
 
-import { CalendarioEditable } from "./calendario-editable";
+import {
+  CalendarioCemacoEditable,
+} from "./calendario-cemaco-editable";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-type CronogramaPageProps = {
+type CalendarioCemacoPageProps = {
   searchParams: Promise<{
     mes?: string | string[];
   }>;
@@ -44,19 +41,29 @@ function obtenerMesActual(): string {
     .slice(0, 7);
 }
 
-function normalizarMes(valor: string) {
-  return /^\d{4}-(0[1-9]|1[0-2])$/.test(valor)
+function normalizarMes(
+  valor: string,
+) {
+  return /^\d{4}-(0[1-9]|1[0-2])$/.test(
+    valor,
+  )
     ? valor
     : obtenerMesActual();
 }
 
-function obtenerRangoMes(mes: string) {
+function obtenerRangoMes(
+  mes: string,
+) {
   const [anio, numeroMes] = mes
     .split("-")
     .map(Number);
 
   const diasMes = new Date(
-    Date.UTC(anio, numeroMes, 0),
+    Date.UTC(
+      anio,
+      numeroMes,
+      0,
+    ),
   ).getUTCDate();
 
   return {
@@ -68,27 +75,30 @@ function obtenerRangoMes(mes: string) {
   };
 }
 
-function formatearMes(mes: string) {
+function formatearMes(
+  mes: string,
+) {
   const [anio, numeroMes] = mes
     .split("-")
     .map(Number);
 
-  const texto = new Intl.DateTimeFormat(
-    "es-GT",
-    {
-      month: "long",
-      year: "numeric",
-      timeZone: "UTC",
-    },
-  ).format(
-    new Date(
-      Date.UTC(
-        anio,
-        numeroMes - 1,
-        1,
+  const texto =
+    new Intl.DateTimeFormat(
+      "es-GT",
+      {
+        month: "long",
+        year: "numeric",
+        timeZone: "UTC",
+      },
+    ).format(
+      new Date(
+        Date.UTC(
+          anio,
+          numeroMes - 1,
+          1,
+        ),
       ),
-    ),
-  );
+    );
 
   return (
     texto.charAt(0).toUpperCase() +
@@ -96,12 +106,13 @@ function formatearMes(mes: string) {
   );
 }
 
-export default async function CronogramaPage({
+export default async function CalendarioCemacoPage({
   searchParams,
-}: CronogramaPageProps) {
+}: CalendarioCemacoPageProps) {
   await requerirAdmin();
 
-  const parametros = await searchParams;
+  const parametros =
+    await searchParams;
 
   const mesParametro =
     typeof parametros.mes === "string"
@@ -109,7 +120,9 @@ export default async function CronogramaPage({
       : "";
 
   const mesSeleccionado =
-    normalizarMes(mesParametro);
+    normalizarMes(
+      mesParametro,
+    );
 
   const {
     fechaInicio,
@@ -119,96 +132,72 @@ export default async function CronogramaPage({
     mesSeleccionado,
   );
 
-  const listaTrabajos = await db
-    .select({
-      id: trabajos.id,
-      fecha: trabajos.fecha,
-      tipo: trabajos.tipo,
-      estado: trabajos.estado,
-      clienteNombre: clientes.nombre,
-    })
-    .from(trabajos)
-    .innerJoin(
-      clientes,
-      eq(
-        trabajos.clienteId,
-        clientes.id,
-      ),
-    )
-    .where(
-      and(
-        gte(
-          trabajos.fecha,
-          fechaInicio,
-        ),
-        lte(
-          trabajos.fecha,
-          fechaFin,
-        ),
-      ),
-    )
-    .orderBy(
-      asc(trabajos.fecha),
-      asc(trabajos.id),
-    );
-
   const notas = await db
     .select({
-      id: cronogramaNotas.id,
-      fecha: cronogramaNotas.fecha,
-      contenido: cronogramaNotas.contenido,
+      id: cronogramaNotasCemaco.id,
+      fecha:
+        cronogramaNotasCemaco.fecha,
+      contenido:
+        cronogramaNotasCemaco.contenido,
       importancia:
-        cronogramaNotas.importancia,
+        cronogramaNotasCemaco.importancia,
       actualizadoEn:
-        cronogramaNotas.actualizadoEn,
+        cronogramaNotasCemaco.actualizadoEn,
     })
-    .from(cronogramaNotas)
+    .from(
+      cronogramaNotasCemaco,
+    )
     .where(
       and(
         gte(
-          cronogramaNotas.fecha,
+          cronogramaNotasCemaco.fecha,
           fechaInicio,
         ),
         lte(
-          cronogramaNotas.fecha,
+          cronogramaNotasCemaco.fecha,
           fechaFin,
         ),
       ),
     )
     .orderBy(
-      asc(cronogramaNotas.fecha),
+      asc(
+        cronogramaNotasCemaco.fecha,
+      ),
     );
 
-  const totalPendientes =
-    listaTrabajos.filter(
-      (trabajo) =>
-        trabajo.estado === "Pendiente",
+  const totalCumplidos =
+    notas.filter(
+      (nota) =>
+        nota.importancia ===
+        "CUMPLIDO",
     ).length;
 
   const totalEnProceso =
-    listaTrabajos.filter(
-      (trabajo) =>
-        trabajo.estado === "En proceso" ||
-        trabajo.estado === "En camino",
+    notas.filter(
+      (nota) =>
+        nota.importancia ===
+        "EN_PROCESO",
     ).length;
 
-  const totalFinalizados =
-    listaTrabajos.filter(
-      (trabajo) =>
-        trabajo.estado === "Finalizado",
+  const totalPendientes =
+    notas.filter(
+      (nota) =>
+        nota.importancia ===
+        "PENDIENTE",
     ).length;
 
   const totalUrgentes =
     notas.filter(
       (nota) =>
-        nota.importancia === "URGENTE",
+        nota.importancia ===
+        "URGENTE",
     ).length;
 
   return (
     <AppShell>
       <PageHeader
-        title="Cronograma mensual"
-        description={`Organiza y edita la programación de ${formatearMes(
+        title="Calendario CEMACO"
+        description={`Organiza y edita las actividades CEMACO de ${formatearMes(
           mesSeleccionado,
         )}.`}
       />
@@ -225,7 +214,7 @@ export default async function CronogramaPage({
                   htmlFor="mes"
                   className="mb-2 block text-sm font-semibold text-slate-700"
                 >
-                  Mes del cronograma
+                  Mes de CEMACO
                 </label>
 
                 <input
@@ -243,114 +232,87 @@ export default async function CronogramaPage({
                 type="submit"
                 className="btn btn-primary inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
               >
-                <CalendarDays size={17} />
-                Ver cronograma
+                <CalendarDays
+                  size={17}
+                />
+                Ver calendario
               </button>
 
               <Link
-                href="/cronograma"
+                href="/cronograma/cemaco"
                 className="btn btn-outline-primary inline-flex items-center justify-center gap-2 rounded-xl border border-blue-300 bg-white px-5 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
               >
-                <Clock3 size={17} />
+                <Clock3
+                  size={17}
+                />
                 Ver hoy
               </Link>
             </form>
 
             <div className="flex flex-col gap-3 sm:flex-row">
               <Link
-                href="/cronograma/cemaco"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-5 py-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                href="/cronograma"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-300 bg-white px-5 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
               >
-                <CalendarDays size={17} />
-                Calendario CEMACO
-              </Link>
-
-              <Link
-                href="/trabajos"
-                className="btn btn-primary inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
-              >
-                <Plus size={17} />
-                Crear trabajo
+                <CalendarDays
+                  size={17}
+                />
+                Cronograma general
               </Link>
 
               <Link
                 href="/dashboard"
                 className="btn btn-outline-secondary inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
               >
-                <Home size={17} />
+                <Home
+                  size={17}
+                />
                 Volver al inicio
               </Link>
             </div>
           </div>
         </div>
 
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-slate-500">
-                Trabajos programados
-              </p>
-
-              <CalendarDays
-                size={21}
-                className="text-blue-600"
-              />
-            </div>
-
-            <p className="mt-2 text-3xl font-bold text-slate-900">
-              {listaTrabajos.length}
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <article className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+            <p className="text-sm font-medium text-emerald-700">
+              Cumplidos
             </p>
-          </article>
 
-          <article className="rounded-2xl border border-blue-200 bg-blue-50 p-5">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-blue-700">
-                Pendientes
-              </p>
-
-              <Clock3 size={21} />
-            </div>
-
-            <p className="mt-2 text-3xl font-bold text-blue-900">
-              {totalPendientes}
+            <p className="mt-2 text-3xl font-bold text-emerald-900">
+              {totalCumplidos}
             </p>
           </article>
 
           <article className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-amber-700">
-                En camino o proceso
-              </p>
-
-              <TriangleAlert size={21} />
-            </div>
+            <p className="text-sm font-medium text-amber-700">
+              En proceso
+            </p>
 
             <p className="mt-2 text-3xl font-bold text-amber-900">
               {totalEnProceso}
             </p>
           </article>
 
-          <article className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-emerald-700">
-                Finalizados
-              </p>
+          <article className="rounded-2xl border border-blue-200 bg-blue-50 p-5">
+            <p className="text-sm font-medium text-blue-700">
+              Pendientes
+            </p>
 
-              <CheckCircle2 size={21} />
-            </div>
-
-            <p className="mt-2 text-3xl font-bold text-emerald-900">
-              {totalFinalizados}
+            <p className="mt-2 text-3xl font-bold text-blue-900">
+              {totalPendientes}
             </p>
           </article>
 
           <article className="rounded-2xl border border-red-200 bg-red-50 p-5">
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium text-red-700">
-                Alertas urgentes
+                Urgentes
               </p>
 
-              <TriangleAlert size={21} />
+              <TriangleAlert
+                size={21}
+              />
             </div>
 
             <p className="mt-2 text-3xl font-bold text-red-900">
@@ -359,12 +321,12 @@ export default async function CronogramaPage({
           </article>
         </section>
 
-        <CalendarioEditable
+        <CalendarioCemacoEditable
           key={mesSeleccionado}
           mes={mesSeleccionado}
           diasMes={diasMes}
           notasIniciales={notas}
-          trabajos={listaTrabajos}
+          trabajos={[]}
         />
       </section>
     </AppShell>

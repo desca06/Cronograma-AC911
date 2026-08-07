@@ -4,7 +4,9 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
-import { cronogramaNotas } from "@/db/schema";
+import {
+  cronogramaNotasCemaco,
+} from "@/db/schema";
 import { requerirAdmin } from "@/lib/auth";
 
 const IMPORTANCIAS = [
@@ -31,7 +33,7 @@ function esFechaValida(fecha: string) {
   );
 }
 
-export async function guardarNotaCalendario(
+export async function guardarNotaCemaco(
   formData: FormData,
 ) {
   await requerirAdmin();
@@ -67,7 +69,7 @@ export async function guardarNotaCalendario(
     return {
       ok: false,
       mensaje:
-        "Escribe al menos una actividad antes de guardar.",
+        "Escribe al menos una actividad CEMACO.",
     };
   }
 
@@ -82,7 +84,7 @@ export async function guardarNotaCalendario(
   const ahora = new Date().toISOString();
 
   await db
-    .insert(cronogramaNotas)
+    .insert(cronogramaNotasCemaco)
     .values({
       fecha,
       contenido,
@@ -90,7 +92,8 @@ export async function guardarNotaCalendario(
       actualizadoEn: ahora,
     })
     .onConflictDoUpdate({
-      target: cronogramaNotas.fecha,
+      target:
+        cronogramaNotasCemaco.fecha,
       set: {
         contenido,
         importancia,
@@ -98,16 +101,18 @@ export async function guardarNotaCalendario(
       },
     });
 
-  revalidatePath("/cronograma");
+  revalidatePath(
+    "/cronograma/cemaco",
+  );
 
   return {
     ok: true,
     mensaje:
-      "La actividad se guardó en la base de datos.",
+      "La actividad CEMACO fue guardada correctamente.",
   };
 }
 
-export async function eliminarNotaCalendario(
+export async function eliminarNotaCemaco(
   formData: FormData,
 ) {
   await requerirAdmin();
@@ -124,19 +129,21 @@ export async function eliminarNotaCalendario(
   }
 
   await db
-    .delete(cronogramaNotas)
+    .delete(cronogramaNotasCemaco)
     .where(
       eq(
-        cronogramaNotas.fecha,
+        cronogramaNotasCemaco.fecha,
         fecha,
       ),
     );
 
-  revalidatePath("/cronograma");
+  revalidatePath(
+    "/cronograma/cemaco",
+  );
 
   return {
     ok: true,
     mensaje:
-      "La actividad fue eliminada de la base de datos.",
+      "La actividad CEMACO fue eliminada correctamente.",
   };
 }

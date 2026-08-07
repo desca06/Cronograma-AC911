@@ -730,6 +730,52 @@ export const empleadoQr = pgTable(
   ],
 );
 
+export const cronogramaNotasCemaco = pgTable(
+  "cronograma_notas_cemaco",
+  {
+    id: serial("id").primaryKey(),
+
+    fecha: date("fecha", {
+      mode: "string",
+    })
+      .notNull()
+      .unique(),
+
+    contenido: text("contenido")
+      .notNull()
+      .default(""),
+
+    importancia: varchar("importancia", {
+      length: 20,
+    })
+      .notNull()
+      .default("PENDIENTE"),
+
+    creadoEn: timestamp("creado_en", {
+      withTimezone: true,
+      mode: "string",
+    })
+      .notNull()
+      .defaultNow(),
+
+    actualizadoEn: timestamp(
+      "actualizado_en",
+      {
+        withTimezone: true,
+        mode: "string",
+      },
+    )
+      .notNull()
+      .defaultNow(),
+  },
+);
+
+export type CronogramaNotaCemaco =
+  typeof cronogramaNotasCemaco.$inferSelect;
+
+export type NuevaCronogramaNotaCemaco =
+  typeof cronogramaNotasCemaco.$inferInsert;
+
 export type EmpleadoQr = typeof empleadoQr.$inferSelect;
 export type NuevoEmpleadoQr = typeof empleadoQr.$inferInsert;
 
