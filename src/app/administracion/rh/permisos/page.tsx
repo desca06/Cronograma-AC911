@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  ArrowLeft,
   CalendarClock,
   CheckCircle2,
   Clock3,
@@ -149,6 +150,16 @@ export default async function PermisosPage({
       />
 
       <section className="space-y-6 p-5 md:p-8">
+        <div>
+          <Link
+            href="/administracion"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900"
+          >
+            <ArrowLeft size={18} />
+            Volver a administración
+          </Link>
+        </div>
+
         {parametros.creado === "true" && (
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
             El permiso fue registrado correctamente.
