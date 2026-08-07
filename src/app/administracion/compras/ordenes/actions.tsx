@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
@@ -122,7 +122,7 @@ function parsearItems(raw: string): ItemFormulario[] {
 }
 
 export async function crearOrdenCompra(formData: FormData) {
-  await requerirAdmin();
+  const sesion = await requerirAdmin();
 
   const proveedorId = entero(formData.get("proveedorId"));
   const fechaCompra = texto(formData.get("fechaCompra"));
@@ -206,6 +206,16 @@ export async function crearOrdenCompra(formData: FormData) {
 
   const codigo = generarCodigoOrden();
 
+  /*
+   * IMPORTANTE:
+   * Capturamos el instante real una sola vez y lo enviamos
+   * explícitamente a PostgreSQL. Así no dependemos de defaultNow()
+   * para las horas de Compras y evitamos el desfase de 6 horas.
+   *
+   * Al mostrar estos Date en la interfaz se usa America/Guatemala.
+   */
+  const ahora = new Date();
+
   const ordenId = await db.transaction(async (tx) => {
     const [orden] = await tx
       .insert(ordenesCompra)
@@ -219,6 +229,8 @@ export async function crearOrdenCompra(formData: FormData) {
         estado: "PENDIENTE",
         subtotal,
         total: subtotal,
+        creadoEn: ahora,
+        actualizadoEn: ahora,
       })
       .returning({ id: ordenesCompra.id });
 
@@ -257,20 +269,24 @@ export async function crearOrdenCompra(formData: FormData) {
         precioUnitario: item.precioUnitario,
         subtotal: item.cantidad * item.precioUnitario,
         orden: indice,
+        creadoEn: ahora,
       });
     }
 
     await tx.insert(ordenCompraEventos).values({
       ordenCompraId: orden.id,
+      usuarioId: sesion.usuarioId,
       tipo: "CREADA",
       estadoAnterior: null,
       estadoNuevo: "PENDIENTE",
       descripcion: "Orden de compra creada.",
+      creadoEn: ahora,
     });
 
     return orden.id;
   });
 
+  revalidatePath("/administracion/compras");
   revalidatePath("/administracion/compras/ordenes");
   revalidatePath("/administracion/compras/historial");
 
@@ -282,7 +298,8 @@ export async function crearOrdenCompra(formData: FormData) {
 export async function aprobarOrdenCompra(
   ordenId: number,
 ) {
-  await requerirAdmin();
+  const sesion = await requerirAdmin();
+  const ahora = new Date();
 
   await db.transaction(async (tx) => {
     const [orden] = await tx
@@ -304,19 +321,22 @@ export async function aprobarOrdenCompra(
       .update(ordenesCompra)
       .set({
         estado: "APROBADA",
-        actualizadoEn: new Date(),
+        actualizadoEn: ahora,
       })
       .where(eq(ordenesCompra.id, ordenId));
 
     await tx.insert(ordenCompraEventos).values({
       ordenCompraId: ordenId,
+      usuarioId: sesion.usuarioId,
       tipo: "APROBADA",
       estadoAnterior: "PENDIENTE",
       estadoNuevo: "APROBADA",
       descripcion: "Orden de compra aprobada.",
+      creadoEn: ahora,
     });
   });
 
+  revalidatePath("/administracion/compras");
   revalidatePath("/administracion/compras/ordenes");
   revalidatePath(
     `/administracion/compras/ordenes/${ordenId}`,
@@ -331,7 +351,8 @@ export async function aprobarOrdenCompra(
 export async function completarOrdenCompra(
   ordenId: number,
 ) {
-  await requerirAdmin();
+  const sesion = await requerirAdmin();
+  const ahora = new Date();
 
   await db.transaction(async (tx) => {
     const [orden] = await tx
@@ -356,6 +377,7 @@ export async function completarOrdenCompra(
         articuloId: ordenCompraItems.articuloId,
         descripcion: ordenCompraItems.descripcion,
         cantidad: ordenCompraItems.cantidad,
+        precioUnitario: ordenCompraItems.precioUnitario,
       })
       .from(ordenCompraItems)
       .where(
@@ -367,6 +389,45 @@ export async function completarOrdenCompra(
         item.tipo !== "PRODUCTO" ||
         !item.articuloId
       ) {
+        continue;
+      }
+
+      const [articulo] = await tx
+        .select({
+          id: articulosInventario.id,
+          estado: articulosInventario.estado,
+          controlaStock:
+            articulosInventario.controlaStock,
+        })
+        .from(articulosInventario)
+        .where(
+          eq(
+            articulosInventario.id,
+            item.articuloId,
+          ),
+        )
+        .limit(1);
+
+      if (!articulo || articulo.estado !== "ACTIVO") {
+        throw new Error(
+          `El artículo ${item.descripcion} ya no está disponible.`,
+        );
+      }
+
+      await tx
+        .update(articulosInventario)
+        .set({
+          costoReferencia: item.precioUnitario,
+          actualizadoEn: ahora,
+        })
+        .where(
+          eq(
+            articulosInventario.id,
+            item.articuloId,
+          ),
+        );
+
+      if (!articulo.controlaStock) {
         continue;
       }
 
@@ -385,68 +446,92 @@ export async function completarOrdenCompra(
         )
         .limit(1);
 
-      const anterior = existencia?.cantidadActual ?? 0;
-      const nueva = anterior + item.cantidad;
+      const anterior =
+        existencia?.cantidadActual ?? 0;
+
+      const nueva =
+        anterior + item.cantidad;
 
       if (existencia) {
         await tx
           .update(existenciasInventario)
           .set({
             cantidadActual: nueva,
-            ultimaEntrada: new Date(),
-            actualizadoEn: new Date(),
+            ultimaEntrada: ahora,
+            actualizadoEn: ahora,
           })
           .where(
-            eq(existenciasInventario.id, existencia.id),
+            eq(
+              existenciasInventario.id,
+              existencia.id,
+            ),
           );
       } else {
-        await tx.insert(existenciasInventario).values({
-          articuloId: item.articuloId,
-          cantidadActual: nueva,
-          cantidadReservada: 0,
-          ultimaEntrada: new Date(),
-        });
+        await tx
+          .insert(existenciasInventario)
+          .values({
+            articuloId: item.articuloId,
+            cantidadActual: nueva,
+            cantidadReservada: 0,
+            ultimaEntrada: ahora,
+          });
       }
 
-      await tx.insert(movimientosInventario).values({
-        articuloId: item.articuloId,
-        usuarioId: null,
-        tipoMovimiento: "ENTRADA",
-        cantidad: item.cantidad,
-        existenciaAnterior: anterior,
-        existenciaNueva: nueva,
-        motivo: `Compra ${orden.codigo}`,
-        observaciones:
-          "Entrada automática al completar una orden de compra.",
-        documentoReferencia: orden.codigo,
-      });
+      await tx
+        .insert(movimientosInventario)
+        .values({
+          articuloId: item.articuloId,
+          usuarioId: sesion.usuarioId,
+          tipoMovimiento: "ENTRADA",
+          cantidad: item.cantidad,
+          existenciaAnterior: anterior,
+          existenciaNueva: nueva,
+          motivo: `Compra ${orden.codigo}`,
+          observaciones:
+            "Entrada automática al completar una orden de compra.",
+          documentoReferencia: orden.codigo,
+        });
     }
 
     await tx
       .update(ordenesCompra)
       .set({
         estado: "COMPLETADA",
-        completadaEn: new Date(),
-        actualizadoEn: new Date(),
+        completadaEn: ahora,
+        actualizadoEn: ahora,
       })
       .where(eq(ordenesCompra.id, ordenId));
 
-    await tx.insert(ordenCompraEventos).values({
-      ordenCompraId: ordenId,
-      tipo: "COMPLETADA",
-      estadoAnterior: "APROBADA",
-      estadoNuevo: "COMPLETADA",
-      descripcion:
-        "Compra completada. Los productos vinculados fueron ingresados al inventario.",
-    });
+    await tx
+      .insert(ordenCompraEventos)
+      .values({
+        ordenCompraId: ordenId,
+        usuarioId: sesion.usuarioId,
+        tipo: "COMPLETADA",
+        estadoAnterior: "APROBADA",
+        estadoNuevo: "COMPLETADA",
+        descripcion:
+          "Compra completada. Los artículos con control de stock fueron ingresados automáticamente al inventario.",
+        creadoEn: ahora,
+      });
   });
 
+  revalidatePath("/administracion/compras");
   revalidatePath("/administracion/compras/ordenes");
   revalidatePath(
     `/administracion/compras/ordenes/${ordenId}`,
   );
   revalidatePath("/administracion/compras/historial");
-  revalidatePath("/administracion/inventario");
+
+  revalidatePath(
+    "/administracion/inventario/articulos",
+  );
+  revalidatePath(
+    "/administracion/inventario/existencias",
+  );
+  revalidatePath(
+    "/administracion/inventario/movimientos",
+  );
 
   redirect(
     `/administracion/compras/ordenes/${ordenId}?success=completada`,
@@ -456,7 +541,8 @@ export async function completarOrdenCompra(
 export async function cancelarOrdenCompra(
   ordenId: number,
 ) {
-  await requerirAdmin();
+  const sesion = await requerirAdmin();
+  const ahora = new Date();
 
   await db.transaction(async (tx) => {
     const [orden] = await tx
@@ -482,19 +568,22 @@ export async function cancelarOrdenCompra(
       .update(ordenesCompra)
       .set({
         estado: "CANCELADA",
-        actualizadoEn: new Date(),
+        actualizadoEn: ahora,
       })
       .where(eq(ordenesCompra.id, ordenId));
 
     await tx.insert(ordenCompraEventos).values({
       ordenCompraId: ordenId,
+      usuarioId: sesion.usuarioId,
       tipo: "CANCELADA",
       estadoAnterior: orden.estado,
       estadoNuevo: "CANCELADA",
       descripcion: "Orden de compra cancelada.",
+      creadoEn: ahora,
     });
   });
 
+  revalidatePath("/administracion/compras");
   revalidatePath("/administracion/compras/ordenes");
   revalidatePath(
     `/administracion/compras/ordenes/${ordenId}`,

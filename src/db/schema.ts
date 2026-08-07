@@ -10,7 +10,7 @@ import {
   time,
   uniqueIndex,
   varchar,
-  index
+  index,
 } from "drizzle-orm/pg-core";
 
 export const empleados = pgTable(
@@ -942,6 +942,11 @@ export const ordenCompraEventos = pgTable(
         onDelete: "cascade",
       }),
 
+    usuarioId: integer("usuario_id")
+      .references(() => usuarios.id, {
+        onDelete: "set null",
+      }),
+
     tipo: varchar("tipo", {
       length: 20,
     })
@@ -971,6 +976,9 @@ export const ordenCompraEventos = pgTable(
     index("orden_eventos_orden_idx").on(
       tabla.ordenCompraId,
     ),
+    index("orden_eventos_usuario_idx").on(
+      tabla.usuarioId,
+    ),
     index("orden_eventos_tipo_idx").on(
       tabla.tipo,
     ),
@@ -979,6 +987,24 @@ export const ordenCompraEventos = pgTable(
     ),
   ],
 );
+
+export type OrdenCompra =
+  typeof ordenesCompra.$inferSelect;
+
+export type NuevaOrdenCompra =
+  typeof ordenesCompra.$inferInsert;
+
+export type OrdenCompraItem =
+  typeof ordenCompraItems.$inferSelect;
+
+export type NuevoOrdenCompraItem =
+  typeof ordenCompraItems.$inferInsert;
+
+export type OrdenCompraEvento =
+  typeof ordenCompraEventos.$inferSelect;
+
+export type NuevoOrdenCompraEvento =
+  typeof ordenCompraEventos.$inferInsert;
 
 export type CronogramaNotaCemaco =
   typeof cronogramaNotasCemaco.$inferSelect;
@@ -1038,7 +1064,7 @@ export type ExistenciaInventario = typeof existenciasInventario.$inferSelect;
 export type NuevaExistenciaInventario = typeof existenciasInventario.$inferInsert;
 
 export type MovimientoInventario = typeof movimientosInventario.$inferSelect;
-export type NuevoMovimientoInventario = typeof movimientosInventario.$inferInsert
+export type NuevoMovimientoInventario = typeof movimientosInventario.$inferInsert;
 
 export type TipoMovimientoInventario =| "ENTRADA"  | "SALIDA"| "AJUSTE_POSITIVO"  | "AJUSTE_NEGATIVO";
 

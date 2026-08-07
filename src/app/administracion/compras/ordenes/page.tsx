@@ -86,6 +86,32 @@ function nombreEstado(estado: string) {
   }
 }
 
+function formatearFechaCompra(fecha: string) {
+  const partes = fecha.split("-");
+
+  if (partes.length !== 3) {
+    return fecha;
+  }
+
+  const [anio, mes, dia] = partes;
+
+  return `${dia}/${mes}/${anio}`;
+}
+
+function horaGuatemala(fecha: Date | null) {
+  if (!fecha) {
+    return "—";
+  }
+
+  return new Intl.DateTimeFormat("es-GT", {
+    timeZone: "America/Guatemala",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  }).format(fecha);
+}
+
 export default async function OrdenesCompraPage({
   searchParams,
 }: Props) {
@@ -118,6 +144,7 @@ export default async function OrdenesCompraPage({
       id: ordenesCompra.id,
       codigo: ordenesCompra.codigo,
       fechaCompra: ordenesCompra.fechaCompra,
+      creadoEn: ordenesCompra.creadoEn,
       proveedor: proveedores.nombreComercial,
       motivo: ordenesCompra.motivo,
       estado: ordenesCompra.estado,
@@ -135,22 +162,32 @@ export default async function OrdenesCompraPage({
     )
     .orderBy(desc(ordenesCompra.creadoEn));
 
+
   const [resumen] = await db
     .select({
       total: sql<number>`count(*)::int`,
+
       pendientes: sql<number>`
         count(*) filter (
           where ${ordenesCompra.estado} = 'PENDIENTE'
         )::int
       `,
+
       aprobadas: sql<number>`
         count(*) filter (
           where ${ordenesCompra.estado} = 'APROBADA'
         )::int
       `,
+
       completadas: sql<number>`
         count(*) filter (
           where ${ordenesCompra.estado} = 'COMPLETADA'
+        )::int
+      `,
+
+      canceladas: sql<number>`
+        count(*) filter (
+          where ${ordenesCompra.estado} = 'CANCELADA'
         )::int
       `,
     })
@@ -161,13 +198,15 @@ export default async function OrdenesCompraPage({
       titulo: "Total de órdenes",
       cantidad: resumen?.total ?? 0,
       icono: ShoppingCart,
-      clases: "border-blue-200 bg-blue-50 text-blue-700",
+      clases:
+        "border-blue-200 bg-blue-50 text-blue-700",
     },
     {
       titulo: "Pendientes",
       cantidad: resumen?.pendientes ?? 0,
       icono: Clock3,
-      clases: "border-amber-200 bg-amber-50 text-amber-700",
+      clases:
+        "border-amber-200 bg-amber-50 text-amber-700",
     },
     {
       titulo: "Aprobadas",
@@ -182,6 +221,13 @@ export default async function OrdenesCompraPage({
       icono: PackageCheck,
       clases:
         "border-violet-200 bg-violet-50 text-violet-700",
+    },
+    {
+      titulo: "Canceladas",
+      cantidad: resumen?.canceladas ?? 0,
+      icono: XCircle,
+      clases:
+        "border-red-200 bg-red-50 text-red-700",
     },
   ];
 
@@ -208,6 +254,7 @@ export default async function OrdenesCompraPage({
             <h2 className="text-xl font-bold text-slate-900">
               Órdenes registradas
             </h2>
+
             <p className="mt-1 text-sm text-slate-500">
               Administrá proveedores, productos, montos y estados.
             </p>
@@ -222,7 +269,7 @@ export default async function OrdenesCompraPage({
           </Link>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           {tarjetas.map((item) => {
             const Icono = item.icono;
 
@@ -235,8 +282,10 @@ export default async function OrdenesCompraPage({
                   <p className="text-sm font-semibold">
                     {item.titulo}
                   </p>
+
                   <Icono size={21} />
                 </div>
+
                 <p className="mt-3 text-3xl font-bold">
                   {item.cantidad}
                 </p>
@@ -263,6 +312,7 @@ export default async function OrdenesCompraPage({
                   size={18}
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
                 />
+
                 <input
                   id="buscar"
                   name="buscar"
@@ -289,10 +339,18 @@ export default async function OrdenesCompraPage({
                 className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm"
               >
                 <option value="">Todos</option>
-                <option value="PENDIENTE">Pendiente</option>
-                <option value="APROBADA">Aprobada</option>
-                <option value="COMPLETADA">Completada</option>
-                <option value="CANCELADA">Cancelada</option>
+                <option value="PENDIENTE">
+                  Pendiente
+                </option>
+                <option value="APROBADA">
+                  Aprobada
+                </option>
+                <option value="COMPLETADA">
+                  Completada
+                </option>
+                <option value="CANCELADA">
+                  Cancelada
+                </option>
               </select>
             </div>
 
@@ -311,6 +369,7 @@ export default async function OrdenesCompraPage({
             <h2 className="text-lg font-bold text-slate-900">
               Listado de órdenes de compra
             </h2>
+
             <p className="mt-1 text-sm text-slate-500">
               Cada orden está relacionada con su proveedor y sus
               productos o servicios.
@@ -323,36 +382,48 @@ export default async function OrdenesCompraPage({
                 size={46}
                 className="mx-auto text-slate-300"
               />
+
               <h3 className="mt-4 text-lg font-bold text-slate-900">
                 No hay órdenes registradas
               </h3>
+
               <p className="mt-2 text-sm text-slate-500">
                 Creá la primera orden de compra para comenzar.
               </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1050px]">
+              <table className="w-full min-w-[1150px]">
                 <thead className="bg-slate-50">
                   <tr className="border-b border-slate-200">
                     <th className="px-5 py-4 text-left text-xs font-bold uppercase text-slate-500">
                       Orden
                     </th>
+
                     <th className="px-5 py-4 text-left text-xs font-bold uppercase text-slate-500">
                       Proveedor
                     </th>
+
                     <th className="px-5 py-4 text-left text-xs font-bold uppercase text-slate-500">
                       Fecha
                     </th>
+
+                    <th className="px-5 py-4 text-left text-xs font-bold uppercase text-slate-500">
+                      Hora
+                    </th>
+
                     <th className="px-5 py-4 text-left text-xs font-bold uppercase text-slate-500">
                       Motivo
                     </th>
+
                     <th className="px-5 py-4 text-left text-xs font-bold uppercase text-slate-500">
                       Total
                     </th>
+
                     <th className="px-5 py-4 text-left text-xs font-bold uppercase text-slate-500">
                       Estado
                     </th>
+
                     <th className="px-5 py-4 text-right text-xs font-bold uppercase text-slate-500">
                       Acción
                     </th>
@@ -368,27 +439,43 @@ export default async function OrdenesCompraPage({
                       <td className="whitespace-nowrap px-5 py-4 font-bold text-orange-700">
                         {orden.codigo}
                       </td>
+
                       <td className="px-5 py-4 font-semibold text-slate-900">
                         {orden.proveedor}
                       </td>
+
                       <td className="whitespace-nowrap px-5 py-4 text-sm text-slate-600">
-                        {orden.fechaCompra}
+                        {formatearFechaCompra(
+                          orden.fechaCompra,
+                        )}
                       </td>
+
+                      <td className="whitespace-nowrap px-5 py-4 text-sm font-semibold text-slate-700">
+                        {horaGuatemala(
+                          orden.creadoEn,
+                        )}
+                      </td>
+
                       <td className="max-w-[300px] px-5 py-4 text-sm text-slate-600">
                         {orden.motivo}
                       </td>
+
                       <td className="whitespace-nowrap px-5 py-4 font-bold text-slate-900">
                         {dinero(orden.total)}
                       </td>
+
                       <td className="px-5 py-4">
                         <span
                           className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${claseEstado(
                             orden.estado,
                           )}`}
                         >
-                          {nombreEstado(orden.estado)}
+                          {nombreEstado(
+                            orden.estado,
+                          )}
                         </span>
                       </td>
+
                       <td className="px-5 py-4 text-right">
                         <Link
                           href={`/administracion/compras/ordenes/${orden.id}`}
@@ -405,6 +492,8 @@ export default async function OrdenesCompraPage({
             </div>
           )}
         </div>
+
+
       </section>
     </AppShell>
   );

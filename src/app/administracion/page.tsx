@@ -1,7 +1,6 @@
 import {
   Boxes,
   ChartNoAxesCombined,
-  Settings,
   ShoppingCart,
   UsersRound,
 } from "lucide-react";
@@ -38,7 +37,8 @@ const modulos = [
       borde: "border-orange-200",
       fondoIcono: "bg-orange-100",
       textoIcono: "text-orange-700",
-      boton: "bg-orange-600",
+      boton:
+        "bg-orange-600 hover:bg-orange-700",
     },
   },
   {
@@ -52,38 +52,25 @@ const modulos = [
       borde: "border-blue-200",
       fondoIcono: "bg-blue-100",
       textoIcono: "text-blue-700",
-      boton: "bg-blue-600",
+      boton:
+        "bg-blue-600 hover:bg-blue-700",
     },
   },
   {
     nombre: "Reportes",
     descripcion:
       "Indicadores administrativos, productividad y rendimiento.",
-    href: "#",
+    href: "/administracion/reportes",
     icono: ChartNoAxesCombined,
     disponible: true,
     estilos: {
       borde: "border-purple-200",
       fondoIcono: "bg-purple-100",
       textoIcono: "text-purple-700",
-      boton: "bg-purple-600",
+      boton:
+        "bg-purple-600 hover:bg-purple-700",
     },
   },
-  /*
-  {
-    nombre: "Configuración",
-    descripcion:
-      "Configura puestos, estados, datos de empresa y preferencias.",
-    href: "#",
-    icono: Settings,
-    disponible: false,
-    estilos: {
-      borde: "border-slate-300",
-      fondoIcono: "bg-slate-100",
-      textoIcono: "text-slate-700",
-      boton: "bg-slate-700",
-    },
-  },*/
 ];
 
 export const dynamic = "force-dynamic";

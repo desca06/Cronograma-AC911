@@ -41,3 +41,5 @@ CREATE INDEX IF NOT EXISTS orden_eventos_tipo_idx
 
 CREATE INDEX IF NOT EXISTS orden_eventos_fecha_idx
   ON orden_compra_eventos(creado_en);
+
+  
