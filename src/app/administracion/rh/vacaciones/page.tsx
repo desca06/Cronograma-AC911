@@ -145,11 +145,11 @@ export default async function VacacionesPage({
         <div className="mx-auto max-w-7xl">
           <div className="mb-6">
             <Link
-              href="/administracion"
+              href="/administracion/rh"
               className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900"
             >
               <ArrowLeft size={18} />
-              Volver a administración
+              Volver a Recursos Humanos
             </Link>
           </div>
 
