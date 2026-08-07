@@ -1,10 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { LoaderCircle, Save } from "lucide-react";
-import { useFormStatus } from "react-dom";
+import {
+  LoaderCircle,
+  Save,
+} from "lucide-react";
+import {
+  useFormStatus,
+} from "react-dom";
 
-import { actualizarExpediente } from "../../actions";
+import {
+  actualizarExpediente,
+} from "../../actions";
 
 type Empleado = {
   id: number;
@@ -32,7 +39,8 @@ type FormularioEditarExpedienteProps = {
 };
 
 function BotonGuardar() {
-  const { pending } = useFormStatus();
+  const { pending } =
+    useFormStatus();
 
   return (
     <button
@@ -42,7 +50,10 @@ function BotonGuardar() {
     >
       {pending ? (
         <>
-          <LoaderCircle size={18} className="animate-spin" />
+          <LoaderCircle
+            size={18}
+            className="animate-spin"
+          />
           Guardando...
         </>
       ) : (
@@ -59,23 +70,27 @@ export function FormularioEditarExpediente({
   expediente,
   empleados,
 }: FormularioEditarExpedienteProps) {
-  const actualizarActual = actualizarExpediente.bind(
-    null,
-    expediente.id,
-  );
+  const actualizarActual =
+    actualizarExpediente.bind(
+      null,
+      expediente.id,
+    );
 
   return (
     <form
-      action={actualizarActual}
-      className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8"
+      action={
+        actualizarActual
+      }
+      className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
     >
-      <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+      <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-4">
         <p className="text-xs font-bold uppercase tracking-wide text-blue-600">
           Código del expediente
         </p>
 
         <p className="mt-1 text-lg font-bold text-blue-900">
-          {expediente.codigo ?? "Sin código"}
+          {expediente.codigo ??
+            "Sin código"}
         </p>
       </div>
 
@@ -92,17 +107,26 @@ export function FormularioEditarExpediente({
             id="empleadoId"
             name="empleadoId"
             required
-            defaultValue={expediente.empleadoId}
+            defaultValue={
+              expediente.empleadoId
+            }
             className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
           >
-            {empleados.map((empleado) => (
-              <option
-                key={empleado.id}
-                value={empleado.id}
-              >
-                {empleado.nombre} — {empleado.puesto}
-              </option>
-            ))}
+            {empleados.map(
+              (empleado) => (
+                <option
+                  key={
+                    empleado.id
+                  }
+                  value={
+                    empleado.id
+                  }
+                >
+                  {empleado.nombre} —{" "}
+                  {empleado.puesto}
+                </option>
+              ),
+            )}
           </select>
         </div>
 
@@ -120,8 +144,9 @@ export function FormularioEditarExpediente({
             type="text"
             required
             maxLength={20}
-            defaultValue={expediente.dpi}
-            placeholder="Ej. 1234 56789 0101"
+            defaultValue={
+              expediente.dpi
+            }
             className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
           />
         </div>
@@ -139,8 +164,9 @@ export function FormularioEditarExpediente({
             name="nit"
             type="text"
             maxLength={20}
-            defaultValue={expediente.nit ?? ""}
-            placeholder="Ej. 1234567-8"
+            defaultValue={
+              expediente.nit ?? ""
+            }
             className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
           />
         </div>
@@ -158,8 +184,9 @@ export function FormularioEditarExpediente({
             name="igss"
             type="text"
             maxLength={30}
-            defaultValue={expediente.igss ?? ""}
-            placeholder="Número de afiliación"
+            defaultValue={
+              expediente.igss ?? ""
+            }
             className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
           />
         </div>
@@ -177,7 +204,9 @@ export function FormularioEditarExpediente({
             name="fechaIngreso"
             type="date"
             required
-            defaultValue={expediente.fechaIngreso}
+            defaultValue={
+              expediente.fechaIngreso
+            }
             className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
           />
         </div>
@@ -196,8 +225,9 @@ export function FormularioEditarExpediente({
             type="text"
             required
             maxLength={150}
-            defaultValue={expediente.contactoEmergencia}
-            placeholder="Nombre completo"
+            defaultValue={
+              expediente.contactoEmergencia
+            }
             className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
           />
         </div>
@@ -216,8 +246,9 @@ export function FormularioEditarExpediente({
             type="tel"
             required
             maxLength={20}
-            defaultValue={expediente.telefonoEmergencia}
-            placeholder="Ej. 5555-5555"
+            defaultValue={
+              expediente.telefonoEmergencia
+            }
             className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
           />
         </div>
@@ -234,7 +265,9 @@ export function FormularioEditarExpediente({
             id="estado"
             name="estado"
             required
-            defaultValue={expediente.estado}
+            defaultValue={
+              expediente.estado
+            }
             className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
           >
             <option value="ACTIVO">
@@ -260,8 +293,9 @@ export function FormularioEditarExpediente({
             name="direccion"
             rows={3}
             required
-            defaultValue={expediente.direccion}
-            placeholder="Dirección completa del empleado"
+            defaultValue={
+              expediente.direccion
+            }
             className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
           />
         </div>
@@ -278,8 +312,10 @@ export function FormularioEditarExpediente({
             id="observaciones"
             name="observaciones"
             rows={4}
-            defaultValue={expediente.observaciones ?? ""}
-            placeholder="Información adicional del expediente"
+            defaultValue={
+              expediente.observaciones ??
+              ""
+            }
             className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
           />
         </div>

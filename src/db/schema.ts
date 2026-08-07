@@ -262,6 +262,10 @@ export const expedientes = pgTable("expedientes", {
       onDelete: "restrict",
     }),
   codigo: text("codigo").unique(),
+
+  // Ruta pública de la fotografía del empleado.
+  fotoUrl: text("foto_url"),
+
   dpi: text("dpi").notNull(),
   nit: text("nit"),
   igss: text("igss"),

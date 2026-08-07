@@ -1,6 +1,5 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { ENV } from "@/config/env";
 import {
   PDFDocument,
   StandardFonts,
@@ -334,6 +333,62 @@ async function loadLogo(pdf: PDFDocument): Promise<PDFImage | null> {
   return null;
 }
 
+async function loadEmployeePhoto(
+  pdf: PDFDocument,
+  fotoUrl: string | null | undefined,
+): Promise<PDFImage | null> {
+  if (
+    !fotoUrl ||
+    !fotoUrl.startsWith(
+      "/uploads/empleados/",
+    )
+  ) {
+    return null;
+  }
+
+  try {
+    const nombreArchivo =
+      path.basename(fotoUrl);
+
+    const ruta = path.join(
+      process.cwd(),
+      "public",
+      "uploads",
+      "empleados",
+      nombreArchivo,
+    );
+
+    const bytes =
+      await readFile(ruta);
+
+    const extension =
+      path.extname(
+        nombreArchivo,
+      ).toLowerCase();
+
+    if (
+      extension === ".jpg" ||
+      extension === ".jpeg"
+    ) {
+      return await pdf.embedJpg(
+        bytes,
+      );
+    }
+
+    if (
+      extension === ".png"
+    ) {
+      return await pdf.embedPng(
+        bytes,
+      );
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function drawHeader(
   page: PDFPage,
   logo: PDFImage | null,
@@ -541,6 +596,7 @@ export async function GET(
     .select({
       id: expedientes.id,
       codigo: expedientes.codigo,
+      fotoUrl: expedientes.fotoUrl,
       empleadoId: expedientes.empleadoId,
       empleadoNombre: empleados.nombre,
       empleadoPuesto: empleados.puesto,
@@ -578,6 +634,12 @@ export async function GET(
     StandardFonts.HelveticaBold,
   );
   const logo = await loadLogo(pdf);
+
+  const fotoEmpleado =
+    await loadEmployeePhoto(
+      pdf,
+      expediente.fotoUrl,
+    );
 
   const code = safeText(expediente.codigo);
 
@@ -648,61 +710,112 @@ export async function GET(
     borderColor: BLUE,
   });
 
-  page.drawCircle({
-    x: photoX + photoWidth / 2,
-    y: photoY + 68,
-    size: 15,
-    borderColor: MUTED,
-    borderWidth: 1,
-  });
+  if (fotoEmpleado) {
+    const escala = Math.min(
+      photoWidth /
+        fotoEmpleado.width,
+      photoHeight /
+        fotoEmpleado.height,
+    );
 
-  page.drawLine({
-    start: {
-      x: photoX + 26,
-      y: photoY + 29,
-    },
-    end: {
-      x: photoX + photoWidth - 26,
-      y: photoY + 29,
-    },
-    thickness: 1,
-    color: MUTED,
-  });
+    const ancho =
+      fotoEmpleado.width *
+      escala;
 
-  page.drawLine({
-    start: {
-      x: photoX + 26,
-      y: photoY + 29,
-    },
-    end: {
-      x: photoX + 35,
-      y: photoY + 48,
-    },
-    thickness: 1,
-    color: MUTED,
-  });
+    const alto =
+      fotoEmpleado.height *
+      escala;
 
-  page.drawLine({
-    start: {
-      x: photoX + photoWidth - 26,
-      y: photoY + 29,
-    },
-    end: {
-      x: photoX + photoWidth - 35,
-      y: photoY + 48,
-    },
-    thickness: 1,
-    color: MUTED,
-  });
+    page.drawImage(
+      fotoEmpleado,
+      {
+        x:
+          photoX +
+          (photoWidth - ancho) /
+            2,
 
-  drawCenteredText(page, "FOTOGRAFÍA", {
-    x: photoX,
-    y: photoY + 10,
-    width: photoWidth,
-    size: 7,
-    font: bold,
-    color: MUTED,
-  });
+        y:
+          photoY +
+          (photoHeight - alto) /
+            2,
+
+        width: ancho,
+        height: alto,
+      },
+    );
+  } else {
+    page.drawCircle({
+      x:
+        photoX +
+        photoWidth / 2,
+      y:
+        photoY + 68,
+      size: 15,
+      borderColor: MUTED,
+      borderWidth: 1,
+    });
+
+    page.drawLine({
+      start: {
+        x: photoX + 26,
+        y: photoY + 29,
+      },
+      end: {
+        x:
+          photoX +
+          photoWidth -
+          26,
+        y: photoY + 29,
+      },
+      thickness: 1,
+      color: MUTED,
+    });
+
+    page.drawLine({
+      start: {
+        x: photoX + 26,
+        y: photoY + 29,
+      },
+      end: {
+        x: photoX + 35,
+        y: photoY + 48,
+      },
+      thickness: 1,
+      color: MUTED,
+    });
+
+    page.drawLine({
+      start: {
+        x:
+          photoX +
+          photoWidth -
+          26,
+        y: photoY + 29,
+      },
+      end: {
+        x:
+          photoX +
+          photoWidth -
+          35,
+        y: photoY + 48,
+      },
+      thickness: 1,
+      color: MUTED,
+    });
+
+    drawCenteredText(
+      page,
+      "SIN FOTOGRAFÍA",
+      {
+        x: photoX,
+        y: photoY + 10,
+        width: photoWidth,
+        size: 7,
+        font: bold,
+        color: MUTED,
+      },
+    );
+  }
 
   const profileX = photoX + photoWidth + 18;
   const profileWidth = CONTENT_WIDTH - photoWidth - 46;
