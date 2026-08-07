@@ -774,6 +774,212 @@ export const cronogramaNotasCemaco = pgTable(
   },
 );
 
+
+export type EstadoOrdenCompra =
+  | "PENDIENTE"
+  | "APROBADA"
+  | "COMPLETADA"
+  | "CANCELADA";
+
+export type TipoItemOrdenCompra =
+  | "PRODUCTO"
+  | "SERVICIO";
+
+export type TipoEventoOrdenCompra =
+  | "CREADA"
+  | "APROBADA"
+  | "COMPLETADA"
+  | "CANCELADA";
+
+export const ordenesCompra = pgTable(
+  "ordenes_compra",
+  {
+    id: serial("id").primaryKey(),
+
+    codigo: text("codigo")
+      .notNull()
+      .unique(),
+
+    proveedorId: integer("proveedor_id")
+      .notNull()
+      .references(() => proveedores.id, {
+        onDelete: "restrict",
+      }),
+
+    fechaCompra: date("fecha_compra", {
+      mode: "string",
+    }).notNull(),
+
+    motivo: text("motivo").notNull(),
+
+    facturaReferencia: text(
+      "factura_referencia",
+    ),
+
+    observaciones: text("observaciones"),
+
+    estado: varchar("estado", {
+      length: 20,
+    })
+      .$type<EstadoOrdenCompra>()
+      .notNull()
+      .default("PENDIENTE"),
+
+    subtotal: integer("subtotal")
+      .notNull()
+      .default(0),
+
+    total: integer("total")
+      .notNull()
+      .default(0),
+
+    completadaEn: timestamp(
+      "completada_en",
+      {
+        mode: "date",
+      },
+    ),
+
+    creadoEn: timestamp("creado_en", {
+      mode: "date",
+    })
+      .notNull()
+      .defaultNow(),
+
+    actualizadoEn: timestamp(
+      "actualizado_en",
+      {
+        mode: "date",
+      },
+    )
+      .notNull()
+      .defaultNow(),
+  },
+  (tabla) => [
+    index("ordenes_compra_proveedor_idx").on(
+      tabla.proveedorId,
+    ),
+    index("ordenes_compra_estado_idx").on(
+      tabla.estado,
+    ),
+    index("ordenes_compra_fecha_idx").on(
+      tabla.fechaCompra,
+    ),
+  ],
+);
+
+export const ordenCompraItems = pgTable(
+  "orden_compra_items",
+  {
+    id: serial("id").primaryKey(),
+
+    ordenCompraId: integer(
+      "orden_compra_id",
+    )
+      .notNull()
+      .references(() => ordenesCompra.id, {
+        onDelete: "cascade",
+      }),
+
+    tipo: varchar("tipo", {
+      length: 20,
+    })
+      .$type<TipoItemOrdenCompra>()
+      .notNull(),
+
+    articuloId: integer("articulo_id")
+      .references(() => articulosInventario.id, {
+        onDelete: "restrict",
+      }),
+
+    descripcion: text("descripcion")
+      .notNull(),
+
+    cantidad: integer("cantidad")
+      .notNull()
+      .default(1),
+
+    precioUnitario: integer(
+      "precio_unitario",
+    )
+      .notNull()
+      .default(0),
+
+    subtotal: integer("subtotal")
+      .notNull()
+      .default(0),
+
+    orden: integer("orden")
+      .notNull()
+      .default(0),
+
+    creadoEn: timestamp("creado_en", {
+      mode: "date",
+    })
+      .notNull()
+      .defaultNow(),
+  },
+  (tabla) => [
+    index("orden_items_orden_idx").on(
+      tabla.ordenCompraId,
+    ),
+    index("orden_items_articulo_idx").on(
+      tabla.articuloId,
+    ),
+  ],
+);
+
+export const ordenCompraEventos = pgTable(
+  "orden_compra_eventos",
+  {
+    id: serial("id").primaryKey(),
+
+    ordenCompraId: integer(
+      "orden_compra_id",
+    )
+      .notNull()
+      .references(() => ordenesCompra.id, {
+        onDelete: "cascade",
+      }),
+
+    tipo: varchar("tipo", {
+      length: 20,
+    })
+      .$type<TipoEventoOrdenCompra>()
+      .notNull(),
+
+    estadoAnterior: varchar(
+      "estado_anterior",
+      {
+        length: 20,
+      },
+    ).$type<EstadoOrdenCompra>(),
+
+    estadoNuevo: varchar("estado_nuevo", {
+      length: 20,
+    }).$type<EstadoOrdenCompra>(),
+
+    descripcion: text("descripcion"),
+
+    creadoEn: timestamp("creado_en", {
+      mode: "date",
+    })
+      .notNull()
+      .defaultNow(),
+  },
+  (tabla) => [
+    index("orden_eventos_orden_idx").on(
+      tabla.ordenCompraId,
+    ),
+    index("orden_eventos_tipo_idx").on(
+      tabla.tipo,
+    ),
+    index("orden_eventos_fecha_idx").on(
+      tabla.creadoEn,
+    ),
+  ],
+);
+
 export type CronogramaNotaCemaco =
   typeof cronogramaNotasCemaco.$inferSelect;
 
