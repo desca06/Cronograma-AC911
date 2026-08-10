@@ -342,14 +342,6 @@ export default async function ResultadoAsistenciaPage({
               Podés cerrar esta página después de
               confirmar tus datos.
             </p>
-
-            <Link
-              href="/"
-              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 sm:w-auto"
-            >
-              <Home size={17} />
-              Ir al inicio
-            </Link>
           </div>
         </section>
       </div>
