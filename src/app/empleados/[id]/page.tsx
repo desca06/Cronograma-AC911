@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ENV } from "@/config/env";
 import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import {
@@ -91,7 +90,7 @@ export default async function DetalleEmpleadoPage({
     "http://192.168.0.113:3000";
 
   const urlMarcacion = empleado.qrToken
-    ? `${appUrl}/administracion/rh/asistencias/marcar/${empleado.qrToken}`
+    ? `${appUrl}/asistencia/${empleado.qrToken}`
     : null;
 
   const imagenQr = urlMarcacion

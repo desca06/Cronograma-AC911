@@ -4,7 +4,8 @@ import {
   NextResponse,
 } from "next/server";
 
-const nombreCookie = "control_trabajos_session";
+const nombreCookie =
+  "control_trabajos_session";
 
 const rutasSupervisor = [
   "/dashboard",
@@ -17,8 +18,16 @@ const rutasSupervisor = [
   "/configuracion",
 ];
 
+const rutasPublicas = [
+  "/login",
+  "/asistencia",
+  "/manifest.webmanifest",
+  "/push/onesignal",
+];
+
 function obtenerClaveSecreta(): Uint8Array {
-  const clave = process.env.SESSION_SECRET;
+  const clave =
+    process.env.SESSION_SECRET;
 
   if (!clave) {
     throw new Error(
@@ -26,54 +35,126 @@ function obtenerClaveSecreta(): Uint8Array {
     );
   }
 
-  return new TextEncoder().encode(clave);
+  return new TextEncoder().encode(
+    clave,
+  );
+}
+
+function esRutaPublica(
+  ruta: string,
+) {
+  return rutasPublicas.some(
+    (rutaPublica) =>
+      ruta === rutaPublica ||
+      ruta.startsWith(
+        `${rutaPublica}/`,
+      ),
+  );
 }
 
 export async function proxy(
   request: NextRequest,
 ) {
-  const ruta = request.nextUrl.pathname;
+  const ruta =
+    request.nextUrl.pathname;
 
-  const esLogin = ruta === "/login";
+  const esLogin =
+    ruta === "/login";
 
-  const token =
-    request.cookies.get(nombreCookie)?.value;
-
-  if (!token) {
-    if (esLogin) {
+  /*
+   * Estas rutas deben funcionar sin sesión.
+   *
+   * /asistencia/[token]
+   * /asistencia/resultado
+   *
+   * También dejamos públicos el manifest
+   * y el Service Worker de OneSignal.
+   */
+  if (esRutaPublica(ruta)) {
+    /*
+     * Si ya hay sesión y entran al login,
+     * mantenemos el comportamiento original:
+     * redirigir al panel correspondiente.
+     */
+    if (!esLogin) {
       return NextResponse.next();
     }
 
-    return NextResponse.redirect(
-      new URL("/login", request.url),
-    );
-  }
+    const tokenLogin =
+      request.cookies.get(
+        nombreCookie,
+      )?.value;
 
-  try {
-    const resultado = await jwtVerify(
-      token,
-      obtenerClaveSecreta(),
-    );
+    if (!tokenLogin) {
+      return NextResponse.next();
+    }
 
-    const rol = String(
-      resultado.payload.rol ?? "",
-    );
+    try {
+      const resultado =
+        await jwtVerify(
+          tokenLogin,
+          obtenerClaveSecreta(),
+        );
 
-    if (esLogin) {
+      const rol = String(
+        resultado.payload.rol ??
+          "",
+      );
+
       const destino =
         rol === "TECNICO"
           ? "/mis-trabajos"
           : "/dashboard";
 
       return NextResponse.redirect(
-        new URL(destino, request.url),
+        new URL(
+          destino,
+          request.url,
+        ),
       );
+    } catch {
+      const respuesta =
+        NextResponse.next();
+
+      respuesta.cookies.delete(
+        nombreCookie,
+      );
+
+      return respuesta;
     }
+  }
+
+  const token =
+    request.cookies.get(
+      nombreCookie,
+    )?.value;
+
+  if (!token) {
+    return NextResponse.redirect(
+      new URL(
+        "/login",
+        request.url,
+      ),
+    );
+  }
+
+  try {
+    const resultado =
+      await jwtVerify(
+        token,
+        obtenerClaveSecreta(),
+      );
+
+    const rol = String(
+      resultado.payload.rol ??
+        "",
+    );
 
     const intentaEntrarComoSupervisor =
       rutasSupervisor.some(
         (rutaSupervisor) =>
-          ruta === rutaSupervisor ||
+          ruta ===
+            rutaSupervisor ||
           ruta.startsWith(
             `${rutaSupervisor}/`,
           ),
@@ -93,10 +174,15 @@ export async function proxy(
 
     if (
       rol === "SUPERVISOR" &&
-      ruta.startsWith("/mis-trabajos")
+      ruta.startsWith(
+        "/mis-trabajos",
+      )
     ) {
       return NextResponse.redirect(
-        new URL("/dashboard", request.url),
+        new URL(
+          "/dashboard",
+          request.url,
+        ),
       );
     }
 
@@ -104,10 +190,15 @@ export async function proxy(
   } catch {
     const respuesta =
       NextResponse.redirect(
-        new URL("/login", request.url),
+        new URL(
+          "/login",
+          request.url,
+        ),
       );
 
-    respuesta.cookies.delete(nombreCookie);
+    respuesta.cookies.delete(
+      nombreCookie,
+    );
 
     return respuesta;
   }
