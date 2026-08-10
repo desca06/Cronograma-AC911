@@ -1,17 +1,17 @@
 "use client";
 
 import {
-  CirclePlus,
-  LoaderCircle,
-  Package,
+  PackagePlus,
+  Plus,
   Save,
   Trash2,
-  Wrench,
 } from "lucide-react";
-import { useMemo, useState } from "react";
-import { useFormStatus } from "react-dom";
+import {
+  useMemo,
+  useState,
+} from "react";
 
-import { crearOrdenCompra } from "../actions";
+import { crearOrdenCompra } from "./../actions"
 
 type Proveedor = {
   id: number;
@@ -19,133 +19,149 @@ type Proveedor = {
   nombreComercial: string;
 };
 
-type Articulo = {
-  id: number;
-  codigo: string | null;
-  nombre: string;
-  unidadMedida: string;
-};
-
-type Item = {
-  idLocal: string;
+type ItemManual = {
+  id: string;
   tipo: "PRODUCTO" | "SERVICIO";
-  articuloId: string;
   descripcion: string;
-  cantidad: string;
+  cantidad: number;
   precioUnitario: string;
 };
 
 type Props = {
   proveedores: Proveedor[];
-  articulos: Articulo[];
 };
 
-function crearItem(): Item {
+function nuevoItem(): ItemManual {
   return {
-    idLocal: crypto.randomUUID(),
+    id: crypto.randomUUID(),
     tipo: "PRODUCTO",
-    articuloId: "",
     descripcion: "",
-    cantidad: "1",
+    cantidad: 1,
     precioUnitario: "0",
   };
 }
 
-function BotonGuardar() {
-  const { pending } = useFormStatus();
+function fechaHoyGuatemala() {
+  return new Intl.DateTimeFormat(
+    "en-CA",
+    {
+      timeZone: "America/Guatemala",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    },
+  ).format(new Date());
+}
 
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
-    >
-      {pending ? (
-        <LoaderCircle size={18} className="animate-spin" />
-      ) : (
-        <Save size={18} />
-      )}
-      {pending ? "Guardando..." : "Crear orden"}
-    </button>
+function numeroDinero(
+  valor: string,
+) {
+  const numero = Number(
+    valor.replace(",", "."),
   );
+
+  return Number.isFinite(numero) &&
+    numero >= 0
+    ? numero
+    : 0;
+}
+
+function formatoQuetzales(
+  valor: number,
+) {
+  return new Intl.NumberFormat(
+    "es-GT",
+    {
+      style: "currency",
+      currency: "GTQ",
+      minimumFractionDigits: 2,
+    },
+  ).format(valor);
 }
 
 export function FormularioOrdenCompra({
   proveedores,
-  articulos,
 }: Props) {
-  const [items, setItems] = useState<Item[]>([
-    crearItem(),
-  ]);
+  const [items, setItems] =
+    useState<ItemManual[]>([
+      nuevoItem(),
+    ]);
 
-  const subtotal = useMemo(
+  const total = useMemo(
     () =>
-      items.reduce((total, item) => {
-        const cantidad = Number(item.cantidad) || 0;
-        const precio = Number(item.precioUnitario) || 0;
-        return total + cantidad * precio;
-      }, 0),
+      items.reduce(
+        (
+          acumulado,
+          item,
+        ) =>
+          acumulado +
+          Math.max(
+            item.cantidad,
+            0,
+          ) *
+            numeroDinero(
+              item.precioUnitario,
+            ),
+        0,
+      ),
     [items],
   );
 
   function actualizarItem(
-    idLocal: string,
-    campo: keyof Item,
-    valor: string,
+    id: string,
+    cambios: Partial<ItemManual>,
   ) {
-    setItems((actuales) =>
-      actuales.map((item) =>
-        item.idLocal === idLocal
-          ? { ...item, [campo]: valor }
-          : item,
-      ),
+    setItems(
+      (actuales) =>
+        actuales.map(
+          (item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  ...cambios,
+                }
+              : item,
+        ),
     );
   }
 
-  function cambiarTipo(
-    idLocal: string,
-    tipo: "PRODUCTO" | "SERVICIO",
-  ) {
-    setItems((actuales) =>
-      actuales.map((item) =>
-        item.idLocal === idLocal
-          ? {
-              ...item,
-              tipo,
-              articuloId: "",
-              descripcion: "",
-            }
-          : item,
-      ),
+  function agregarLinea() {
+    setItems(
+      (actuales) => [
+        ...actuales,
+        nuevoItem(),
+      ],
     );
   }
 
-  function eliminarItem(idLocal: string) {
-    setItems((actuales) => {
-      if (actuales.length === 1) {
-        return actuales;
-      }
-
-      return actuales.filter(
-        (item) => item.idLocal !== idLocal,
-      );
-    });
+  function quitarLinea(
+    id: string,
+  ) {
+    setItems(
+      (actuales) =>
+        actuales.length === 1
+          ? actuales
+          : actuales.filter(
+              (item) =>
+                item.id !== id,
+            ),
+    );
   }
 
-  const itemsParaServidor = items.map((item) => ({
-    tipo: item.tipo,
-    articuloId:
-      item.tipo === "PRODUCTO"
-        ? item.articuloId
-        : null,
-    descripcion: item.descripcion,
-    cantidad: item.cantidad,
-    precioUnitario: item.precioUnitario,
-  }));
-
-  const fechaHoy = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Guatemala",
-  }).format(new Date());
+  const itemsParaEnviar =
+    JSON.stringify(
+      items.map(
+        (item) => ({
+          tipo: item.tipo,
+          descripcion:
+            item.descripcion.trim(),
+          cantidad:
+            item.cantidad,
+          precioUnitario:
+            item.precioUnitario,
+        }),
+      ),
+    );
 
   return (
     <form
@@ -155,345 +171,373 @@ export function FormularioOrdenCompra({
       <input
         type="hidden"
         name="items"
-        value={JSON.stringify(itemsParaServidor)}
+        value={
+          itemsParaEnviar
+        }
       />
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-        <h2 className="text-lg font-bold text-slate-900">
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+        <h2 className="text-base font-bold text-slate-900">
           Información de la compra
         </h2>
 
         <div className="mt-5 grid gap-5 md:grid-cols-2">
-          <div>
-            <label
-              htmlFor="proveedorId"
-              className="mb-2 block text-sm font-semibold text-slate-700"
-            >
+          <label className="space-y-2">
+            <span className="text-sm font-semibold text-slate-700">
               Proveedor *
-            </label>
+            </span>
 
             <select
-              id="proveedorId"
               name="proveedorId"
               required
               defaultValue=""
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+              className="h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
             >
-              <option value="" disabled>
+              <option
+                value=""
+                disabled
+              >
                 Seleccioná un proveedor
               </option>
-              {proveedores.map((proveedor) => (
-                <option
-                  key={proveedor.id}
-                  value={proveedor.id}
-                >
-                  {proveedor.codigo} ·{" "}
-                  {proveedor.nombreComercial}
-                </option>
-              ))}
+
+              {proveedores.map(
+                (proveedor) => (
+                  <option
+                    key={
+                      proveedor.id
+                    }
+                    value={
+                      proveedor.id
+                    }
+                  >
+                    {
+                      proveedor.nombreComercial
+                    }
+                    {" · "}
+                    {
+                      proveedor.codigo
+                    }
+                  </option>
+                ),
+              )}
             </select>
-          </div>
+          </label>
 
-          <div>
-            <label
-              htmlFor="fechaCompra"
-              className="mb-2 block text-sm font-semibold text-slate-700"
-            >
+          <label className="space-y-2">
+            <span className="text-sm font-semibold text-slate-700">
               Fecha de compra *
-            </label>
+            </span>
 
             <input
-              id="fechaCompra"
-              name="fechaCompra"
               type="date"
+              name="fechaCompra"
               required
-              defaultValue={fechaHoy}
-              className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+              defaultValue={
+                fechaHoyGuatemala()
+              }
+              className="h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
             />
-          </div>
+          </label>
 
-          <div>
-            <label
-              htmlFor="facturaReferencia"
-              className="mb-2 block text-sm font-semibold text-slate-700"
-            >
+          <label className="space-y-2">
+            <span className="text-sm font-semibold text-slate-700">
               Factura / referencia
-            </label>
+            </span>
 
             <input
-              id="facturaReferencia"
+              type="text"
               name="facturaReferencia"
               placeholder="Ej. FAC-45896"
-              className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+              className="h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
             />
-          </div>
+          </label>
 
-          <div>
-            <label
-              htmlFor="motivo"
-              className="mb-2 block text-sm font-semibold text-slate-700"
-            >
+          <label className="space-y-2">
+            <span className="text-sm font-semibold text-slate-700">
               Motivo de la compra *
-            </label>
+            </span>
 
             <input
-              id="motivo"
+              type="text"
               name="motivo"
               required
               placeholder="Ej. Material para proyecto CEMACO"
-              className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+              className="h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
             />
-          </div>
+          </label>
         </div>
 
-        <div className="mt-5">
-          <label
-            htmlFor="observaciones"
-            className="mb-2 block text-sm font-semibold text-slate-700"
-          >
+        <label className="mt-5 block space-y-2">
+          <span className="text-sm font-semibold text-slate-700">
             Observaciones
-          </label>
+          </span>
 
           <textarea
-            id="observaciones"
             name="observaciones"
             rows={3}
             placeholder="Información adicional de la compra."
-            className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+            className="w-full resize-none rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
           />
-        </div>
-      </div>
+        </label>
+      </section>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-col gap-4 border-b border-slate-200 p-5 sm:flex-row sm:items-center sm:justify-between">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-4 border-b border-slate-200 p-5 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">
-              Productos y servicios
-            </h2>
+            <div className="flex items-center gap-2">
+              <PackagePlus
+                size={21}
+                className="text-orange-600"
+              />
+
+              <h2 className="text-base font-bold text-slate-900">
+                Productos y servicios
+              </h2>
+            </div>
+
             <p className="mt-1 text-sm text-slate-500">
-              Los productos vinculados al inventario entrarán
-              automáticamente cuando la orden se complete.
+              Ingresá manualmente la descripción, cantidad y precio de cada línea.
             </p>
           </div>
 
           <button
             type="button"
-            onClick={() =>
-              setItems((actuales) => [
-                ...actuales,
-                crearItem(),
-              ])
-            }
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-orange-300 bg-orange-50 px-4 py-2.5 text-sm font-semibold text-orange-700 transition hover:bg-orange-100"
+            onClick={agregarLinea}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-orange-400 bg-orange-50 px-4 py-2.5 text-sm font-semibold text-orange-700 transition hover:bg-orange-100"
           >
-            <CirclePlus size={18} />
+            <Plus size={17} />
             Agregar línea
           </button>
         </div>
 
-        <div className="space-y-4 p-5">
-          {items.map((item, indice) => (
-            <div
-              key={item.idLocal}
-              className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-            >
-              <div className="mb-4 flex items-center justify-between">
-                <p className="font-bold text-slate-900">
-                  Línea {indice + 1}
-                </p>
+        <div className="space-y-4 p-4 md:p-5">
+          {items.map(
+            (
+              item,
+              indice,
+            ) => {
+              const subtotal =
+                Math.max(
+                  item.cantidad,
+                  0,
+                ) *
+                numeroDinero(
+                  item.precioUnitario,
+                );
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    eliminarItem(item.idLocal)
-                  }
-                  disabled={items.length === 1}
-                  className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-30"
+              return (
+                <article
+                  key={item.id}
+                  className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
                 >
-                  <Trash2 size={16} />
-                  Quitar
-                </button>
-              </div>
+                  <div className="mb-4 flex items-center justify-between">
+                    <h3 className="font-bold text-slate-900">
+                      Línea{" "}
+                      {indice + 1}
+                    </h3>
 
-              <div className="grid gap-4 lg:grid-cols-[180px_1fr_130px_170px]">
-                <div>
-                  <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">
-                    Tipo
-                  </label>
-
-                  <select
-                    value={item.tipo}
-                    onChange={(evento) =>
-                      cambiarTipo(
-                        item.idLocal,
-                        evento.target.value as
-                          | "PRODUCTO"
-                          | "SERVICIO",
-                      )
-                    }
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm"
-                  >
-                    <option value="PRODUCTO">
-                      Producto
-                    </option>
-                    <option value="SERVICIO">
-                      Servicio
-                    </option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">
-                    {item.tipo === "PRODUCTO"
-                      ? "Artículo de inventario"
-                      : "Descripción del servicio"}
-                  </label>
-
-                  {item.tipo === "PRODUCTO" ? (
-                    <select
-                      value={item.articuloId}
-                      onChange={(evento) =>
-                        actualizarItem(
-                          item.idLocal,
-                          "articuloId",
-                          evento.target.value,
+                    <button
+                      type="button"
+                      onClick={() =>
+                        quitarLinea(
+                          item.id,
                         )
                       }
-                      required
-                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm"
+                      disabled={
+                        items.length ===
+                        1
+                      }
+                      className="inline-flex items-center gap-1.5 text-sm font-semibold text-red-500 transition hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-30"
                     >
-                      <option value="">
-                        Seleccioná un artículo
-                      </option>
-                      {articulos.map((articulo) => (
-                        <option
-                          key={articulo.id}
-                          value={articulo.id}
-                        >
-                          {articulo.codigo
-                            ? `${articulo.codigo} · `
-                            : ""}
-                          {articulo.nombre} ·{" "}
-                          {articulo.unidadMedida}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <div className="relative">
-                      <Wrench
-                        size={17}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                      <Trash2
+                        size={16}
                       />
-                      <input
-                        value={item.descripcion}
-                        onChange={(evento) =>
+                      Quitar
+                    </button>
+                  </div>
+
+                  <div className="grid gap-4 lg:grid-cols-[150px_minmax(280px,1fr)_120px_170px]">
+                    <label className="space-y-2">
+                      <span className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                        Tipo
+                      </span>
+
+                      <select
+                        value={
+                          item.tipo
+                        }
+                        onChange={(
+                          event,
+                        ) =>
                           actualizarItem(
-                            item.idLocal,
-                            "descripcion",
-                            evento.target.value,
+                            item.id,
+                            {
+                              tipo:
+                                event
+                                  .target
+                                  .value ===
+                                "SERVICIO"
+                                  ? "SERVICIO"
+                                  : "PRODUCTO",
+                            },
                           )
                         }
+                        className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                      >
+                        <option value="PRODUCTO">
+                          Producto
+                        </option>
+                        <option value="SERVICIO">
+                          Servicio
+                        </option>
+                      </select>
+                    </label>
+
+                    <label className="space-y-2">
+                      <span className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                        Descripción *
+                      </span>
+
+                      <input
+                        type="text"
                         required
-                        placeholder="Ej. Instalación especializada"
-                        className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-10 pr-3 text-sm"
+                        value={
+                          item.descripcion
+                        }
+                        onChange={(
+                          event,
+                        ) =>
+                          actualizarItem(
+                            item.id,
+                            {
+                              descripcion:
+                                event
+                                  .target
+                                  .value,
+                            },
+                          )
+                        }
+                        placeholder={
+                          item.tipo ===
+                          "PRODUCTO"
+                            ? "Ej. Cable UTP Cat6, válvula, repuesto..."
+                            : "Ej. Instalación, transporte, mantenimiento..."
+                        }
+                        className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
                       />
+                    </label>
+
+                    <label className="space-y-2">
+                      <span className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                        Cantidad *
+                      </span>
+
+                      <input
+                        type="number"
+                        min={1}
+                        step={1}
+                        required
+                        value={
+                          item.cantidad
+                        }
+                        onChange={(
+                          event,
+                        ) =>
+                          actualizarItem(
+                            item.id,
+                            {
+                              cantidad:
+                                Math.max(
+                                  Number(
+                                    event
+                                      .target
+                                      .value,
+                                  ) ||
+                                    0,
+                                  0,
+                                ),
+                            },
+                          )
+                        }
+                        className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                      />
+                    </label>
+
+                    <label className="space-y-2">
+                      <span className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                        Precio unitario (Q) *
+                      </span>
+
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        required
+                        value={
+                          item.precioUnitario
+                        }
+                        onChange={(
+                          event,
+                        ) =>
+                          actualizarItem(
+                            item.id,
+                            {
+                              precioUnitario:
+                                event
+                                  .target
+                                  .value,
+                            },
+                          )
+                        }
+                        className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="mt-4 flex justify-end">
+                    <div className="rounded-xl bg-white px-4 py-2 text-sm shadow-sm ring-1 ring-slate-200">
+                      <span className="text-slate-500">
+                        Subtotal:
+                      </span>{" "}
+                      <strong className="text-slate-950">
+                        {
+                          formatoQuetzales(
+                            subtotal,
+                          )
+                        }
+                      </strong>
                     </div>
-                  )}
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">
-                    Cantidad
-                  </label>
-
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={item.cantidad}
-                    onChange={(evento) =>
-                      actualizarItem(
-                        item.idLocal,
-                        "cantidad",
-                        evento.target.value,
-                      )
-                    }
-                    required
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">
-                    Precio unitario (Q)
-                  </label>
-
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={item.precioUnitario}
-                    onChange={(evento) =>
-                      actualizarItem(
-                        item.idLocal,
-                        "precioUnitario",
-                        evento.target.value,
-                      )
-                    }
-                    required
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-4 flex items-center justify-end gap-2 text-sm">
-                {item.tipo === "PRODUCTO" ? (
-                  <Package
-                    size={17}
-                    className="text-blue-600"
-                  />
-                ) : (
-                  <Wrench
-                    size={17}
-                    className="text-purple-600"
-                  />
-                )}
-
-                <span className="font-medium text-slate-500">
-                  Subtotal:
-                </span>
-                <span className="font-bold text-slate-900">
-                  Q{" "}
-                  {(
-                    (Number(item.cantidad) || 0) *
-                    (Number(item.precioUnitario) || 0)
-                  ).toLocaleString("es-GT", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
-              </div>
-            </div>
-          ))}
+                  </div>
+                </article>
+              );
+            },
+          )}
         </div>
-      </div>
+      </section>
 
-      <div className="flex flex-col gap-4 rounded-2xl border border-orange-200 bg-orange-50 p-5 sm:flex-row sm:items-center sm:justify-between">
+      <section className="flex flex-col gap-4 rounded-2xl border border-orange-200 bg-orange-50 p-5 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-sm font-semibold text-orange-700">
             Total estimado de la orden
           </p>
-          <p className="mt-1 text-3xl font-bold text-orange-900">
-            Q{" "}
-            {subtotal.toLocaleString("es-GT", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
+
+          <p className="mt-1 text-3xl font-black text-slate-950">
+            {
+              formatoQuetzales(
+                total,
+              )
+            }
           </p>
         </div>
 
-        <BotonGuardar />
-      </div>
+        <button
+          type="submit"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-600 px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-orange-700"
+        >
+          <Save size={18} />
+          Crear orden
+        </button>
+      </section>
     </form>
   );
 }

@@ -1,14 +1,11 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { asc, eq } from "drizzle-orm";
+import { asc } from "drizzle-orm";
 
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { db } from "@/db";
-import {
-  articulosInventario,
-  proveedores,
-} from "@/db/schema";
+import { proveedores } from "@/db/schema";
 import { requerirAdmin } from "@/lib/auth";
 
 import { FormularioOrdenCompra } from "./formulario-orden-compra";
@@ -27,8 +24,6 @@ const mensajesError: Record<string, string> = {
   motivo: "Ingresá el motivo de la compra.",
   items:
     "Agregá por lo menos un producto o servicio válido.",
-  articulo:
-    "Uno de los artículos seleccionados ya no existe.",
 };
 
 export default async function NuevaOrdenCompraPage({
@@ -47,22 +42,11 @@ export default async function NuevaOrdenCompraPage({
     .from(proveedores)
     .orderBy(asc(proveedores.nombreComercial));
 
-  const listaArticulos = await db
-    .select({
-      id: articulosInventario.id,
-      codigo: articulosInventario.codigo,
-      nombre: articulosInventario.nombre,
-      unidadMedida: articulosInventario.unidadMedida,
-    })
-    .from(articulosInventario)
-    .where(eq(articulosInventario.estado, "ACTIVO"))
-    .orderBy(asc(articulosInventario.nombre));
-
   return (
     <AppShell>
       <PageHeader
         title="Nueva orden de compra"
-        description="Registra una compra a proveedor y vincula sus productos con inventario."
+        description="Registra manualmente los productos y servicios comprados a un proveedor."
       />
 
       <section className="space-y-6 p-5 md:p-8">
@@ -88,8 +72,9 @@ export default async function NuevaOrdenCompraPage({
             <h2 className="font-bold text-amber-900">
               Primero necesitás un proveedor
             </h2>
+
             <p className="mt-2 text-sm text-amber-700">
-              No hay proveedores registrados. Crea uno antes de
+              No hay proveedores registrados. Creá uno antes de
               registrar la orden de compra.
             </p>
 
@@ -103,7 +88,6 @@ export default async function NuevaOrdenCompraPage({
         ) : (
           <FormularioOrdenCompra
             proveedores={listaProveedores}
-            articulos={listaArticulos}
           />
         )}
       </section>
