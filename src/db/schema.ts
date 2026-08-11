@@ -26,15 +26,7 @@ export const empleados = pgTable(
       .notNull()
       .default(true),
 
-    /*
-     * Límite mensual de horas extra expresado
-     * en minutos.
-     *
-     * Ejemplos:
-     * 300 = 5 horas
-     * 600 = 10 horas
-     * 900 = 15 horas
-     */
+
     limiteMinutosExtraMensuales: integer(
       "limite_minutos_extra_mensuales",
     )
@@ -227,14 +219,7 @@ export const asistencias = pgTable(
       .notNull()
       .default("PRESENTE"),
 
-    /*
-     * Minutos de hora extra reconocidos para
-     * esta asistencia.
-     *
-     * Solo deben registrarse minutos posteriores
-     * a las 17:00 y sin superar el límite mensual
-     * configurado en empleados.
-     */
+    
     minutosHoraExtra: integer(
       "minutos_hora_extra",
     )
@@ -283,19 +268,117 @@ export const vacaciones = pgTable("vacaciones", {
   creadoEn: timestamp("creado_en", {mode: "string"}).notNull().defaultNow(),
   actualizadoEn: timestamp("actualizado_en",{mode: "string"}).notNull().defaultNow()});
 
-export const permisos = pgTable("permisos", {
-  id: serial("id").primaryKey(),
-  empleadoId: integer("empleado_id").notNull().references(() => empleados.id, {onDelete: "restrict"}),
-  tipo: text("tipo").notNull(),
-  fecha: date("fecha", {mode: "string",}).notNull(),
-  horaInicio: time("hora_inicio", {withTimezone: false,}).notNull(),
-  horaFin: time("hora_fin", {withTimezone: false}).notNull(),
-  motivo: text("motivo").notNull(),
-  observacion: text("observacion"),
-  estado: text("estado").notNull().default("PENDIENTE"),
-  autorizadoPor: integer("autorizado_por").references(() => usuarios.id,{onDelete: "set null"}),
-  creadoEn: timestamp("creado_en", {mode: "string"}).notNull().defaultNow(),
-  actualizadoEn: timestamp("actualizado_en", {mode: "string"}).notNull().defaultNow()});
+export const permisos = pgTable(
+  "permisos",
+  {
+    id: serial("id").primaryKey(),
+
+    empleadoId: integer("empleado_id")
+      .notNull()
+      .references(() => empleados.id, {
+        onDelete: "restrict",
+      }),
+
+    tipo: text("tipo").notNull(),
+
+    /*
+     * Se conserva "fecha" como fecha inicial para
+     * compatibilidad con los permisos ya existentes.
+     */
+    fecha: date("fecha", {
+      mode: "string",
+    }).notNull(),
+
+    /*
+     * Los permisos nuevos pueden abarcar varios días.
+     * Para registros antiguos puede ser NULL y el
+     * sistema usará "fecha" como fecha final.
+     */
+    fechaFin: date("fecha_fin", {
+      mode: "string",
+    }),
+
+    horaInicio: time("hora_inicio", {
+      withTimezone: false,
+    }).notNull(),
+
+    horaFin: time("hora_fin", {
+      withTimezone: false,
+    }).notNull(),
+
+    motivo: text("motivo").notNull(),
+    observacion: text("observacion"),
+
+    estado: text("estado")
+      .notNull()
+      .default("PENDIENTE"),
+
+    /*
+     * Cantidad de días hábiles solicitados.
+     * Los registros antiguos quedan en 1.
+     */
+    diasSolicitados: integer(
+      "dias_solicitados",
+    )
+      .notNull()
+      .default(1),
+
+    /*
+     * Cantidad de días que realmente afectaron
+     * la bolsa de 15 días de vacaciones.
+     *
+     * Puede ser 0 cuando el empleado ya tenía
+     * vacaciones aprobadas.
+     */
+    diasDescontadosVacaciones: integer(
+      "dias_descontados_vacaciones",
+    )
+      .notNull()
+      .default(0),
+
+    /*
+     * Permite distinguir rápidamente los permisos
+     * que sí redujeron el saldo de vacaciones.
+     */
+    afectaVacaciones: boolean(
+      "afecta_vacaciones",
+    )
+      .notNull()
+      .default(false),
+
+    autorizadoPor: integer(
+      "autorizado_por",
+    ).references(() => usuarios.id, {
+      onDelete: "set null",
+    }),
+
+    creadoEn: timestamp("creado_en", {
+      mode: "string",
+    })
+      .notNull()
+      .defaultNow(),
+
+    actualizadoEn: timestamp(
+      "actualizado_en",
+      {
+        mode: "string",
+      },
+    )
+      .notNull()
+      .defaultNow(),
+  },
+  (tabla) => [
+    index("permisos_empleado_idx").on(
+      tabla.empleadoId,
+    ),
+    index("permisos_fecha_idx").on(
+      tabla.fecha,
+    ),
+    index("permisos_estado_idx").on(
+      tabla.estado,
+    ),
+  ],
+);
 
 export const expedientes = pgTable("expedientes", {
   id: serial("id").primaryKey(),

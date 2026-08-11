@@ -41,6 +41,8 @@ type DetalleVacacionPageProps = {
     rechazada?: string;
     actualizada?: string;
     error?: string;
+    disponibles?: string;
+    diasRestantes?: string;
   }>;
 };
 
@@ -196,6 +198,21 @@ export default async function DetalleVacacionPage({
             </div>
           )}
 
+          {parametros.error === "saldo" && (
+            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+              Días insuficientes. Esta solicitud supera el saldo disponible del trabajador.
+              {parametros.disponibles
+                ? ` Actualmente tiene ${parametros.disponibles} día(s) disponible(s).`
+                : ""}
+            </div>
+          )}
+
+          {parametros.error === "agotadas" && (
+            <div className="mb-6 rounded-xl border border-red-300 bg-red-50 px-4 py-4 text-sm font-bold text-red-800">
+              Vacaciones agotadas. El trabajador ya utilizó sus 15 días hábiles y no puede aprobarse una nueva solicitud.
+            </div>
+          )}
+
           {parametros.error === "eliminar" && (
             <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
               La solicitud no pudo eliminarse. Solo se pueden eliminar solicitudes pendientes.
@@ -246,11 +263,11 @@ export default async function DetalleVacacionPage({
 
                   <div>
                     <h3 className="font-bold text-blue-900">
-                      Descuento generado por un permiso
+                      Registro histórico generado por un permiso
                     </h3>
 
                     <p className="mt-1 text-sm leading-6 text-blue-800">
-                      Este día de vacaciones se creó automáticamente cuando se aprobó el permiso #{permisoOrigenId}.
+                      Este registro pertenece a la lógica anterior y fue creado automáticamente cuando se aprobó el permiso #{permisoOrigenId}.
                     </p>
                   </div>
                 </div>

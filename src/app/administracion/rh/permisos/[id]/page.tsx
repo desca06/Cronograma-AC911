@@ -4,260 +4,287 @@ import {
   CalendarDays,
   Clock3,
   FilePenLine,
-  Link2,
+  ShieldCheck,
   UserRound,
 } from "lucide-react";
-import { eq, like } from "drizzle-orm";
-import { notFound } from "next/navigation";
+import {
+  eq,
+} from "drizzle-orm";
+import {
+  notFound,
+} from "next/navigation";
 
-import { AppShell } from "@/components/app-shell";
-import { PageHeader } from "@/components/page-header";
+import {
+  AppShell,
+} from "@/components/app-shell";
+import {
+  PageHeader,
+} from "@/components/page-header";
 import { db } from "@/db";
 import {
   empleados,
   permisos,
   usuarios,
-  vacaciones,
 } from "@/db/schema";
-import { requerirAdmin } from "@/lib/auth";
-import { crearPrefijoVacacionPorPermiso } from "@/lib/vacaciones";
+import {
+  requerirAdmin,
+} from "@/lib/auth";
 
-import { BotonesAutorizacion } from "./botones-autorizacion";
-import { BotonEliminar } from "./boton-eliminar";
+import {
+  BotonesAutorizacion,
+} from "./botones-autorizacion";
+import {
+  BotonEliminar,
+} from "./boton-eliminar";
 
-export const dynamic = "force-dynamic";
+export const dynamic =
+  "force-dynamic";
 
-type DetallePermisoPageProps = {
+type Props = {
   params: Promise<{
     id: string;
   }>;
-
   searchParams: Promise<{
     aprobado?: string;
     rechazado?: string;
     actualizado?: string;
     error?: string;
+    diasDescontados?: string;
+    diasRestantes?: string;
+    sinDescuento?: string;
   }>;
 };
 
-function nombreTipo(tipo: string) {
-  const tipos: Record<string, string> = {
-    PERSONAL: "Personal",
-    CITA_MEDICA: "Cita médica",
-    ENFERMEDAD: "Enfermedad",
-  };
+function formatearFecha(
+  fecha: string,
+) {
+  const [
+    anio,
+    mes,
+    dia,
+  ] = fecha.split("-");
 
-  return tipos[tipo] ?? tipo;
-}
-
-function nombreEstado(estado: string) {
-  if (estado === "APROBADO") {
-    return "Aprobado";
-  }
-
-  if (estado === "RECHAZADO") {
-    return "Rechazado";
-  }
-
-  return "Pendiente";
-}
-
-function claseEstado(estado: string) {
-  if (estado === "APROBADO") {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700";
-  }
-
-  if (estado === "RECHAZADO") {
-    return "border-red-200 bg-red-50 text-red-700";
-  }
-
-  return "border-amber-200 bg-amber-50 text-amber-700";
-}
-
-function formatearFecha(fecha: string) {
-  const [anio, mes, dia] = fecha.split("-");
-
-  if (!anio || !mes || !dia) {
+  if (
+    !anio ||
+    !mes ||
+    !dia
+  ) {
     return fecha;
   }
 
   return `${dia}/${mes}/${anio}`;
 }
 
-function formatearHora(hora: string) {
-  return hora.slice(0, 5);
+function nombreTipo(
+  tipo: string,
+) {
+  const mapa:
+    Record<string, string> =
+    {
+      PERSONAL:
+        "Personal",
+      CITA_MEDICA:
+        "Cita médica",
+      ENFERMEDAD:
+        "Enfermedad",
+    };
+
+  return mapa[tipo] ?? tipo;
+}
+
+function claseEstado(
+  estado: string,
+) {
+  if (
+    estado === "APROBADO"
+  ) {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+
+  if (
+    estado === "RECHAZADO"
+  ) {
+    return "border-red-200 bg-red-50 text-red-700";
+  }
+
+  return "border-amber-200 bg-amber-50 text-amber-700";
 }
 
 export default async function DetallePermisoPage({
   params,
   searchParams,
-}: DetallePermisoPageProps) {
+}: Props) {
   await requerirAdmin();
 
-  const { id } = await params;
-  const parametros = await searchParams;
+  const { id } =
+    await params;
 
-  const permisoId = Number(id);
+  const parametros =
+    await searchParams;
+
+  const permisoId =
+    Number(id);
 
   if (
-    !Number.isInteger(permisoId) ||
+    !Number.isInteger(
+      permisoId,
+    ) ||
     permisoId <= 0
   ) {
     notFound();
   }
 
-  const resultado = await db
-    .select({
-      id: permisos.id,
-      empleadoId: permisos.empleadoId,
-      empleado: empleados.nombre,
-      puesto: empleados.puesto,
-      tipo: permisos.tipo,
-      fecha: permisos.fecha,
-      horaInicio: permisos.horaInicio,
-      horaFin: permisos.horaFin,
-      motivo: permisos.motivo,
-      observacion: permisos.observacion,
-      estado: permisos.estado,
-      autorizadoPor: permisos.autorizadoPor,
-      autorizador: usuarios.nombre,
-      creadoEn: permisos.creadoEn,
-      actualizadoEn: permisos.actualizadoEn,
-    })
-    .from(permisos)
-    .innerJoin(
-      empleados,
-      eq(permisos.empleadoId, empleados.id),
-    )
-    .leftJoin(
-      usuarios,
-      eq(permisos.autorizadoPor, usuarios.id),
-    )
-    .where(eq(permisos.id, permisoId))
-    .limit(1);
-
-  const permiso = resultado[0];
+  const [permiso] =
+    await db
+      .select({
+        id: permisos.id,
+        empleado:
+          empleados.nombre,
+        puesto:
+          empleados.puesto,
+        tipo:
+          permisos.tipo,
+        fecha:
+          permisos.fecha,
+        fechaFin:
+          permisos.fechaFin,
+        diasSolicitados:
+          permisos.diasSolicitados,
+        diasDescontadosVacaciones:
+          permisos.diasDescontadosVacaciones,
+        afectaVacaciones:
+          permisos.afectaVacaciones,
+        horaInicio:
+          permisos.horaInicio,
+        horaFin:
+          permisos.horaFin,
+        motivo:
+          permisos.motivo,
+        observacion:
+          permisos.observacion,
+        estado:
+          permisos.estado,
+        autorizador:
+          usuarios.nombre,
+      })
+      .from(permisos)
+      .innerJoin(
+        empleados,
+        eq(
+          permisos.empleadoId,
+          empleados.id,
+        ),
+      )
+      .leftJoin(
+        usuarios,
+        eq(
+          permisos.autorizadoPor,
+          usuarios.id,
+        ),
+      )
+      .where(
+        eq(
+          permisos.id,
+          permisoId,
+        ),
+      )
+      .limit(1);
 
   if (!permiso) {
     notFound();
   }
 
-  let vacacionGenerada:
-    | {
-        id: number;
-      }
-    | undefined;
+  const fechaFinal =
+    permiso.fechaFin ??
+    permiso.fecha;
 
-  if (permiso.estado === "APROBADO") {
-    const vacacionesEncontradas = await db
-      .select({
-        id: vacaciones.id,
-      })
-      .from(vacaciones)
-      .where(
-        like(
-          vacaciones.observacion,
-          `${crearPrefijoVacacionPorPermiso(
-            permiso.id,
-          )}%`,
-        ),
-      )
-      .limit(1);
+  const diasDescontadosParametro =
+    Number(
+      parametros
+        .diasDescontados ??
+        permiso
+          .diasDescontadosVacaciones,
+    );
 
-    vacacionGenerada = vacacionesEncontradas[0];
-  }
+  const diasRestantesParametro =
+    Number(
+      parametros
+        .diasRestantes ??
+        0,
+    );
 
   return (
     <AppShell>
       <PageHeader
         title="Detalle del permiso"
-        description="Consulte la información completa de la solicitud."
+        description="Información completa de la solicitud."
       />
 
       <section className="p-5 md:p-8">
         <div className="mx-auto max-w-5xl">
           <Link
             href="/administracion/rh/permisos"
-            className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900"
+            className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900"
           >
             <ArrowLeft size={18} />
             Volver a permisos
           </Link>
 
-          {parametros.aprobado === "true" && (
-            <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-              El permiso fue aprobado correctamente y se descontó 1 día de vacaciones.
+          {parametros.aprobado ===
+            "true" && (
+            <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-800">
+              {parametros.sinDescuento ===
+              "vacaciones-aprobadas"
+                ? "Permiso aprobado. No descontó días porque el empleado ya tiene vacaciones aprobadas en este año."
+                : `Permiso aprobado. Se descontaron ${diasDescontadosParametro} día(s) de la bolsa de vacaciones. Quedan ${diasRestantesParametro} día(s) disponibles.`}
             </div>
           )}
 
-          {parametros.rechazado === "true" && (
-            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-              El permiso fue rechazado correctamente. No se descontaron días de vacaciones.
+          {parametros.rechazado ===
+            "true" && (
+            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
+              Permiso rechazado. No se descontaron días de vacaciones.
             </div>
           )}
 
-          {parametros.actualizado === "true" && (
-            <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-              El permiso fue actualizado correctamente.
+          {parametros.actualizado ===
+            "true" && (
+            <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">
+              Permiso actualizado correctamente.
             </div>
           )}
 
-          {parametros.error === "estado" && (
-            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-              El permiso ya fue procesado y no puede cambiarse.
+          {parametros.error ===
+            "saldo" && (
+            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
+              No se puede aprobar: los días solicitados superan el saldo disponible de vacaciones.
             </div>
           )}
 
-          {permiso.estado === "APROBADO" &&
-            vacacionGenerada && (
-              <div className="mb-6 rounded-2xl border border-blue-200 bg-blue-50 p-5">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-start gap-3">
-                    <div className="rounded-xl bg-blue-100 p-2.5 text-blue-700">
-                      <Link2 size={22} />
-                    </div>
-
-                    <div>
-                      <h3 className="font-bold text-blue-900">
-                        Día de vacaciones descontado
-                      </h3>
-
-                      <p className="mt-1 text-sm leading-6 text-blue-800">
-                        Este permiso generó automáticamente un registro aprobado de 1 día en vacaciones.
-                      </p>
-                    </div>
-                  </div>
-
-                  <Link
-                    href={`/administracion/rh/vacaciones/${vacacionGenerada.id}`}
-                    className="inline-flex items-center justify-center rounded-xl border border-blue-300 bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
-                  >
-                    Ver descuento
-                  </Link>
-                </div>
-              </div>
-            )}
-
-          {permiso.estado === "APROBADO" &&
-            !vacacionGenerada && (
-              <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
-                Este permiso fue aprobado antes de activar el descuento automático y todavía no tiene un día de vacaciones asociado.
-              </div>
-            )}
+          {parametros.error ===
+            "estado" && (
+            <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800">
+              El permiso ya fue procesado.
+            </div>
+          )}
 
           <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
             <div>
               <div className="flex flex-wrap items-center gap-3">
                 <h2 className="text-xl font-bold text-slate-900">
-                  {permiso.empleado}
+                  {
+                    permiso.empleado
+                  }
                 </h2>
 
                 <span
-                  className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${claseEstado(
+                  className={`rounded-full border px-3 py-1 text-xs font-bold ${claseEstado(
                     permiso.estado,
                   )}`}
                 >
-                  {nombreEstado(permiso.estado)}
+                  {
+                    permiso.estado
+                  }
                 </span>
               </div>
 
@@ -266,207 +293,187 @@ export default async function DetallePermisoPage({
               </p>
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row">
-              {permiso.estado === "PENDIENTE" && (
+            <div className="flex flex-wrap gap-3">
+              {permiso.estado ===
+                "PENDIENTE" && (
                 <>
                   <Link
                     href={`/administracion/rh/permisos/${permiso.id}/editar`}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                    className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100"
                   >
                     <FilePenLine size={17} />
                     Editar
                   </Link>
 
                   <BotonEliminar
-                    permisoId={permiso.id}
-                    empleado={permiso.empleado}
-                    permitido={true}
+                    permisoId={
+                      permiso.id
+                    }
+                    empleado={
+                      permiso.empleado
+                    }
+                    permitido
                   />
                 </>
               )}
 
               <BotonesAutorizacion
-                permisoId={permiso.id}
-                empleado={permiso.empleado}
-                permitido={permiso.estado === "PENDIENTE"}
+                permisoId={
+                  permiso.id
+                }
+                empleado={
+                  permiso.empleado
+                }
+                permitido={
+                  permiso.estado ===
+                  "PENDIENTE"
+                }
               />
             </div>
           </div>
 
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="space-y-6 lg:col-span-2">
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h3 className="text-lg font-bold text-slate-900">
                   Información del permiso
                 </h3>
 
-                <div className="mt-6 grid gap-5 sm:grid-cols-2">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                      Tipo
-                    </p>
+                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                  <Dato
+                    titulo="Tipo"
+                    valor={nombreTipo(
+                      permiso.tipo,
+                    )}
+                  />
 
-                    <p className="mt-1 font-semibold text-slate-900">
-                      {nombreTipo(permiso.tipo)}
-                    </p>
-                  </div>
+                  <Dato
+                    titulo="Días hábiles"
+                    valor={`${permiso.diasSolicitados} ${
+                      permiso.diasSolicitados ===
+                      1
+                        ? "día"
+                        : "días"
+                    }`}
+                  />
 
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                      Fecha
-                    </p>
+                  <Dato
+                    titulo="Fecha inicial"
+                    valor={formatearFecha(
+                      permiso.fecha,
+                    )}
+                  />
 
-                    <p className="mt-1 font-semibold text-slate-900">
-                      {formatearFecha(permiso.fecha)}
-                    </p>
-                  </div>
+                  <Dato
+                    titulo="Fecha final"
+                    valor={formatearFecha(
+                      fechaFinal,
+                    )}
+                  />
 
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                      Hora de inicio
-                    </p>
-
-                    <p className="mt-1 font-semibold text-slate-900">
-                      {formatearHora(
-                        permiso.horaInicio,
-                      )}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                      Hora final
-                    </p>
-
-                    <p className="mt-1 font-semibold text-slate-900">
-                      {formatearHora(
-                        permiso.horaFin,
-                      )}
-                    </p>
-                  </div>
+                  <Dato
+                    titulo="Horario"
+                    valor={`${permiso.horaInicio.slice(
+                      0,
+                      5,
+                    )} - ${permiso.horaFin.slice(
+                      0,
+                      5,
+                    )}`}
+                  />
                 </div>
-              </div>
+              </section>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h3 className="text-lg font-bold text-slate-900">
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h3 className="font-bold text-slate-900">
                   Motivo
                 </h3>
 
-                <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-slate-700">
-                  {permiso.motivo}
+                <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-700">
+                  {
+                    permiso.motivo
+                  }
                 </p>
-              </div>
+              </section>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h3 className="text-lg font-bold text-slate-900">
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h3 className="font-bold text-slate-900">
                   Observación
                 </h3>
 
-                <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-slate-700">
+                <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-700">
                   {permiso.observacion ||
                     "No se registraron observaciones."}
                 </p>
-              </div>
+              </section>
             </div>
 
             <div className="space-y-6">
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h3 className="text-lg font-bold text-slate-900">
-                  Resumen
-                </h3>
-
-                <div className="mt-5 space-y-5">
-                  <div className="flex gap-3">
-                    <UserRound
-                      size={20}
-                      className="mt-0.5 text-blue-600"
-                    />
-
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                        Empleado
-                      </p>
-
-                      <p className="mt-1 text-sm font-semibold text-slate-900">
-                        {permiso.empleado}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <CalendarDays
-                      size={20}
-                      className="mt-0.5 text-blue-600"
-                    />
-
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                        Fecha
-                      </p>
-
-                      <p className="mt-1 text-sm font-semibold text-slate-900">
-                        {formatearFecha(
-                          permiso.fecha,
-                        )}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <Clock3
-                      size={20}
-                      className="mt-0.5 text-blue-600"
-                    />
-
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                        Horario
-                      </p>
-
-                      <p className="mt-1 text-sm font-semibold text-slate-900">
-                        {formatearHora(
-                          permiso.horaInicio,
-                        )}{" "}
-                        -{" "}
-                        {formatearHora(
-                          permiso.horaFin,
-                        )}
-                      </p>
-                    </div>
-                  </div>
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <UserRound
+                    size={21}
+                    className="text-blue-600"
+                  />
+                  <h3 className="font-bold text-slate-900">
+                    Autorización
+                  </h3>
                 </div>
-              </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h3 className="text-lg font-bold text-slate-900">
-                  Autorización
-                </h3>
-
-                <p className="mt-4 text-sm text-slate-500">
+                <p className="mt-5 text-xs font-bold uppercase text-slate-500">
                   Autorizado por
                 </p>
 
                 <p className="mt-1 font-semibold text-slate-900">
                   {permiso.autorizador ||
-                    "Pendiente de autorización"}
+                    "Pendiente"}
                 </p>
+              </section>
 
-                <p className="mt-5 text-sm text-slate-500">
-                  Descuento de vacaciones
-                </p>
+              <section className="rounded-2xl border border-blue-200 bg-blue-50 p-6">
+                <div className="flex items-center gap-3">
+                  <ShieldCheck
+                    size={21}
+                    className="text-blue-700"
+                  />
+                  <h3 className="font-bold text-blue-950">
+                    Impacto en vacaciones
+                  </h3>
+                </div>
 
-                <p className="mt-1 font-semibold text-slate-900">
-                  {permiso.estado === "APROBADO"
-                    ? vacacionGenerada
-                      ? "1 día descontado"
-                      : "Pendiente de registrar"
-                    : "No aplicado"}
+                <p className="mt-4 text-sm leading-6 text-blue-900">
+                  {permiso.estado !==
+                  "APROBADO"
+                    ? "Se determinará al momento de aprobar el permiso."
+                    : permiso.afectaVacaciones
+                      ? `Este permiso descontó ${permiso.diasDescontadosVacaciones} día(s) de vacaciones.`
+                      : "Este permiso no descontó vacaciones porque el empleado ya tenía vacaciones aprobadas en ese año."}
                 </p>
-              </div>
+              </section>
             </div>
           </div>
         </div>
       </section>
     </AppShell>
+  );
+}
+
+function Dato({
+  titulo,
+  valor,
+}: {
+  titulo: string;
+  valor: string;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+      <p className="text-xs font-bold uppercase text-slate-500">
+        {titulo}
+      </p>
+
+      <p className="mt-2 font-semibold text-slate-900">
+        {valor}
+      </p>
+    </div>
   );
 }

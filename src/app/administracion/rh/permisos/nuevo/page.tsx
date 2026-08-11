@@ -65,7 +65,13 @@ export default async function NuevoPermisoPage({
 
           {parametros.error === "horario" && (
             <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-              La hora final debe ser posterior a la hora inicial.
+              En permisos de un solo día, la hora final debe ser posterior a la hora inicial.
+            </div>
+          )}
+
+          {parametros.error === "fechas" && (
+            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+              El rango debe contener al menos un día hábil de lunes a viernes.
             </div>
           )}
 

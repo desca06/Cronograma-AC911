@@ -1,11 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
-import { Save } from "lucide-react";
-import { useFormStatus } from "react-dom";
+import {
+  CalendarDays,
+  LoaderCircle,
+  Save,
+} from "lucide-react";
+import {
+  useMemo,
+  useState,
+} from "react";
+import {
+  useFormStatus,
+} from "react-dom";
 
-import { actualizarVacacion } from "@/app/administracion/rh/vacaciones/actions";
+import {
+  calcularDiasHabiles,
+} from "@/lib/vacaciones";
+import {
+  actualizarVacacion,
+} from "../../actions";
 
 type Empleado = {
   id: number;
@@ -13,20 +27,26 @@ type Empleado = {
   puesto: string;
 };
 
+type Vacacion = {
+  id: number;
+  empleadoId: number;
+  fechaInicio: string;
+  fechaFin: string;
+  cantidadDias: number;
+  observacion:
+    | string
+    | null;
+  estado: string;
+};
+
 type FormularioEditarVacacionProps = {
-  vacacion: {
-    id: number;
-    empleadoId: number;
-    fechaInicio: string;
-    fechaFin: string;
-    cantidadDias: number,
-    observacion: string | null;
-  };
+  vacacion: Vacacion;
   empleados: Empleado[];
 };
 
 function BotonGuardar() {
-  const { pending } = useFormStatus();
+  const { pending } =
+    useFormStatus();
 
   return (
     <button
@@ -34,11 +54,20 @@ function BotonGuardar() {
       disabled={pending}
       className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
     >
-      <Save size={18} />
-
-      {pending
-        ? "Guardando cambios..."
-        : "Guardar cambios"}
+      {pending ? (
+        <>
+          <LoaderCircle
+            size={18}
+            className="animate-spin"
+          />
+          Guardando...
+        </>
+      ) : (
+        <>
+          <Save size={18} />
+          Guardar cambios
+        </>
+      )}
     </button>
   );
 }
@@ -48,44 +77,63 @@ export function FormularioEditarVacacion({
   empleados,
 }: FormularioEditarVacacionProps) {
   const actualizarActual =
-    actualizarVacacion.bind(null, vacacion.id);
-
-  const cantidadDias = useMemo(() => {
-    if (!vacacion.fechaInicio || !vacacion.fechaFin) {
-      return vacacion.cantidadDias;
-    }
-
-    const inicio = new Date(
-      `${vacacion.fechaInicio}T00:00:00`,
+    actualizarVacacion.bind(
+      null,
+      vacacion.id,
     );
 
-    const fin = new Date(
-      `${vacacion.fechaFin}T00:00:00`,
-    );
-
-    if (
-      Number.isNaN(inicio.getTime()) ||
-      Number.isNaN(fin.getTime()) ||
-      fin < inicio
-    ) {
-      return 0;
-    }
-
-    const diferencia =
-      fin.getTime() - inicio.getTime();
-
-    return Math.floor(diferencia / 86_400_000) + 1;
-  }, [
+  const [
+    fechaInicio,
+    setFechaInicio,
+  ] = useState(
     vacacion.fechaInicio,
+  );
+
+  const [
+    fechaFin,
+    setFechaFin,
+  ] = useState(
     vacacion.fechaFin,
-    vacacion.cantidadDias,
-  ]);
+  );
+
+  const cantidadDias =
+    useMemo(
+      () =>
+        calcularDiasHabiles(
+          fechaInicio,
+          fechaFin,
+        ),
+      [
+        fechaInicio,
+        fechaFin,
+      ],
+    );
 
   return (
     <form
-      action={actualizarActual}
+      action={
+        actualizarActual
+      }
       className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8"
     >
+      <div className="mb-6 flex items-center gap-3">
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
+          <CalendarDays
+            size={22}
+          />
+        </div>
+
+        <div>
+          <h2 className="font-bold text-slate-900">
+            Editar vacaciones
+          </h2>
+
+          <p className="text-sm text-slate-500">
+            Los días se calculan de lunes a viernes.
+          </p>
+        </div>
+      </div>
+
       <div className="grid gap-6 md:grid-cols-2">
         <div className="md:col-span-2">
           <label
@@ -98,22 +146,27 @@ export function FormularioEditarVacacion({
           <select
             id="empleadoId"
             name="empleadoId"
-            defaultValue={vacacion.empleadoId}
             required
-            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+            defaultValue={
+              vacacion.empleadoId
+            }
+            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900"
           >
-            <option value="">
-              Seleccioná un empleado
-            </option>
-
-            {empleados.map((empleado) => (
-              <option
-                key={empleado.id}
-                value={empleado.id}
-              >
-                {empleado.nombre} — {empleado.puesto}
-              </option>
-            ))}
+            {empleados.map(
+              (empleado) => (
+                <option
+                  key={
+                    empleado.id
+                  }
+                  value={
+                    empleado.id
+                  }
+                >
+                  {empleado.nombre} —{" "}
+                  {empleado.puesto}
+                </option>
+              ),
+            )}
           </select>
         </div>
 
@@ -129,9 +182,29 @@ export function FormularioEditarVacacion({
             id="fechaInicio"
             name="fechaInicio"
             type="date"
-            defaultValue={vacacion.fechaInicio}
             required
-            className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+            value={fechaInicio}
+            onChange={(
+              evento,
+            ) => {
+              const valor =
+                evento.target.value;
+
+              setFechaInicio(
+                valor,
+              );
+
+              if (
+                fechaFin &&
+                valor >
+                  fechaFin
+              ) {
+                setFechaFin(
+                  valor,
+                );
+              }
+            }}
+            className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
           />
         </div>
 
@@ -147,22 +220,40 @@ export function FormularioEditarVacacion({
             id="fechaFin"
             name="fechaFin"
             type="date"
-            defaultValue={vacacion.fechaFin}
             required
-            className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+            min={fechaInicio}
+            value={fechaFin}
+            onChange={(
+              evento,
+            ) =>
+              setFechaFin(
+                evento.target
+                  .value,
+              )
+            }
+            className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
           />
         </div>
 
-        <div className="md:col-span-2">
-          <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
-            <p className="text-sm font-semibold text-blue-800">
-              Días registrados actualmente
-            </p>
+        <div className="md:col-span-2 rounded-xl border border-blue-200 bg-blue-50 p-4">
+          <p className="text-xs font-bold uppercase tracking-wide text-blue-700">
+            Días hábiles
+          </p>
 
-            <p className="mt-1 text-2xl font-bold text-blue-900">
-              {cantidadDias}
-            </p>
-          </div>
+          <p className="mt-1 text-2xl font-bold text-blue-950">
+            {cantidadDias > 0
+              ? `${cantidadDias} ${
+                  cantidadDias ===
+                  1
+                    ? "día"
+                    : "días"
+                }`
+              : "Rango inválido"}
+          </p>
+
+          <p className="mt-1 text-xs text-blue-800">
+            Máximo permitido: 15 días hábiles.
+          </p>
         </div>
 
         <div className="md:col-span-2">
@@ -176,18 +267,20 @@ export function FormularioEditarVacacion({
           <textarea
             id="observacion"
             name="observacion"
-            defaultValue={vacacion.observacion ?? ""}
-            rows={5}
-            placeholder="Agregá una observación opcional..."
-            className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+            rows={4}
+            defaultValue={
+              vacacion.observacion ??
+              ""
+            }
+            className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 text-sm"
           />
         </div>
       </div>
 
-      <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+      <div className="mt-8 flex flex-col-reverse gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:justify-end">
         <Link
           href={`/administracion/rh/vacaciones/${vacacion.id}`}
-          className="inline-flex items-center justify-center rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+          className="inline-flex items-center justify-center rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100"
         >
           Cancelar
         </Link>

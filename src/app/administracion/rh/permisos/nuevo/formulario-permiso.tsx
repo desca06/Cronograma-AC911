@@ -2,13 +2,25 @@
 
 import Link from "next/link";
 import {
+  BadgeInfo,
   CalendarDays,
   LoaderCircle,
   Save,
 } from "lucide-react";
-import { useFormStatus } from "react-dom";
+import {
+  useMemo,
+  useState,
+} from "react";
+import {
+  useFormStatus,
+} from "react-dom";
 
-import { crearPermiso } from "../actions";
+import {
+  calcularDiasHabiles,
+} from "@/lib/vacaciones";
+import {
+  crearPermiso,
+} from "../actions";
 
 type Empleado = {
   id: number;
@@ -20,7 +32,8 @@ type FormularioPermisoProps = {
 };
 
 function BotonGuardar() {
-  const { pending } = useFormStatus();
+  const { pending } =
+    useFormStatus();
 
   return (
     <button
@@ -49,6 +62,29 @@ function BotonGuardar() {
 export function FormularioPermiso({
   empleados,
 }: FormularioPermisoProps) {
+  const [
+    fechaInicio,
+    setFechaInicio,
+  ] = useState("");
+
+  const [
+    fechaFin,
+    setFechaFin,
+  ] = useState("");
+
+  const diasHabiles =
+    useMemo(
+      () =>
+        calcularDiasHabiles(
+          fechaInicio,
+          fechaFin,
+        ),
+      [
+        fechaInicio,
+        fechaFin,
+      ],
+    );
+
   return (
     <form
       action={crearPermiso}
@@ -56,7 +92,9 @@ export function FormularioPermiso({
     >
       <div className="mb-6 flex items-center gap-3">
         <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
-          <CalendarDays size={22} />
+          <CalendarDays
+            size={22}
+          />
         </div>
 
         <div>
@@ -65,7 +103,20 @@ export function FormularioPermiso({
           </h2>
 
           <p className="text-sm text-slate-500">
-            Completá los datos de la solicitud.
+            El permiso puede abarcar uno o varios días hábiles.
+          </p>
+        </div>
+      </div>
+
+      <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-4">
+        <div className="flex items-start gap-3">
+          <BadgeInfo
+            size={21}
+            className="mt-0.5 shrink-0 text-blue-700"
+          />
+
+          <p className="text-sm leading-6 text-blue-900">
+            Si el trabajador todavía no tiene vacaciones aprobadas en el año, los días hábiles de este permiso podrán descontarse de su bolsa de 15 días al aprobarlo. Si ya tiene vacaciones aprobadas, el permiso no reducirá esa bolsa.
           </p>
         </div>
       </div>
@@ -86,18 +137,29 @@ export function FormularioPermiso({
             defaultValue=""
             className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
           >
-            <option value="" disabled>
+            <option
+              value=""
+              disabled
+            >
               Seleccioná un empleado
             </option>
 
-            {empleados.map((empleado) => (
-              <option
-                key={empleado.id}
-                value={empleado.id}
-              >
-                {empleado.nombre}
-              </option>
-            ))}
+            {empleados.map(
+              (empleado) => (
+                <option
+                  key={
+                    empleado.id
+                  }
+                  value={
+                    empleado.id
+                  }
+                >
+                  {
+                    empleado.nombre
+                  }
+                </option>
+              ),
+            )}
           </select>
         </div>
 
@@ -114,40 +176,91 @@ export function FormularioPermiso({
             name="tipo"
             required
             defaultValue=""
-            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900"
           >
-            <option value="" disabled>
+            <option
+              value=""
+              disabled
+            >
               Seleccioná el tipo
             </option>
-
             <option value="PERSONAL">
               Personal
             </option>
-
             <option value="CITA_MEDICA">
               Cita médica
             </option>
-
             <option value="ENFERMEDAD">
               Enfermedad
             </option>
           </select>
         </div>
 
+        <div />
+
         <div>
           <label
-            htmlFor="fecha"
+            htmlFor="fechaInicio"
             className="mb-2 block text-sm font-semibold text-slate-700"
           >
-            Fecha
+            Fecha de inicio
           </label>
 
           <input
-            id="fecha"
-            name="fecha"
+            id="fechaInicio"
+            name="fechaInicio"
             type="date"
             required
-            className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+            value={fechaInicio}
+            onChange={(
+              evento,
+            ) => {
+              const valor =
+                evento.target.value;
+
+              setFechaInicio(
+                valor,
+              );
+
+              if (
+                fechaFin &&
+                valor >
+                  fechaFin
+              ) {
+                setFechaFin("");
+              }
+            }}
+            className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="fechaFin"
+            className="mb-2 block text-sm font-semibold text-slate-700"
+          >
+            Fecha final
+          </label>
+
+          <input
+            id="fechaFin"
+            name="fechaFin"
+            type="date"
+            required
+            min={
+              fechaInicio ||
+              undefined
+            }
+            value={fechaFin}
+            onChange={(
+              evento,
+            ) =>
+              setFechaFin(
+                evento.target
+                  .value,
+              )
+            }
+            className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
           />
         </div>
 
@@ -164,7 +277,7 @@ export function FormularioPermiso({
             name="horaInicio"
             type="time"
             required
-            className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+            className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
           />
         </div>
 
@@ -181,8 +294,30 @@ export function FormularioPermiso({
             name="horaFin"
             type="time"
             required
-            className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+            className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
           />
+        </div>
+
+        <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+            Días hábiles solicitados
+          </p>
+
+          <p className="mt-1 text-2xl font-bold text-slate-900">
+            {fechaInicio &&
+            fechaFin
+              ? `${diasHabiles} ${
+                  diasHabiles ===
+                  1
+                    ? "día"
+                    : "días"
+                }`
+              : "Seleccioná las fechas"}
+          </p>
+
+          <p className="mt-1 text-xs text-slate-500">
+            Se cuentan de lunes a viernes.
+          </p>
         </div>
 
         <div className="md:col-span-2">
@@ -199,7 +334,24 @@ export function FormularioPermiso({
             rows={4}
             required
             placeholder="Describe el motivo del permiso..."
-            className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+            className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 text-sm"
+          />
+        </div>
+
+        <div className="md:col-span-2">
+          <label
+            htmlFor="observacion"
+            className="mb-2 block text-sm font-semibold text-slate-700"
+          >
+            Observación
+          </label>
+
+          <textarea
+            id="observacion"
+            name="observacion"
+            rows={3}
+            placeholder="Observación opcional..."
+            className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 text-sm"
           />
         </div>
       </div>

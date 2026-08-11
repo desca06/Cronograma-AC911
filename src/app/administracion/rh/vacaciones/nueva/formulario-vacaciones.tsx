@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useFormStatus } from "react-dom";
 
+import { calcularDiasHabiles } from "@/lib/vacaciones";
 import { crearVacacion } from "../actions";
 
 type Empleado = {
@@ -21,22 +22,6 @@ type Empleado = {
 type FormularioVacacionesProps = {
   empleados: Empleado[];
 };
-
-function calcularDias(
-  fechaInicio: string,
-  fechaFin: string,
-) {
-  if (!fechaInicio || !fechaFin) {
-    return 0;
-  }
-
-  const inicio = new Date(`${fechaInicio}T00:00:00Z`);
-  const fin = new Date(`${fechaFin}T00:00:00Z`);
-
-  const diferencia = fin.getTime() - inicio.getTime();
-
-  return Math.floor(diferencia / 86_400_000) + 1;
-}
 
 function BotonGuardar() {
   const { pending } = useFormStatus();
@@ -72,7 +57,7 @@ export function FormularioVacaciones({
   const [fechaFin, setFechaFin] = useState("");
 
   const cantidadDias = useMemo(
-    () => calcularDias(fechaInicio, fechaFin),
+    () => calcularDiasHabiles(fechaInicio, fechaFin),
     [fechaInicio, fechaFin],
   );
 
@@ -209,7 +194,7 @@ export function FormularioVacaciones({
 
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Cantidad de días
+              Días hábiles
             </p>
 
             <p
@@ -226,6 +211,10 @@ export function FormularioVacaciones({
                       : "días"
                   }`
                 : "Seleccioná ambas fechas"}
+            </p>
+
+            <p className="mt-1 text-xs text-slate-500">
+              Se cuentan únicamente lunes a viernes.
             </p>
           </div>
         </div>

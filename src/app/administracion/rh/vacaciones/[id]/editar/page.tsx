@@ -108,6 +108,12 @@ export default async function EditarVacacionPage({
             </div>
           )}
 
+          {parametros.error === "maximo" && (
+            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+              La solicitud no puede superar los 15 días hábiles.
+            </div>
+          )}
+
           <FormularioEditarVacacion
             vacacion={vacacion}
             empleados={listaEmpleados}

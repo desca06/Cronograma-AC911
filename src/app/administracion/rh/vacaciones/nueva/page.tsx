@@ -26,6 +26,15 @@ function obtenerMensajeError(error?: string) {
     case "empleado":
       return "El empleado seleccionado no existe o se encuentra inactivo.";
 
+    case "maximo":
+      return "Una solicitud no puede superar los 15 días hábiles.";
+
+    case "agotadas":
+      return "El trabajador ya agotó sus 15 días hábiles de vacaciones. No tiene más días disponibles.";
+
+    case "saldo":
+      return "Días insuficientes. La solicitud supera el saldo de vacaciones disponible.";
+
     case "datos":
       return "Completá correctamente todos los campos obligatorios.";
 
