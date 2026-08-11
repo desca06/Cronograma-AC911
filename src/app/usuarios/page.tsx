@@ -112,8 +112,9 @@ export default async function UsuariosPage({
             </h2>
 
             <p className="mt-1 text-sm text-slate-500">
-              Los técnicos deben vincularse con un empleado
-              registrado.
+              Los técnicos deben vincularse con un empleado.
+              Supervisores también pueden vincularse para usar
+              Mis trabajos e Historial.
             </p>
           </div>
 
@@ -328,6 +329,14 @@ export default async function UsuariosPage({
                       <label className="mb-2 block text-sm font-semibold text-slate-700">
                         Rol
                       </label>
+
+                      {esUsuarioActual && (
+                        <input
+                          type="hidden"
+                          name="rol"
+                          value={usuario.rol}
+                        />
+                      )}
 
                       <select
                         name="rol"

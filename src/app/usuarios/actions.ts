@@ -69,8 +69,9 @@ export async function crearUsuario(
       : "TECNICO";
 
   const empleadoId =
-    rolFinal === "TECNICO" &&
-    Number.isInteger(empleadoIdSeleccionado) &&
+    Number.isInteger(
+      empleadoIdSeleccionado,
+    ) &&
     empleadoIdSeleccionado > 0
       ? empleadoIdSeleccionado
       : null;
@@ -187,20 +188,40 @@ export async function actualizarUsuario(
   const esUsuarioActual =
     id === sesion.usuarioId;
 
-  const rolFinal = 
-    rolRecibido === "ADMIN"
-      ? "ADMIN"
-      : rolRecibido === "SUPERVISOR"
-      ? "SUPERVISOR"
-      : "TECNICO";
+  const [usuarioActual] = await db
+    .select({
+      rol: usuarios.rol,
+    })
+    .from(usuarios)
+    .where(
+      eq(
+        usuarios.id,
+        id,
+      ),
+    )
+    .limit(1);
+
+  if (!usuarioActual) {
+    redirect("/usuarios?error=datos");
+  }
+
+  const rolFinal =
+    esUsuarioActual
+      ? usuarioActual.rol
+      : rolRecibido === "ADMIN"
+        ? "ADMIN"
+        : rolRecibido === "SUPERVISOR"
+          ? "SUPERVISOR"
+          : "TECNICO";
 
   const activoFinal = esUsuarioActual
     ? true
     : activoRecibido;
 
   const empleadoId =
-    rolFinal === "TECNICO" &&
-    Number.isInteger(empleadoIdSeleccionado) &&
+    Number.isInteger(
+      empleadoIdSeleccionado,
+    ) &&
     empleadoIdSeleccionado > 0
       ? empleadoIdSeleccionado
       : null;
