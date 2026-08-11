@@ -1,4 +1,8 @@
-import { and, eq } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+} from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -9,6 +13,7 @@ import {
   clientes,
   trabajos,
   trabajoEmpleados,
+  trabajoObservacionesTecnico,
   usuarios,
   vehiculos,
 } from "@/db/schema";
@@ -36,6 +41,20 @@ type TrabajoAsignadoPageProps = {
     exito?: string | string[];
   }>;
 };
+
+function formatearFechaHora(
+  fecha: Date,
+) {
+  return new Intl.DateTimeFormat(
+    "es-GT",
+    {
+      timeZone:
+        "America/Guatemala",
+      dateStyle: "medium",
+      timeStyle: "short",
+    },
+  ).format(fecha);
+}
 
 export default async function TrabajoAsignadoPage({
   params,
@@ -90,11 +109,6 @@ export default async function TrabajoAsignadoPage({
     );
   }
 
-  /*
-   * La consulta incluye la asignación del técnico.
-   * Así nadie puede abrir un trabajo ajeno
-   * escribiendo otro ID en la dirección.
-   */
   const [trabajo] = await db
     .select({
       id: trabajos.id,
@@ -105,13 +119,8 @@ export default async function TrabajoAsignadoPage({
       estado: trabajos.estado,
       horaInicio: trabajos.horaInicio,
       horaFin: trabajos.horaFin,
-
       observacionesSupervisor:
         trabajos.observaciones,
-
-      observacionesTecnico:
-        trabajos.observacionesTecnico,
-
       clienteNombre: clientes.nombre,
       vehiculoNombre: vehiculos.nombre,
     })
@@ -143,7 +152,10 @@ export default async function TrabajoAsignadoPage({
           trabajoEmpleados.empleadoId,
           usuario.empleadoId,
         ),
-        eq(trabajos.id, trabajoId),
+        eq(
+          trabajos.id,
+          trabajoId,
+        ),
       ),
     )
     .limit(1);
@@ -153,6 +165,42 @@ export default async function TrabajoAsignadoPage({
       "/mis-trabajos?error=permiso",
     );
   }
+
+  const historial =
+    await db
+      .select({
+        id:
+          trabajoObservacionesTecnico.id,
+        observacion:
+          trabajoObservacionesTecnico.observacion,
+        estadoTrabajo:
+          trabajoObservacionesTecnico.estadoTrabajo,
+        creadoEn:
+          trabajoObservacionesTecnico.creadoEn,
+        autor:
+          usuarios.nombre,
+      })
+      .from(
+        trabajoObservacionesTecnico,
+      )
+      .leftJoin(
+        usuarios,
+        eq(
+          trabajoObservacionesTecnico.usuarioId,
+          usuarios.id,
+        ),
+      )
+      .where(
+        eq(
+          trabajoObservacionesTecnico.trabajoId,
+          trabajo.id,
+        ),
+      )
+      .orderBy(
+        desc(
+          trabajoObservacionesTecnico.creadoEn,
+        ),
+      );
 
   const mensajeError =
     error === "permiso"
@@ -216,7 +264,9 @@ export default async function TrabajoAsignadoPage({
 
             <span
               className={`w-fit rounded-full px-3 py-1 text-xs font-bold ${
-                coloresEstado[trabajo.estado] ??
+                coloresEstado[
+                  trabajo.estado
+                ] ??
                 "bg-slate-100 text-slate-700"
               }`}
             >
@@ -269,6 +319,66 @@ export default async function TrabajoAsignadoPage({
             Ver o subir evidencias
           </Link>
 
+          <section className="mt-6 border-t border-slate-200 pt-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">
+                  Historial de observaciones
+                </h3>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Registro completo de avances y comentarios realizados por el técnico.
+                </p>
+              </div>
+
+              <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700">
+                {historial.length}
+              </span>
+            </div>
+
+            {historial.length === 0 ? (
+              <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-500">
+                Todavía no hay observaciones registradas para este trabajo.
+              </div>
+            ) : (
+              <div className="mt-4 space-y-3">
+                {historial.map(
+                  (registro) => (
+                    <article
+                      key={registro.id}
+                      className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="font-bold text-slate-900">
+                          {registro.autor ||
+                            "Técnico"}
+                        </p>
+
+                        <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
+                          {
+                            registro.estadoTrabajo
+                          }
+                        </span>
+                      </div>
+
+                      <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">
+                        {
+                          registro.observacion
+                        }
+                      </p>
+
+                      <p className="mt-3 text-xs font-medium text-slate-500">
+                        {formatearFechaHora(
+                          registro.creadoEn,
+                        )}
+                      </p>
+                    </article>
+                  ),
+                )}
+              </div>
+            )}
+          </section>
+
           <form
             action={actualizarMiTrabajo}
             className="mt-6 space-y-4 border-t border-slate-200 pt-5"
@@ -296,7 +406,9 @@ export default async function TrabajoAsignadoPage({
               <select
                 id={`estado-${trabajo.id}`}
                 name="estado"
-                defaultValue={trabajo.estado}
+                defaultValue={
+                  trabajo.estado
+                }
                 className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"
               >
                 <option value="Pendiente">
@@ -322,20 +434,21 @@ export default async function TrabajoAsignadoPage({
                 htmlFor={`observaciones-tecnico-${trabajo.id}`}
                 className="mb-2 block text-sm font-semibold text-slate-700"
               >
-                Observaciones del técnico
+                Nueva observación del técnico
               </label>
 
               <textarea
                 id={`observaciones-tecnico-${trabajo.id}`}
                 name="observacionesTecnico"
                 rows={4}
-                defaultValue={
-                  trabajo.observacionesTecnico ??
-                  ""
-                }
-                placeholder="Escribe avances, problemas, materiales utilizados o resultados"
+                defaultValue=""
+                placeholder="Escribe una nueva observación, avance, problema, material utilizado o resultado"
                 className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3"
               />
+
+              <p className="mt-2 text-xs text-slate-500">
+                Al guardar, esta observación se agregará al historial y no reemplazará las anteriores.
+              </p>
             </div>
 
             <button

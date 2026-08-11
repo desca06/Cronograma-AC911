@@ -9,10 +9,10 @@ import {
   notificaciones,
   trabajos,
   trabajoEmpleados,
+  trabajoObservacionesTecnico,
   usuarios,
 } from "@/db/schema";
 import { requerirSesion } from "@/lib/auth";
-import { enviarPushAUsuarios } from "@/lib/push";
 
 function obtenerTexto(
   formData: FormData,
@@ -96,10 +96,16 @@ export async function actualizarMiTrabajo(
     "estado",
   );
 
-  const observacionesTecnico = obtenerTexto(
-    formData,
-    "observacionesTecnico",
-  );
+  /*
+   * Este campo representa UNA NUEVA observación.
+   * Ya no contiene todo el historial ni reemplaza
+   * la observación anterior.
+   */
+  const nuevaObservacion =
+    obtenerTexto(
+      formData,
+      "observacionesTecnico",
+    );
 
   const estadosPermitidos = [
     "Pendiente",
@@ -177,8 +183,6 @@ export async function actualizarMiTrabajo(
       tipo: trabajos.tipo,
       fecha: trabajos.fecha,
       estado: trabajos.estado,
-      observacionesTecnico:
-        trabajos.observacionesTecnico,
     })
     .from(trabajos)
     .where(
@@ -199,20 +203,19 @@ export async function actualizarMiTrabajo(
     );
   }
 
-  const observacionesTecnicoAnteriores =
-    trabajoActual.observacionesTecnico
-      ?.trim() ?? "";
-
   const cambioEstado =
     trabajoActual.estado !== estado;
 
-  const cambioObservacionesTecnico =
-    observacionesTecnicoAnteriores !==
-    observacionesTecnico;
+  /*
+   * Cualquier texto no vacío es una nueva entrada
+   * histórica, aunque sea parecido a una anterior.
+   */
+  const agregoObservacion =
+    nuevaObservacion.length > 0;
 
   if (
     !cambioEstado &&
-    !cambioObservacionesTecnico
+    !agregoObservacion
   ) {
     redirect(
       agregarParametro(
@@ -223,20 +226,50 @@ export async function actualizarMiTrabajo(
     );
   }
 
+  const ahora = new Date();
+
   await db.transaction(async (tx) => {
-    await tx.update(trabajos)
+    /*
+     * Conservamos observacionesTecnico como "última
+     * observación" por compatibilidad con pantallas
+     * antiguas. El historial real vive en
+     * trabajo_observaciones_tecnico.
+     */
+    await tx
+      .update(trabajos)
       .set({
         estado,
-        observacionesTecnico:
-          observacionesTecnico || null,
+        ...(agregoObservacion
+          ? {
+              observacionesTecnico:
+                nuevaObservacion,
+            }
+          : {}),
       })
       .where(
         eq(
           trabajos.id,
           trabajoId,
         ),
-      )
-;
+      );
+
+    if (agregoObservacion) {
+      await tx
+        .insert(
+          trabajoObservacionesTecnico,
+        )
+        .values({
+          trabajoId,
+          usuarioId:
+            sesion.usuarioId,
+          observacion:
+            nuevaObservacion,
+          estadoTrabajo:
+            estado,
+          creadoEn:
+            ahora,
+        });
+    }
 
     const supervisores = await tx
       .select({
@@ -248,8 +281,7 @@ export async function actualizarMiTrabajo(
           usuarios.rol,
           "SUPERVISOR",
         ),
-      )
-;
+      );
 
     if (supervisores.length === 0) {
       return;
@@ -281,25 +313,28 @@ export async function actualizarMiTrabajo(
 
     if (
       cambioEstado &&
-      cambioObservacionesTecnico
+      agregoObservacion
     ) {
       mensaje +=
-        " El técnico también agregó o actualizó sus observaciones.";
+        " El técnico también agregó una nueva observación.";
     } else if (
       !cambioEstado &&
-      cambioObservacionesTecnico
+      agregoObservacion
     ) {
       titulo =
-        "Observaciones del técnico actualizadas";
+        "Nueva observación del técnico";
 
       mensaje =
-        `El técnico agregó o actualizó sus ` +
-        `observaciones en el trabajo ` +
-        `"${trabajoActual.tipo}" del ` +
-        `${trabajoActual.fecha}.`;
+        `El técnico agregó una nueva observación ` +
+        `en el trabajo "${trabajoActual.tipo}" ` +
+        `del ${trabajoActual.fecha}.`;
+
+      tipoNotificacion =
+        "ACTUALIZACION";
     }
 
-    await tx.insert(notificaciones)
+    await tx
+      .insert(notificaciones)
       .values(
         supervisores.map(
           (supervisor) => ({
@@ -308,12 +343,12 @@ export async function actualizarMiTrabajo(
             trabajoId,
             titulo,
             mensaje,
-            tipo: tipoNotificacion,
+            tipo:
+              tipoNotificacion,
             leida: false,
           }),
         ),
-      )
-;
+      );
   });
 
   revalidarPaginas(trabajoId);

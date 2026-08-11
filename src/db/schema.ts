@@ -115,6 +115,50 @@ export const usuarios = pgTable("usuarios", {
   creadoEn: timestamp("creado_en", { mode: "string" }).notNull().defaultNow(),
 });
 
+
+export const trabajoObservacionesTecnico = pgTable(
+  "trabajo_observaciones_tecnico",
+  {
+    id: serial("id").primaryKey(),
+
+    trabajoId: integer("trabajo_id")
+      .notNull()
+      .references(() => trabajos.id, {
+        onDelete: "cascade",
+      }),
+
+    usuarioId: integer("usuario_id")
+      .references(() => usuarios.id, {
+        onDelete: "set null",
+      }),
+
+    observacion: text("observacion")
+      .notNull(),
+
+    estadoTrabajo: text("estado_trabajo")
+      .notNull(),
+
+    creadoEn: timestamp("creado_en", {
+      mode: "date",
+    })
+      .notNull()
+      .defaultNow(),
+  },
+  (tabla) => [
+    index(
+      "trabajo_obs_tecnico_trabajo_idx",
+    ).on(tabla.trabajoId),
+
+    index(
+      "trabajo_obs_tecnico_usuario_idx",
+    ).on(tabla.usuarioId),
+
+    index(
+      "trabajo_obs_tecnico_fecha_idx",
+    ).on(tabla.creadoEn),
+  ],
+);
+
 export const notificaciones = pgTable("notificaciones", {
   id: serial("id").primaryKey(),
   usuarioId: integer("usuario_id")
@@ -1020,6 +1064,11 @@ export type NuevaNotificacion = typeof notificaciones.$inferInsert;
 
 export type Evidencia = typeof evidencias.$inferSelect;
 export type NuevaEvidencia = typeof evidencias.$inferInsert;
+
+export type TrabajoObservacionTecnico =
+  typeof trabajoObservacionesTecnico.$inferSelect;
+export type NuevaTrabajoObservacionTecnico =
+  typeof trabajoObservacionesTecnico.$inferInsert;
 
 export type Usuario = typeof usuarios.$inferSelect;
 export type NuevoUsuario = typeof usuarios.$inferInsert;
