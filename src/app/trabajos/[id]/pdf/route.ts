@@ -1,3 +1,6 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+
 import {
   asc,
   eq,
@@ -510,6 +513,8 @@ export async function GET(
   const listaEvidencias =
     await db
       .select({
+        archivoUrl:
+          evidencias.archivoUrl,
         nombreOriginal:
           evidencias.nombreOriginal,
         descripcion:
@@ -1029,7 +1034,47 @@ export async function GET(
       listaEvidencias.length >
       0
     ) {
-      if (y < 150) {
+      /*
+       * Las evidencias se acomodan de forma compacta
+       * para aprovechar mejor cada página.
+       *
+       * - Sin marco celeste alrededor de la tarjeta.
+       * - 3 columnas por fila.
+       * - Se crea otra página únicamente cuando
+       *   la siguiente FILA completa ya no cabe.
+       */
+      const gap = 12;
+      const columnas = 3;
+
+      const anchoDisponible =
+        PAGE_WIDTH -
+        MARGIN * 2;
+
+      const anchoTarjeta =
+        (anchoDisponible -
+          gap *
+            (columnas - 1)) /
+        columnas;
+
+      const altoImagen = 118;
+      const altoInfo = 43;
+      const altoTarjeta =
+        altoImagen +
+        altoInfo;
+
+      const espacioEntreFilas = 14;
+      const limiteInferior = 38;
+
+      /*
+       * Si todavía queda espacio suficiente en la
+       * página actual, empezamos aquí mismo.
+       * Solo saltamos si ni siquiera cabe una fila.
+       */
+      if (
+        y -
+          altoTarjeta <
+        limiteInferior
+      ) {
         page =
           nuevaPagina();
 
@@ -1049,13 +1094,33 @@ export async function GET(
         },
       );
 
-      y -= 24;
+      y -= 22;
+
+      let columna = 0;
 
       for (
-        const evidencia
-        of listaEvidencias
+        let indice = 0;
+        indice <
+        listaEvidencias.length;
+        indice += 1
       ) {
-        if (y < 75) {
+        const evidencia =
+          listaEvidencias[
+            indice
+          ];
+
+        /*
+         * El salto se evalúa únicamente al iniciar
+         * una nueva fila. Así no se manda una imagen
+         * a otra página si todavía cabe junto a las
+         * demás en la fila actual.
+         */
+        if (
+          columna === 0 &&
+          y -
+            altoTarjeta <
+            limiteInferior
+        ) {
           page =
             nuevaPagina();
 
@@ -1075,56 +1140,247 @@ export async function GET(
             },
           );
 
-          y -= 24;
+          y -= 22;
         }
 
-        page.drawRectangle({
-          x: MARGIN,
-          y: y - 38,
-          width:
-            PAGE_WIDTH -
-            MARGIN * 2,
-          height: 42,
-          color: COLOR.sky,
-          borderColor:
-            COLOR.skyBorder,
-          borderWidth: 1,
-        });
+        const x =
+          MARGIN +
+          columna *
+            (anchoTarjeta +
+              gap);
+
+        const tarjetaY =
+          y -
+          altoTarjeta;
+
+        /*
+         * Ya NO dibujamos un rectángulo/borde
+         * alrededor de toda la evidencia.
+         */
+
+        const rutaRelativa =
+          evidencia.archivoUrl
+            .replace(
+              /^\/+/,
+              "",
+            );
+
+        const rutaFisica =
+          path.join(
+            process.cwd(),
+            "public",
+            rutaRelativa,
+          );
+
+        let imagenInsertada =
+          false;
+
+        try {
+          const bytesImagen =
+            await readFile(
+              rutaFisica,
+            );
+
+          const extension =
+            path
+              .extname(
+                rutaFisica,
+              )
+              .toLowerCase();
+
+          let imagen;
+
+          if (
+            extension ===
+              ".jpg" ||
+            extension ===
+              ".jpeg"
+          ) {
+            imagen =
+              await pdf.embedJpg(
+                bytesImagen,
+              );
+          } else if (
+            extension ===
+            ".png"
+          ) {
+            imagen =
+              await pdf.embedPng(
+                bytesImagen,
+              );
+          }
+
+          if (imagen) {
+            const escala =
+              Math.min(
+                (anchoTarjeta -
+                  8) /
+                  imagen.width,
+                (altoImagen -
+                  6) /
+                  imagen.height,
+              );
+
+            const anchoImagen =
+              imagen.width *
+              escala;
+
+            const altoImagenFinal =
+              imagen.height *
+              escala;
+
+            const imagenX =
+              x +
+              (anchoTarjeta -
+                anchoImagen) /
+                2;
+
+            const imagenY =
+              tarjetaY +
+              altoInfo +
+              (altoImagen -
+                altoImagenFinal) /
+                2;
+
+            page.drawImage(
+              imagen,
+              {
+                x: imagenX,
+                y: imagenY,
+                width:
+                  anchoImagen,
+                height:
+                  altoImagenFinal,
+              },
+            );
+
+            imagenInsertada =
+              true;
+          }
+        } catch {
+          imagenInsertada =
+            false;
+        }
+
+        if (
+          !imagenInsertada
+        ) {
+          page.drawRectangle({
+            x: x + 4,
+            y:
+              tarjetaY +
+              altoInfo +
+              4,
+            width:
+              anchoTarjeta -
+              8,
+            height:
+              altoImagen -
+              8,
+            color:
+              COLOR.slate50,
+          });
+
+          const aviso =
+            "Vista previa no disponible";
+
+          const anchoAviso =
+            bold.widthOfTextAtSize(
+              aviso,
+              7,
+            );
+
+          page.drawText(
+            aviso,
+            {
+              x:
+                x +
+                (anchoTarjeta -
+                  anchoAviso) /
+                  2,
+              y:
+                tarjetaY +
+                altoInfo +
+                altoImagen /
+                  2,
+              size: 7,
+              font: bold,
+              color:
+                COLOR.slate500,
+            },
+          );
+        }
 
         page.drawText(
           cortar(
             evidencia.nombreOriginal,
-            70,
+            32,
           ),
           {
-            x: MARGIN + 12,
-            y: y - 12,
-            size: 8,
+            x: x + 4,
+            y:
+              tarjetaY +
+              29,
+            size: 7,
             font: bold,
             color:
               COLOR.slate900,
           },
         );
 
-        const detalle =
-          `${evidencia.descripcion || "Sin descripción"} · ${formatearFechaHora(evidencia.creadoEn)}`;
-
         page.drawText(
           cortar(
-            detalle,
-            105,
+            evidencia.descripcion ||
+              "Sin descripción",
+            36,
           ),
           {
-            x: MARGIN + 12,
-            y: y - 28,
-            size: 6.8,
+            x: x + 4,
+            y:
+              tarjetaY +
+              17,
+            size: 6.2,
+            font: regular,
+            color:
+              COLOR.slate700,
+          },
+        );
+
+        page.drawText(
+          formatearFechaHora(
+            evidencia.creadoEn,
+          ),
+          {
+            x: x + 4,
+            y:
+              tarjetaY +
+              5,
+            size: 5.7,
             font: regular,
             color:
               COLOR.slate500,
           },
         );
 
-        y -= 50;
+        columna += 1;
+
+        if (
+          columna === columnas
+        ) {
+          columna = 0;
+
+          y -=
+            altoTarjeta +
+            espacioEntreFilas;
+        }
+      }
+
+      if (
+        columna !== 0
+      ) {
+        y -=
+          altoTarjeta +
+          espacioEntreFilas;
       }
     }
   }
