@@ -62,7 +62,12 @@ export default async function TrabajoAsignadoPage({
 }: TrabajoAsignadoPageProps) {
   const sesion = await requerirSesion();
 
-  if (sesion.rol !== "TECNICO") {
+  const rolesPermitidos = [
+    "TECNICO",
+    "SUPERVISOR",
+  ];
+
+  if (!rolesPermitidos.includes(sesion.rol)) {
     redirect("/dashboard");
   }
 

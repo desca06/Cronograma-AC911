@@ -1,7 +1,6 @@
 import { and, desc, eq, gte, lte} from "drizzle-orm";
 
 import Link from "next/link";
-import { redirect } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
@@ -47,10 +46,6 @@ export default async function HistorialPage({ searchParams,
   const filtrosActivos = Boolean(
     desde || hasta,
   );
-
-  if (sesion.rol === "SUPERVISOR") {
-    redirect("/dashboard");
-  }
 
   const [usuario] = await db
     .select({
@@ -166,7 +161,11 @@ export default async function HistorialPage({ searchParams,
 
         <StatCard
             label="Historial"
-            value="Técnico"
+            value={
+              sesion.rol === "SUPERVISOR"
+                ? "Supervisor"
+                : "Técnico"
+            }
             helper="Consulta de asignaciones finalizadas"
             icon={CheckCircle2}
             color="blue"

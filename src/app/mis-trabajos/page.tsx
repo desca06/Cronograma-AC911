@@ -7,7 +7,6 @@ import {
   ne,
 } from "drizzle-orm";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
@@ -59,10 +58,6 @@ export default async function MisTrabajosPage({
   searchParams,
 }: MisTrabajosPageProps) {
   const sesion = await requerirSesion();
-
-  if (sesion.rol === "SUPERVISOR") {
-    redirect("/dashboard");
-  }
 
   const parametros = await searchParams;
 

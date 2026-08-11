@@ -172,20 +172,6 @@ export async function proxy(
       );
     }
 
-    if (
-      rol === "SUPERVISOR" &&
-      ruta.startsWith(
-        "/mis-trabajos",
-      )
-    ) {
-      return NextResponse.redirect(
-        new URL(
-          "/dashboard",
-          request.url,
-        ),
-      );
-    }
-
     return NextResponse.next();
   } catch {
     const respuesta =
