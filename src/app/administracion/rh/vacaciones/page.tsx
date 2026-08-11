@@ -10,11 +10,8 @@ import {
   Umbrella,
 } from "lucide-react";
 import {
-  and,
   desc,
   eq,
-  gte,
-  lte,
   sql,
 } from "drizzle-orm";
 
@@ -34,12 +31,13 @@ import {
   requerirAdmin,
 } from "@/lib/auth";
 import {
-  calcularSaldoAnualVacaciones,
   DIAS_VACACIONES_ANUALES,
+  esVacacionGeneradaPorPermiso,
 } from "@/lib/vacaciones";
 
 export const dynamic =
   "force-dynamic";
+export const runtime = "nodejs";
 
 type VacacionesPageProps = {
   searchParams: Promise<{
@@ -47,6 +45,220 @@ type VacacionesPageProps = {
     eliminada?: string;
   }>;
 };
+
+type SaldoEmpleado = {
+  total: number;
+  vacacionesAprobadas: number;
+  vacacionesPendientes: number;
+  permisosAprobados: number;
+  permisosPendientes: number;
+  usadosConfirmados: number;
+  reservados: number;
+  comprometidos: number;
+  disponibles: number;
+  agotado: boolean;
+};
+
+function obtenerAnio(
+  fecha: string,
+) {
+  return Number(
+    fecha.slice(0, 4),
+  );
+}
+
+function calcularSaldoEmpleado({
+  empleadoId,
+  anio,
+  vacacionesEmpleado,
+  permisosEmpleado,
+}: {
+  empleadoId: number;
+  anio: number;
+  vacacionesEmpleado: Array<{
+    empleadoId: number;
+    fechaInicio: string;
+    cantidadDias: number;
+    estado: string;
+    observacion: string | null;
+  }>;
+  permisosEmpleado: Array<{
+    empleadoId: number;
+    fecha: string;
+    diasSolicitados: number;
+    estado: string;
+  }>;
+}): SaldoEmpleado {
+  const vacacionesDelAnio =
+    vacacionesEmpleado.filter(
+      (item) =>
+        item.empleadoId ===
+          empleadoId &&
+        obtenerAnio(
+          item.fechaInicio,
+        ) === anio &&
+        !esVacacionGeneradaPorPermiso(
+          item.observacion,
+        ),
+    );
+
+  const vacacionesAprobadas =
+    vacacionesDelAnio
+      .filter(
+        (item) =>
+          item.estado ===
+          "APROBADA",
+      )
+      .reduce(
+        (total, item) =>
+          total +
+          Math.max(
+            0,
+            Number(
+              item.cantidadDias,
+            ),
+          ),
+        0,
+      );
+
+  const vacacionesPendientes =
+    vacacionesDelAnio
+      .filter(
+        (item) =>
+          item.estado ===
+          "PENDIENTE",
+      )
+      .reduce(
+        (total, item) =>
+          total +
+          Math.max(
+            0,
+            Number(
+              item.cantidadDias,
+            ),
+          ),
+        0,
+      );
+
+  /*
+   * La primera vacación REAL aprobada determina
+   * hasta qué fecha los permisos consumen vacaciones.
+   */
+  const fechasAprobadas =
+    vacacionesDelAnio
+      .filter(
+        (item) =>
+          item.estado ===
+          "APROBADA",
+      )
+      .map(
+        (item) =>
+          item.fechaInicio,
+      )
+      .sort();
+
+  const primeraVacacionAprobada =
+    fechasAprobadas[0] ??
+    null;
+
+  const permisosDelAnio =
+    permisosEmpleado.filter(
+      (item) =>
+        item.empleadoId ===
+          empleadoId &&
+        obtenerAnio(
+          item.fecha,
+        ) === anio &&
+        (
+          primeraVacacionAprobada ===
+            null ||
+          item.fecha <
+            primeraVacacionAprobada
+        ),
+    );
+
+  const permisosAprobados =
+    permisosDelAnio
+      .filter(
+        (item) =>
+          item.estado ===
+          "APROBADO",
+      )
+      .reduce(
+        (total, item) =>
+          total +
+          Math.max(
+            1,
+            Number(
+              item.diasSolicitados ??
+                1,
+            ),
+          ),
+        0,
+      );
+
+  /*
+   * Una solicitud pendiente también reserva saldo
+   * para que el recuadro se actualice en cuanto
+   * el trabajador la solicita.
+   *
+   * Si luego se rechaza, automáticamente deja
+   * de aparecer aquí y el saldo regresa.
+   */
+  const permisosPendientes =
+    permisosDelAnio
+      .filter(
+        (item) =>
+          item.estado ===
+          "PENDIENTE",
+      )
+      .reduce(
+        (total, item) =>
+          total +
+          Math.max(
+            1,
+            Number(
+              item.diasSolicitados ??
+                1,
+            ),
+          ),
+        0,
+      );
+
+  const usadosConfirmados =
+    vacacionesAprobadas +
+    permisosAprobados;
+
+  const reservados =
+    vacacionesPendientes +
+    permisosPendientes;
+
+  const comprometidos =
+    usadosConfirmados +
+    reservados;
+
+  const disponibles =
+    Math.max(
+      0,
+      DIAS_VACACIONES_ANUALES -
+        comprometidos,
+    );
+
+  return {
+    total:
+      DIAS_VACACIONES_ANUALES,
+    vacacionesAprobadas,
+    vacacionesPendientes,
+    permisosAprobados,
+    permisosPendientes,
+    usadosConfirmados,
+    reservados,
+    comprometidos,
+    disponibles,
+    agotado:
+      disponibles <= 0,
+  };
+}
 
 function estiloEstado(
   estado: string,
@@ -124,14 +336,30 @@ export default async function VacacionesPage({
   const anioActual =
     new Date().getFullYear();
 
-  const inicioAnio =
-    `${anioActual}-01-01`;
+  const [
+    listaEmpleados,
+    listaVacaciones,
+    listaPermisos,
+    resumen,
+  ] = await Promise.all([
+    db
+      .select({
+        id:
+          empleados.id,
+        nombre:
+          empleados.nombre,
+        puesto:
+          empleados.puesto,
+      })
+      .from(empleados)
+      .where(
+        eq(
+          empleados.activo,
+          true,
+        ),
+      ),
 
-  const finAnio =
-    `${anioActual}-12-31`;
-
-  const listaVacaciones =
-    await db
+    db
       .select({
         id:
           vacaciones.id,
@@ -166,129 +394,22 @@ export default async function VacacionesPage({
         desc(
           vacaciones.creadoEn,
         ),
-      );
-
-  /*
-   * Saldo anual de TODOS los empleados activos.
-   */
-  const saldosEmpleados =
-    await db
-      .select({
-        id: empleados.id,
-        nombre:
-          empleados.nombre,
-        puesto:
-          empleados.puesto,
-
-        vacacionesUsadas:
-          sql<number>`
-            COALESCE(
-              (
-                SELECT SUM(v."cantidad_dias")
-                FROM "vacaciones" v
-                WHERE
-                  v."empleado_id" = ${empleados.id}
-                  AND v."estado" = 'APROBADA'
-                  AND v."fecha_inicio" >= ${inicioAnio}
-                  AND v."fecha_inicio" <= ${finAnio}
-                  AND (
-                    v."observacion" IS NULL
-                    OR v."observacion" NOT LIKE '[PERMISO:%'
-                  )
-              ),
-              0
-            )::int
-          `,
-
-        permisosUsados:
-          sql<number>`
-            COALESCE(
-              (
-                SELECT SUM(
-                  GREATEST(
-                    COALESCE(
-                      p."dias_solicitados",
-                      1
-                    ),
-                    1
-                  )
-                )
-                FROM "permisos" p
-                WHERE
-                  p."empleado_id" = ${empleados.id}
-                  AND p."estado" = 'APROBADO'
-                  AND p."fecha" >= ${inicioAnio}
-                  AND p."fecha" <= ${finAnio}
-                  AND (
-                    (
-                      SELECT MIN(v2."fecha_inicio")
-                      FROM "vacaciones" v2
-                      WHERE
-                        v2."empleado_id" = ${empleados.id}
-                        AND v2."estado" = 'APROBADA'
-                        AND v2."fecha_inicio" >= ${inicioAnio}
-                        AND v2."fecha_inicio" <= ${finAnio}
-                        AND (
-                          v2."observacion" IS NULL
-                          OR v2."observacion" NOT LIKE '[PERMISO:%'
-                        )
-                    ) IS NULL
-                    OR p."fecha" < (
-                      SELECT MIN(v3."fecha_inicio")
-                      FROM "vacaciones" v3
-                      WHERE
-                        v3."empleado_id" = ${empleados.id}
-                        AND v3."estado" = 'APROBADA'
-                        AND v3."fecha_inicio" >= ${inicioAnio}
-                        AND v3."fecha_inicio" <= ${finAnio}
-                        AND (
-                          v3."observacion" IS NULL
-                          OR v3."observacion" NOT LIKE '[PERMISO:%'
-                        )
-                    )
-                  )
-              ),
-              0
-            )::int
-          `,
-      })
-      .from(empleados)
-      .where(
-        eq(
-          empleados.activo,
-          true,
-        ),
-      );
-
-  const saldoPorEmpleado =
-    new Map<
-      number,
-      ReturnType<
-        typeof calcularSaldoAnualVacaciones
-      >
-    >();
-
-  for (
-    const empleado
-    of saldosEmpleados
-  ) {
-    saldoPorEmpleado.set(
-      empleado.id,
-      calcularSaldoAnualVacaciones(
-        Number(
-          empleado.vacacionesUsadas ??
-            0,
-        ),
-        Number(
-          empleado.permisosUsados ??
-            0,
-        ),
       ),
-    );
-  }
 
-  const resumen =
-    await db
+    db
+      .select({
+        empleadoId:
+          permisos.empleadoId,
+        fecha:
+          permisos.fecha,
+        diasSolicitados:
+          permisos.diasSolicitados,
+        estado:
+          permisos.estado,
+      })
+      .from(permisos),
+
+    db
       .select({
         total:
           sql<number>`count(*)`,
@@ -311,7 +432,33 @@ export default async function VacacionesPage({
             )
           `,
       })
-      .from(vacaciones);
+      .from(vacaciones),
+  ]);
+
+  const saldoPorEmpleado =
+    new Map<
+      number,
+      SaldoEmpleado
+    >();
+
+  for (
+    const empleado
+    of listaEmpleados
+  ) {
+    saldoPorEmpleado.set(
+      empleado.id,
+      calcularSaldoEmpleado({
+        empleadoId:
+          empleado.id,
+        anio:
+          anioActual,
+        vacacionesEmpleado:
+          listaVacaciones,
+        permisosEmpleado:
+          listaPermisos,
+      }),
+    );
+  }
 
   const totales =
     resumen[0] ?? {
@@ -325,7 +472,7 @@ export default async function VacacionesPage({
     <AppShell>
       <PageHeader
         title="Vacaciones"
-        description={`Todos los empleados disponen de ${DIAS_VACACIONES_ANUALES} días hábiles por año.`}
+        description="Saldo vivo de 15 días hábiles por trabajador."
       />
 
       <section className="p-5 md:p-8">
@@ -335,7 +482,9 @@ export default async function VacacionesPage({
               href="/administracion/rh"
               className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900"
             >
-              <ArrowLeft size={18} />
+              <ArrowLeft
+                size={18}
+              />
               Volver a Recursos Humanos
             </Link>
           </div>
@@ -343,7 +492,7 @@ export default async function VacacionesPage({
           {parametros.creada ===
             "true" && (
             <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-              La solicitud fue registrada correctamente.
+              La solicitud fue registrada y el saldo reservado se actualizó.
             </div>
           )}
 
@@ -352,8 +501,9 @@ export default async function VacacionesPage({
               <h2 className="text-xl font-bold text-slate-900">
                 Solicitudes registradas
               </h2>
+
               <p className="mt-1 text-sm text-slate-500">
-                El sistema controla automáticamente el saldo anual de 15 días hábiles.
+                Las solicitudes pendientes reservan días; si son rechazadas, el saldo vuelve automáticamente.
               </p>
             </div>
 
@@ -361,7 +511,9 @@ export default async function VacacionesPage({
               href="/administracion/rh/vacaciones/nueva"
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700"
             >
-              <Plus size={18} />
+              <Plus
+                size={18}
+              />
               Nueva solicitud
             </Link>
           </div>
@@ -379,6 +531,7 @@ export default async function VacacionesPage({
               }
               clases="bg-blue-50 text-blue-700"
             />
+
             <TarjetaResumen
               titulo="Pendientes"
               cantidad={
@@ -391,6 +544,7 @@ export default async function VacacionesPage({
               }
               clases="bg-amber-50 text-amber-700"
             />
+
             <TarjetaResumen
               titulo="Aprobadas"
               cantidad={
@@ -403,6 +557,7 @@ export default async function VacacionesPage({
               }
               clases="bg-emerald-50 text-emerald-700"
             />
+
             <TarjetaResumen
               titulo="Rechazadas"
               cantidad={
@@ -423,11 +578,11 @@ export default async function VacacionesPage({
             </h3>
 
             <p className="mt-1 text-sm text-slate-500">
-              Cada trabajador inicia con 15 días hábiles.
+              Cada trabajador inicia con 15 días. El saldo baja desde que existe una solicitud pendiente.
             </p>
 
             <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {saldosEmpleados.map(
+              {listaEmpleados.map(
                 (empleado) => {
                   const saldo =
                     saldoPorEmpleado.get(
@@ -460,34 +615,52 @@ export default async function VacacionesPage({
                         }
                       </p>
 
-                      <div className="mt-4 flex items-end justify-between gap-3">
+                      <div className="mt-4 flex items-end justify-between gap-4">
                         <div>
                           <p className="text-xs font-bold uppercase text-slate-500">
                             Disponibles
                           </p>
-                          <p className={`mt-1 text-3xl font-bold ${
-                            saldo.agotado
-                              ? "text-red-700"
-                              : "text-slate-900"
-                          }`}>
+
+                          <p
+                            className={`mt-1 text-3xl font-bold ${
+                              saldo.agotado
+                                ? "text-red-700"
+                                : "text-slate-900"
+                            }`}
+                          >
                             {
                               saldo.disponibles
                             }
                           </p>
                         </div>
 
-                        <div className="text-right text-xs text-slate-600">
+                        <div className="text-right text-xs leading-5 text-slate-600">
                           <p>
-                            Usados:{" "}
+                            Confirmados:{" "}
                             {
-                              saldo.usados
+                              saldo.usadosConfirmados
                             }
                           </p>
+
                           <p>
+                            Reservados:{" "}
+                            {
+                              saldo.reservados
+                            }
+                          </p>
+
+                          <p className="font-semibold">
                             Total: 15
                           </p>
                         </div>
                       </div>
+
+                      {saldo.reservados >
+                        0 && (
+                        <p className="mt-3 text-xs font-semibold text-amber-700">
+                          Hay {saldo.reservados} día(s) pendientes de resolución.
+                        </p>
+                      )}
 
                       {saldo.agotado && (
                         <p className="mt-3 text-sm font-bold text-red-700">
@@ -509,6 +682,7 @@ export default async function VacacionesPage({
                   size={32}
                   className="text-blue-600"
                 />
+
                 <h3 className="mt-4 text-lg font-bold text-slate-900">
                   No hay vacaciones registradas
                 </h3>
@@ -531,7 +705,7 @@ export default async function VacacionesPage({
                         Días hábiles
                       </th>
                       <th className="px-5 py-4 text-left text-xs font-bold uppercase text-slate-500">
-                        Saldo actual
+                        Saldo vivo
                       </th>
                       <th className="px-5 py-4 text-left text-xs font-bold uppercase text-slate-500">
                         Estado
@@ -563,6 +737,7 @@ export default async function VacacionesPage({
                                   vacacion.empleado
                                 }
                               </p>
+
                               <p className="text-xs text-slate-500">
                                 {
                                   vacacion.puesto
@@ -588,18 +763,10 @@ export default async function VacacionesPage({
                               }
                             </td>
 
-                            <td className="px-5 py-4">
-                              <span
-                                className={`font-bold ${
-                                  saldo?.agotado
-                                    ? "text-red-700"
-                                    : "text-slate-900"
-                                }`}
-                              >
-                                {saldo
-                                  ? `${saldo.disponibles} / 15`
-                                  : "—"}
-                              </span>
+                            <td className="px-5 py-4 font-bold text-slate-900">
+                              {saldo
+                                ? `${saldo.disponibles} / 15`
+                                : "—"}
                             </td>
 
                             <td className="px-5 py-4">
@@ -660,14 +827,18 @@ function TarjetaResumen({
           <p className="text-sm font-medium text-slate-500">
             {titulo}
           </p>
+
           <p className="mt-2 text-3xl font-bold text-slate-900">
             {cantidad}
           </p>
         </div>
+
         <div
           className={`rounded-xl p-3 ${clases}`}
         >
-          <Icono size={23} />
+          <Icono
+            size={23}
+          />
         </div>
       </div>
     </div>

@@ -37,6 +37,28 @@ const TIPOS_PERMITIDOS = [
   "ENFERMEDAD",
 ] as const;
 
+
+function revalidarPermisosYVacaciones(
+  permisoId?: number,
+) {
+  revalidatePath(
+    "/administracion/rh/permisos",
+  );
+
+  revalidatePath(
+    "/administracion/rh/vacaciones",
+  );
+
+  if (
+    permisoId &&
+    permisoId > 0
+  ) {
+    revalidatePath(
+      `/administracion/rh/permisos/${permisoId}`,
+    );
+  }
+}
+
 type TipoPermiso =
   (typeof TIPOS_PERMITIDOS)[number];
 
@@ -402,9 +424,7 @@ export async function crearPermiso(
         new Date().toISOString(),
     });
 
-  revalidatePath(
-    "/administracion/rh/permisos",
-  );
+  revalidarPermisosYVacaciones();
 
   redirect(
     "/administracion/rh/permisos?creado=true",
@@ -452,9 +472,7 @@ export async function eliminarPermiso(
     );
   }
 
-  revalidatePath(
-    "/administracion/rh/permisos",
-  );
+  revalidarPermisosYVacaciones();
 
   redirect(
     "/administracion/rh/permisos?eliminado=true",
@@ -610,16 +628,8 @@ export async function aprobarPermiso(
         },
       );
 
-    revalidatePath(
-      "/administracion/rh/permisos",
-    );
-
-    revalidatePath(
-      `/administracion/rh/permisos/${permisoId}`,
-    );
-
-    revalidatePath(
-      "/administracion/rh/vacaciones",
+    revalidarPermisosYVacaciones(
+      permisoId,
     );
 
     const parametros =
@@ -740,12 +750,8 @@ export async function rechazarPermiso(
     );
   }
 
-  revalidatePath(
-    "/administracion/rh/permisos",
-  );
-
-  revalidatePath(
-    `/administracion/rh/permisos/${permisoId}`,
+  revalidarPermisosYVacaciones(
+    permisoId,
   );
 
   redirect(
@@ -908,12 +914,8 @@ export async function actualizarPermiso(
     );
   }
 
-  revalidatePath(
-    "/administracion/rh/permisos",
-  );
-
-  revalidatePath(
-    `/administracion/rh/permisos/${permisoId}`,
+  revalidarPermisosYVacaciones(
+    permisoId,
   );
 
   redirect(

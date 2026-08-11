@@ -13,7 +13,6 @@ import { requerirSupervisor } from "@/lib/auth";
 
 import {
   actualizarEstadoTrabajo,
-  crearTrabajo,
   eliminarTrabajo,
 } from "./actions";
 
@@ -84,12 +83,6 @@ export default async function TrabajosPage({
     parametros.fecha,
   );
 
-  const fechaHoy = new Date().toLocaleDateString(
-    "en-CA",
-    {
-      timeZone: "America/Guatemala",
-    },
-  );
 
   const listaClientes = await db
     .select()
@@ -248,278 +241,28 @@ export default async function TrabajosPage({
     />
 
     <section className="space-y-8 p-5 md:p-8">
-        <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-bold text-slate-900">
-            Crear nuevo trabajo
-          </h2>
-
-          {listaClientes.length === 0 && (
-            <p className="mt-4 rounded-xl bg-amber-100 p-4 text-sm font-medium text-amber-800">
-              Primero debes registrar al menos un cliente.
-            </p>
-          )}
-
-          <form
-            action={crearTrabajo}
-            className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-4"
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <Link
+            href="/trabajos/nuevo"
+            className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700"
           >
-            <div>
-              <label
-                htmlFor="fecha"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
-                Fecha
-              </label>
+            + Nuevo trabajo
+          </Link>
 
-              <input
-                id="fecha"
-                name="fecha"
-                type="date"
-                required
-                defaultValue={fechaHoy}
-                className="w-full rounded-xl border border-slate-300 px-4 py-3"
-              />
-            </div>
+          <Link
+            href="/trabajos-asignados"
+            className="inline-flex items-center justify-center rounded-xl border border-blue-300 bg-blue-50 px-5 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-100"
+          >
+            Ver trabajos asignados
+          </Link>
 
-            <div>
-              <label
-                htmlFor="clienteId"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
-                Cliente
-              </label>
-
-              <select
-                id="clienteId"
-                name="clienteId"
-                required
-                defaultValue=""
-                className="w-full rounded-xl border border-slate-300 px-4 py-3"
-              >
-                <option value="" disabled>
-                  Selecciona un cliente
-                </option>
-
-                {listaClientes.map((cliente) => (
-                  <option
-                    key={cliente.id}
-                    value={cliente.id}
-                  >
-                    {cliente.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label
-                htmlFor="vehiculoId"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
-                Vehículo
-              </label>
-
-              <select
-                id="vehiculoId"
-                name="vehiculoId"
-                defaultValue=""
-                className="w-full rounded-xl border border-slate-300 px-4 py-3"
-              >
-                <option value="">
-                  Sin vehículo asignado
-                </option>
-
-                {listaVehiculos.map((vehiculo) => (
-                  <option
-                    key={vehiculo.id}
-                    value={vehiculo.id}
-                  >
-                    {vehiculo.nombre} — {vehiculo.estado}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label
-                htmlFor="tipo"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
-                Tipo de trabajo
-              </label>
-
-              <select
-                id="tipo"
-                name="tipo"
-                required
-                defaultValue="disabled"
-                className="w-full rounded-xl border border-slate-300 px-4 py-3"
-              >
-                <option value="disabled" disabled>
-                  Selecciona un tipo de trabajo
-                </option>
-                <option value="Instalación">
-                  Instalación
-                </option>
-                <option value="Mantenimiento">
-                  Mantenimiento Correctivo
-                </option>
-                <option value="Mantenimiento Preventivo">
-                  Mantenimiento Preventivo
-                </option>
-                <option value="Reparación">
-                  Reparación
-                </option>
-                <option value="Visita Técnica">
-                  Visita Técnica
-                </option>
-              </select>
-            </div>
-
-            <div className="md:col-span-2 xl:col-span-4">
-              <label
-                htmlFor="descripcion"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
-                Descripción
-              </label>
-
-              <input
-                id="descripcion"
-                name="descripcion"
-                required
-                placeholder="Ejemplo: Instalación de equipos VRF"
-                className="w-full rounded-xl border border-slate-300 px-4 py-3"
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label
-                htmlFor="direccion"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
-                Dirección del trabajo
-              </label>
-
-              <input
-                id="direccion"
-                name="direccion"
-                placeholder="Dirección o ubicación"
-                className="w-full rounded-xl border border-slate-300 px-4 py-3"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="horaInicio"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
-                Hora de inicio
-              </label>
-
-              <input
-                id="horaInicio"
-                name="horaInicio"
-                type="time"
-                className="w-full rounded-xl border border-slate-300 px-4 py-3"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="estado"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
-                Estado inicial
-              </label>
-
-              <select
-                id="estado"
-                name="estado"
-                defaultValue="Pendiente"
-                className="w-full rounded-xl border border-slate-300 px-4 py-3"
-              >
-                {estadosDisponibles.map(
-                  (estado) => (
-                    <option
-                      key={estado}
-                      value={estado}
-                    >
-                      {estado}
-                    </option>
-                  ),
-                )}
-              </select>
-            </div>
-
-            <fieldset className="md:col-span-2 xl:col-span-4">
-              <legend className="mb-3 text-sm font-semibold text-slate-700">
-                Empleados asignados
-              </legend>
-
-              {listaEmpleados.length === 0 ? (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-800">
-                  No hay empleados activos para asignar.
-                </div>
-              ) : (
-                <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-                  {listaEmpleados.map(
-                    (empleado) => (
-                      <label
-                        key={empleado.id}
-                        className="flex cursor-pointer items-center gap-3 rounded-lg bg-white p-3 shadow-sm"
-                      >
-                        <input
-                          type="checkbox"
-                          name="empleadoIds"
-                          value={empleado.id}
-                          className="h-4 w-4"
-                        />
-
-                        <span>
-                          <strong className="block text-sm text-slate-900">
-                            {empleado.nombre}
-                          </strong>
-
-                          <span className="text-xs text-slate-500">
-                            {empleado.puesto}
-                          </span>
-                        </span>
-                      </label>
-                    ),
-                  )}
-                </div>
-              )}
-            </fieldset>
-
-            <div className="md:col-span-2 xl:col-span-4">
-              <label
-                htmlFor="observaciones"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
-                Observaciones
-              </label>
-
-              <textarea
-                id="observaciones"
-                name="observaciones"
-                rows={3}
-                placeholder="Herramientas, equipo requerido o instrucciones"
-                className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3"
-              />
-            </div>
-
-            <div className="md:col-span-2 xl:col-span-4">
-              <button
-                type="submit"
-                disabled={listaClientes.length === 0}
-                className="rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
-              >
-                Guardar trabajo
-              </button>
-            </div>
-          </form>
-        </section>
+          <Link
+            href="/cronograma"
+            className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Ver cronograma
+          </Link>
+        </div>
 
         <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div>

@@ -266,7 +266,15 @@ export default async function CronogramaPage({
               </Link>
 
               <Link
-                href="/trabajos"
+                href="/trabajos-asignados"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-300 bg-blue-50 px-5 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
+              >
+                <CalendarDays size={17} />
+                Trabajos asignados
+              </Link>
+
+              <Link
+                href="/trabajos/nuevo"
                 className="btn btn-primary inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
               >
                 <Plus size={17} />

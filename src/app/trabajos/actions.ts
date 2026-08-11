@@ -43,7 +43,9 @@ function obtenerEmpleadoIds(
 
 function revalidarPaginas(): void {
   revalidatePath("/trabajos");
+  revalidatePath("/trabajos-asignados");
   revalidatePath("/cronograma");
+  revalidatePath("/cronograma/cemaco");
   revalidatePath("/dashboard");
   revalidatePath("/mis-trabajos");
   revalidatePath("/notificaciones");
