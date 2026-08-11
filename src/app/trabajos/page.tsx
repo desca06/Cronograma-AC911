@@ -815,6 +815,14 @@ export default async function TrabajosPage({
                       >
                         Evidencias
                       </Link>
+
+                      <Link
+                        href={`/trabajos/${trabajo.id}/pdf`}
+                        target="_blank"
+                        className="rounded-lg bg-sky-100 px-4 py-2 text-center text-sm font-semibold text-sky-800 hover:bg-sky-200"
+                      >
+                        PDF
+                      </Link>
                     </div>
 
                     <form
