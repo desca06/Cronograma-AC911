@@ -96,11 +96,6 @@ export async function crearTrabajo(
     "estado",
   );
 
-  const horaInicio = obtenerTexto(
-    formData,
-    "horaInicio",
-  );
-
   const observaciones = obtenerTexto(
     formData,
     "observaciones",
@@ -126,13 +121,25 @@ export async function crearTrabajo(
 
   if (
     !fecha ||
-    !Number.isInteger(clienteId) ||
-    clienteId <= 0 ||
+    (
+      !cotizacionId &&
+      (
+        !Number.isInteger(
+          clienteId,
+        ) ||
+        clienteId <= 0
+      )
+    ) ||
     !tipo ||
     !descripcion
   ) {
-    redirect("/trabajos?error=datos");
+    redirect(
+      "/trabajos/nuevo?error=datos",
+    );
   }
+
+  let clienteIdFinal =
+    clienteId;
 
   let trabajoCreadoId = 0;
 
@@ -185,14 +192,14 @@ export async function crearTrabajo(
         );
       }
 
-      if (
-        cotizacionOrigen.clienteId !==
-        clienteId
-      ) {
-        throw new Error(
-          "CLIENTE_COTIZACION",
-        );
-      }
+      /*
+       * Si el supervisor seleccionó una cotización,
+       * el cliente verdadero siempre será el cliente
+       * de esa cotización. Así no pueden quedar
+       * asociados datos inconsistentes.
+       */
+      clienteIdFinal =
+        cotizacionOrigen.clienteId;
 
       const [yaVinculada] =
         await tx
@@ -222,7 +229,8 @@ export async function crearTrabajo(
       .insert(trabajos)
       .values({
         fecha,
-        clienteId,
+        clienteId:
+          clienteIdFinal,
 
         vehiculoId:
           Number.isInteger(
@@ -236,7 +244,7 @@ export async function crearTrabajo(
         descripcion,
         direccion: direccion || null,
         estado: estado || "Pendiente",
-        horaInicio: horaInicio || null,
+        horaInicio: null,
         observaciones:
           observaciones || null,
       })
@@ -311,10 +319,6 @@ export async function crearTrabajo(
     ];
 
     if (usuarioIds.length > 0) {
-      const detalleHora = horaInicio
-        ? ` a las ${horaInicio}`
-        : "";
-
       await tx.insert(notificaciones)
         .values(
           usuarioIds.map((usuarioId) => ({
@@ -324,7 +328,7 @@ export async function crearTrabajo(
               "Nuevo trabajo asignado",
             mensaje:
               `${tipo} programado para el ` +
-              `${fecha}${detalleHora}.`,
+              `${fecha}.`,
             tipo: "ASIGNACION",
             leida: false,
           })),
@@ -355,14 +359,6 @@ export async function crearTrabajo(
         );
       }
 
-      if (
-        error.message ===
-          "CLIENTE_COTIZACION"
-      ) {
-        redirect(
-          `/trabajos/nuevo?cotizacionId=${cotizacionId}&error=cliente`,
-        );
-      }
     }
 
     throw error;

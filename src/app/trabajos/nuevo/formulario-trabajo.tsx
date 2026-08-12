@@ -1,10 +1,17 @@
+"use client";
+
 import Link from "next/link";
 import {
   ArrowLeft,
   CalendarDays,
+  FileCheck2,
   Save,
   UsersRound,
 } from "lucide-react";
+import {
+  useMemo,
+  useState,
+} from "react";
 
 import {
   crearTrabajo,
@@ -42,6 +49,8 @@ type FormularioTrabajoProps = {
   clientes: Cliente[];
   vehiculos: Vehiculo[];
   empleados: Empleado[];
+  cotizacionesAprobadas:
+    CotizacionOrigen[];
   fechaInicial: string;
   cotizacion?:
     | CotizacionOrigen
@@ -60,23 +69,121 @@ export function FormularioTrabajo({
   clientes,
   vehiculos,
   empleados,
+  cotizacionesAprobadas,
   fechaInicial,
   cotizacion = null,
 }: FormularioTrabajoProps) {
+  const [
+    cotizacionId,
+    setCotizacionId,
+  ] = useState(
+    cotizacion
+      ? String(
+          cotizacion.id,
+        )
+      : "",
+  );
+
+  const [
+    clienteId,
+    setClienteId,
+  ] = useState(
+    cotizacion
+      ? String(
+          cotizacion.clienteId,
+        )
+      : "",
+  );
+
+  const [
+    descripcion,
+    setDescripcion,
+  ] = useState(
+    cotizacion?.titulo ??
+      "",
+  );
+
+  const [
+    observaciones,
+    setObservaciones,
+  ] = useState(
+    cotizacion?.observaciones ??
+      "",
+  );
+
+  const cotizacionSeleccionada =
+    useMemo(
+      () =>
+        cotizacionesAprobadas.find(
+          (item) =>
+            String(
+              item.id,
+            ) ===
+            cotizacionId,
+        ) ??
+        (cotizacion &&
+        String(
+          cotizacion.id,
+        ) === cotizacionId
+          ? cotizacion
+          : null),
+      [
+        cotizacionId,
+        cotizacionesAprobadas,
+        cotizacion,
+      ],
+    );
+
+  function cambiarCotizacion(
+    valor: string,
+  ) {
+    setCotizacionId(
+      valor,
+    );
+
+    if (!valor) {
+      return;
+    }
+
+    const seleccionada =
+      cotizacionesAprobadas.find(
+        (item) =>
+          String(
+            item.id,
+          ) === valor,
+      ) ??
+      (cotizacion &&
+      String(
+        cotizacion.id,
+      ) === valor
+        ? cotizacion
+        : null);
+
+    if (!seleccionada) {
+      return;
+    }
+
+    setClienteId(
+      String(
+        seleccionada.clienteId,
+      ),
+    );
+
+    setDescripcion(
+      seleccionada.titulo,
+    );
+
+    setObservaciones(
+      seleccionada.observaciones ??
+        "",
+    );
+  }
+
   return (
     <form
       action={crearTrabajo}
       className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
     >
-      {cotizacion && (
-        <input
-          type="hidden"
-          name="cotizacionId"
-          value={
-            cotizacion.id
-          }
-        />
-      )}
       <div className="border-b border-slate-200 bg-slate-50 px-6 py-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
@@ -92,15 +199,17 @@ export function FormularioTrabajo({
               </h2>
 
               <p className="text-sm text-slate-500">
-                {cotizacion
-                  ? `Trabajo originado desde la cotización ${cotizacion.codigo}.`
-                  : "Al guardar, el trabajo aparecerá automáticamente en los trabajos asignados del personal seleccionado."}
+                Puedes crear un trabajo independiente o asociarlo a una cotización aprobada.
               </p>
             </div>
           </div>
 
           <Link
-            href="/trabajos"
+            href={
+              cotizacion
+                ? `/administracion/compras/cotizaciones/${cotizacion.id}`
+                : "/trabajos"
+            }
             className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100"
           >
             <ArrowLeft
@@ -111,20 +220,36 @@ export function FormularioTrabajo({
         </div>
       </div>
 
-      {cotizacion && (
+      {cotizacionSeleccionada && (
         <div className="mx-6 mt-6 rounded-xl border border-emerald-300 bg-emerald-50 p-4">
-          <p className="text-sm font-bold text-emerald-900">
-            Cotización aprobada: {cotizacion.codigo}
-          </p>
+          <div className="flex items-start gap-3">
+            <FileCheck2
+              size={21}
+              className="mt-0.5 shrink-0 text-emerald-700"
+            />
 
-          <p className="mt-1 text-sm text-emerald-800">
-            Cliente: {cotizacion.clienteNombre}. El trabajo quedará asociado a esta cotización y no podrá generarse otro trabajo desde la misma.
-          </p>
+            <div>
+              <p className="text-sm font-bold text-emerald-900">
+                Cotización seleccionada:{" "}
+                {
+                  cotizacionSeleccionada.codigo
+                }
+              </p>
+
+              <p className="mt-1 text-sm text-emerald-800">
+                Cliente:{" "}
+                {
+                  cotizacionSeleccionada.clienteNombre
+                }. Al crear el trabajo, esta cotización quedará vinculada y dejará de estar disponible para otro trabajo.
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
       <div className="grid gap-5 p-6 md:grid-cols-2 xl:grid-cols-4">
-        {clientes.length === 0 && (
+        {clientes.length ===
+          0 && (
           <div className="md:col-span-2 xl:col-span-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800">
             Primero debes registrar al menos un cliente activo.
           </div>
@@ -158,46 +283,34 @@ export function FormularioTrabajo({
             Cliente
           </label>
 
-          {cotizacion && (
-            <input
-              type="hidden"
-              name="clienteId"
-              value={
-                cotizacion.clienteId
-              }
-            />
-          )}
-
           <select
             id="clienteId"
-            name={
-              cotizacion
-                ? undefined
-                : "clienteId"
-            }
+            name="clienteId"
             required
-            defaultValue={
-              cotizacion
-                ? String(
-                    cotizacion.clienteId,
-                  )
-                : ""
+            value={
+              clienteId
+            }
+            onChange={(
+              evento,
+            ) =>
+              setClienteId(
+                evento.target
+                  .value,
+              )
             }
             disabled={
               Boolean(
-                cotizacion,
+                cotizacionSeleccionada,
               )
             }
             className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 disabled:bg-slate-100"
           >
-            {!cotizacion && (
-              <option
-                value=""
-                disabled
-              >
-                Selecciona un cliente
-              </option>
-            )}
+            <option
+              value=""
+              disabled
+            >
+              Selecciona un cliente
+            </option>
 
             {clientes.map(
               (cliente) => (
@@ -216,6 +329,16 @@ export function FormularioTrabajo({
               ),
             )}
           </select>
+
+          {cotizacionSeleccionada && (
+            <input
+              type="hidden"
+              name="clienteId"
+              value={
+                clienteId
+              }
+            />
+          )}
         </div>
 
         <div>
@@ -310,9 +433,16 @@ export function FormularioTrabajo({
             id="descripcion"
             name="descripcion"
             required
-            defaultValue={
-              cotizacion?.titulo ??
-              ""
+            value={
+              descripcion
+            }
+            onChange={(
+              evento,
+            ) =>
+              setDescripcion(
+                evento.target
+                  .value,
+              )
             }
             placeholder="Ejemplo: Instalación de equipos VRF"
             className="w-full rounded-xl border border-slate-300 px-4 py-3"
@@ -337,18 +467,72 @@ export function FormularioTrabajo({
 
         <div>
           <label
-            htmlFor="horaInicio"
+            htmlFor="cotizacionId"
             className="mb-2 block text-sm font-semibold text-slate-700"
           >
-            Hora de inicio
+            Cotización aprobada
           </label>
 
-          <input
-            id="horaInicio"
-            name="horaInicio"
-            type="time"
-            className="w-full rounded-xl border border-slate-300 px-4 py-3"
-          />
+          <select
+            id="cotizacionId"
+            name="cotizacionId"
+            value={
+              cotizacionId
+            }
+            onChange={(
+              evento,
+            ) =>
+              cambiarCotizacion(
+                evento.target
+                  .value,
+              )
+            }
+            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"
+          >
+            <option value="">
+              Sin cotización
+            </option>
+
+            {cotizacionesAprobadas.map(
+              (item) => (
+                <option
+                  key={
+                    item.id
+                  }
+                  value={
+                    item.id
+                  }
+                >
+                  {item.codigo} —{" "}
+                  {
+                    item.clienteNombre
+                  }
+                </option>
+              ),
+            )}
+
+            {cotizacion &&
+              !cotizacionesAprobadas.some(
+                (item) =>
+                  item.id ===
+                  cotizacion.id,
+              ) && (
+                <option
+                  value={
+                    cotizacion.id
+                  }
+                >
+                  {cotizacion.codigo} —{" "}
+                  {
+                    cotizacion.clienteNombre
+                  }
+                </option>
+              )}
+          </select>
+
+          <p className="mt-1 text-xs text-slate-500">
+            Solo aparecen cotizaciones aprobadas que todavía no tienen trabajo.
+          </p>
         </div>
 
         <div>
@@ -394,7 +578,8 @@ export function FormularioTrabajo({
             </legend>
           </div>
 
-          {empleados.length === 0 ? (
+          {empleados.length ===
+          0 ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-800">
               No hay técnicos o supervisores activos para asignar.
             </div>
@@ -449,9 +634,16 @@ export function FormularioTrabajo({
             id="observaciones"
             name="observaciones"
             rows={4}
-            defaultValue={
-              cotizacion?.observaciones ??
-              ""
+            value={
+              observaciones
+            }
+            onChange={(
+              evento,
+            ) =>
+              setObservaciones(
+                evento.target
+                  .value,
+              )
             }
             placeholder="Herramientas, equipo requerido o instrucciones para el personal..."
             className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3"
@@ -474,7 +666,8 @@ export function FormularioTrabajo({
         <button
           type="submit"
           disabled={
-            clientes.length === 0
+            clientes.length ===
+            0
           }
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
         >

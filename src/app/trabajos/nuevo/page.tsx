@@ -3,7 +3,12 @@ import {
   asc,
   eq,
   inArray,
+  isNull,
 } from "drizzle-orm";
+import {
+  notFound,
+  redirect,
+} from "next/navigation";
 
 import {
   AppShell,
@@ -14,22 +19,48 @@ import {
 import { db } from "@/db";
 import {
   clientes,
+  cotizaciones,
   empleados,
   vehiculos,
 } from "@/db/schema";
+import {
+  cotizacionTrabajos,
+} from "@/db/schema-cotizacion-trabajo";
 import {
   requerirSupervisor,
 } from "@/lib/auth";
 
 import {
   FormularioTrabajo,
-} from "../nuevo/formulario-trabajo";
+} from "./formulario-trabajo";
 
 export const dynamic =
   "force-dynamic";
-
 export const runtime =
   "nodejs";
+
+type Props = {
+  searchParams: Promise<{
+    cotizacionId?:
+      | string
+      | string[];
+    error?:
+      | string
+      | string[];
+  }>;
+};
+
+function obtenerParametro(
+  valor:
+    | string
+    | string[]
+    | undefined,
+) {
+  return typeof valor ===
+    "string"
+    ? valor.trim()
+    : "";
+}
 
 function obtenerFechaHoyGuatemala() {
   return new Date()
@@ -42,17 +73,142 @@ function obtenerFechaHoyGuatemala() {
     );
 }
 
-export default async function NuevoTrabajoPage() {
+export default async function NuevoTrabajoPage({
+  searchParams,
+}: Props) {
   await requerirSupervisor();
+
+  const parametros =
+    await searchParams;
+
+  const cotizacionTexto =
+    obtenerParametro(
+      parametros.cotizacionId,
+    );
+
+  const error =
+    obtenerParametro(
+      parametros.error,
+    );
+
+  let cotizacionOrigen:
+    | {
+        id: number;
+        codigo: string;
+        titulo: string;
+        clienteId: number;
+        clienteNombre: string;
+        observaciones:
+          | string
+          | null;
+      }
+    | null = null;
+
+  if (cotizacionTexto) {
+    const cotizacionId =
+      Number(
+        cotizacionTexto,
+      );
+
+    if (
+      !Number.isInteger(
+        cotizacionId,
+      ) ||
+      cotizacionId <= 0
+    ) {
+      notFound();
+    }
+
+    const [cotizacion] =
+      await db
+        .select({
+          id:
+            cotizaciones.id,
+          codigo:
+            cotizaciones.codigo,
+          titulo:
+            cotizaciones.titulo,
+          clienteId:
+            cotizaciones.clienteId,
+          clienteNombre:
+            clientes.nombre,
+          estado:
+            cotizaciones.estado,
+          observaciones:
+            cotizaciones.observaciones,
+          trabajoId:
+            cotizacionTrabajos.trabajoId,
+        })
+        .from(cotizaciones)
+        .innerJoin(
+          clientes,
+          eq(
+            cotizaciones.clienteId,
+            clientes.id,
+          ),
+        )
+        .leftJoin(
+          cotizacionTrabajos,
+          eq(
+            cotizacionTrabajos.cotizacionId,
+            cotizaciones.id,
+          ),
+        )
+        .where(
+          eq(
+            cotizaciones.id,
+            cotizacionId,
+          ),
+        )
+        .limit(1);
+
+    if (!cotizacion) {
+      notFound();
+    }
+
+    if (
+      cotizacion.estado !==
+      "APROBADA"
+    ) {
+      redirect(
+        `/administracion/compras/cotizaciones/${cotizacion.id}?error=no-aprobada`,
+      );
+    }
+
+    if (
+      cotizacion.trabajoId
+    ) {
+      redirect(
+        `/administracion/compras/cotizaciones/${cotizacion.id}?error=trabajo-duplicado`,
+      );
+    }
+
+    cotizacionOrigen = {
+      id:
+        cotizacion.id,
+      codigo:
+        cotizacion.codigo,
+      titulo:
+        cotizacion.titulo,
+      clienteId:
+        cotizacion.clienteId,
+      clienteNombre:
+        cotizacion.clienteNombre,
+      observaciones:
+        cotizacion.observaciones,
+    };
+  }
 
   const [
     listaClientes,
     listaVehiculos,
     listaEmpleados,
+    listaCotizacionesAprobadas,
   ] = await Promise.all([
     db
       .select({
-        id: clientes.id,
+        id:
+          clientes.id,
         nombre:
           clientes.nombre,
       })
@@ -71,7 +227,8 @@ export default async function NuevoTrabajoPage() {
 
     db
       .select({
-        id: vehiculos.id,
+        id:
+          vehiculos.id,
         nombre:
           vehiculos.nombre,
         estado:
@@ -92,7 +249,8 @@ export default async function NuevoTrabajoPage() {
 
     db
       .select({
-        id: empleados.id,
+        id:
+          empleados.id,
         nombre:
           empleados.nombre,
         puesto:
@@ -119,17 +277,79 @@ export default async function NuevoTrabajoPage() {
           empleados.nombre,
         ),
       ),
+
+    db
+      .select({
+        id:
+          cotizaciones.id,
+        codigo:
+          cotizaciones.codigo,
+        titulo:
+          cotizaciones.titulo,
+        clienteId:
+          cotizaciones.clienteId,
+        clienteNombre:
+          clientes.nombre,
+        observaciones:
+          cotizaciones.observaciones,
+      })
+      .from(cotizaciones)
+      .innerJoin(
+        clientes,
+        eq(
+          cotizaciones.clienteId,
+          clientes.id,
+        ),
+      )
+      .leftJoin(
+        cotizacionTrabajos,
+        eq(
+          cotizacionTrabajos.cotizacionId,
+          cotizaciones.id,
+        ),
+      )
+      .where(
+        and(
+          eq(
+            cotizaciones.estado,
+            "APROBADA",
+          ),
+          isNull(
+            cotizacionTrabajos.trabajoId,
+          ),
+        ),
+      )
+      .orderBy(
+        asc(
+          cotizaciones.codigo,
+        ),
+      ),
   ]);
 
   return (
     <AppShell>
       <PageHeader
-        title="Nuevo trabajo"
-        description="Crea una nueva orden y asignala al equipo de trabajo."
+        title={
+          cotizacionOrigen
+            ? "Crear trabajo desde cotización"
+            : "Nuevo trabajo"
+        }
+        description={
+          cotizacionOrigen
+            ? `Cotización ${cotizacionOrigen.codigo} aprobada y lista para programar.`
+            : "Crea una nueva orden y asignala al equipo de trabajo."
+        }
       />
 
       <section className="p-5 md:p-8">
         <div className="mx-auto max-w-6xl">
+          {error ===
+            "cliente" && (
+            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+              El cliente del trabajo debe coincidir con el cliente de la cotización.
+            </div>
+          )}
+
           <FormularioTrabajo
             clientes={
               listaClientes
@@ -140,12 +360,18 @@ export default async function NuevoTrabajoPage() {
             empleados={
               listaEmpleados
             }
+            cotizacionesAprobadas={
+              listaCotizacionesAprobadas
+            }
             fechaInicial={
               obtenerFechaHoyGuatemala()
+            }
+            cotizacion={
+              cotizacionOrigen
             }
           />
         </div>
       </section>
     </AppShell>
   );
-}  
+}
