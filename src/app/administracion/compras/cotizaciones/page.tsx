@@ -20,6 +20,9 @@ import {
   cotizaciones,
 } from "@/db/schema";
 import { requerirAdmin } from "@/lib/auth";
+import {
+  cotizacionTrabajos,
+} from "@/db/schema-cotizacion-trabajo";
 
 type PageProps = {
   searchParams: Promise<{
@@ -105,11 +108,20 @@ export default async function CotizacionesPage({
       validaHasta: cotizaciones.validaHasta,
       total: cotizaciones.total,
       clienteNombre: clientes.nombre,
+      trabajoId:
+        cotizacionTrabajos.trabajoId,
     })
     .from(cotizaciones)
     .innerJoin(
       clientes,
       eq(cotizaciones.clienteId, clientes.id),
+    )
+    .leftJoin(
+      cotizacionTrabajos,
+      eq(
+        cotizacionTrabajos.cotizacionId,
+        cotizaciones.id,
+      ),
     )
     .orderBy(
       desc(cotizaciones.fechaSolicitud),
@@ -410,6 +422,25 @@ export default async function CotizacionesPage({
                               <Eye size={16} />
                               Ver detalle
                             </Link>
+
+                            {cotizacion.estado === "APROBADA" &&
+                              !cotizacion.trabajoId && (
+                                <Link
+                                  href={`/trabajos/nuevo?cotizacionId=${cotizacion.id}`}
+                                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                                >
+                                  Crear trabajo
+                                </Link>
+                              )}
+
+                            {cotizacion.trabajoId && (
+                              <Link
+                                href={`/trabajos-asignados?trabajoId=${cotizacion.trabajoId}#trabajo-${cotizacion.trabajoId}`}
+                                className="inline-flex items-center gap-2 rounded-xl bg-blue-100 px-3 py-2 text-sm font-semibold text-blue-800 transition hover:bg-blue-200"
+                              >
+                                Ver trabajo
+                              </Link>
+                            )}
                           </div>
                         </td>
                       </tr>

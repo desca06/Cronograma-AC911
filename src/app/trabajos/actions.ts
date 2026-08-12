@@ -1,16 +1,20 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { db } from "@/db";
 import {
+  cotizaciones,
   notificaciones,
   trabajos,
   trabajoEmpleados,
   usuarios,
 } from "@/db/schema";
+import {
+  cotizacionTrabajos,
+} from "@/db/schema-cotizacion-trabajo";
 import { requerirSupervisor } from "@/lib/auth";
 
 function obtenerTexto(
@@ -49,6 +53,9 @@ function revalidarPaginas(): void {
   revalidatePath("/dashboard");
   revalidatePath("/mis-trabajos");
   revalidatePath("/notificaciones");
+  revalidatePath(
+    "/administracion/compras/cotizaciones",
+  );
 }
 
 export async function crearTrabajo(
@@ -102,6 +109,21 @@ export async function crearTrabajo(
   const empleadoIds =
     obtenerEmpleadoIds(formData);
 
+  const cotizacionSeleccionada =
+    Number(
+      formData.get(
+        "cotizacionId",
+      ),
+    );
+
+  const cotizacionId =
+    Number.isInteger(
+      cotizacionSeleccionada,
+    ) &&
+    cotizacionSeleccionada > 0
+      ? cotizacionSeleccionada
+      : null;
+
   if (
     !fecha ||
     !Number.isInteger(clienteId) ||
@@ -112,7 +134,90 @@ export async function crearTrabajo(
     redirect("/trabajos?error=datos");
   }
 
-  await db.transaction(async (tx) => {
+  let trabajoCreadoId = 0;
+
+  try {
+    await db.transaction(async (tx) => {
+    if (cotizacionId) {
+      /*
+       * Evita dos trabajos simultáneos para la misma
+       * cotización.
+       */
+      await tx.execute(
+        sql`
+          select pg_advisory_xact_lock(
+            ${911000} + ${cotizacionId}
+          )
+        `,
+      );
+
+      const [cotizacionOrigen] =
+        await tx
+          .select({
+            id:
+              cotizaciones.id,
+            clienteId:
+              cotizaciones.clienteId,
+            estado:
+              cotizaciones.estado,
+          })
+          .from(cotizaciones)
+          .where(
+            eq(
+              cotizaciones.id,
+              cotizacionId,
+            ),
+          )
+          .limit(1);
+
+      if (!cotizacionOrigen) {
+        throw new Error(
+          "COTIZACION_NO_EXISTE",
+        );
+      }
+
+      if (
+        cotizacionOrigen.estado !==
+        "APROBADA"
+      ) {
+        throw new Error(
+          "COTIZACION_NO_APROBADA",
+        );
+      }
+
+      if (
+        cotizacionOrigen.clienteId !==
+        clienteId
+      ) {
+        throw new Error(
+          "CLIENTE_COTIZACION",
+        );
+      }
+
+      const [yaVinculada] =
+        await tx
+          .select({
+            trabajoId:
+              cotizacionTrabajos.trabajoId,
+          })
+          .from(
+            cotizacionTrabajos,
+          )
+          .where(
+            eq(
+              cotizacionTrabajos.cotizacionId,
+              cotizacionId,
+            ),
+          )
+          .limit(1);
+
+      if (yaVinculada) {
+        throw new Error(
+          "COTIZACION_YA_TIENE_TRABAJO",
+        );
+      }
+    }
+
     const [nuevoTrabajo] = await tx
       .insert(trabajos)
       .values({
@@ -137,7 +242,22 @@ export async function crearTrabajo(
       })
       .returning({ id: trabajos.id });
 
-    const trabajoId = nuevoTrabajo.id;
+    const trabajoId =
+      nuevoTrabajo.id;
+
+    trabajoCreadoId =
+      trabajoId;
+
+    if (cotizacionId) {
+      await tx
+        .insert(
+          cotizacionTrabajos,
+        )
+        .values({
+          cotizacionId,
+          trabajoId,
+        });
+    }
 
     if (empleadoIds.length === 0) {
       return;
@@ -211,11 +331,58 @@ export async function crearTrabajo(
         )
 ;
     }
-  });
+    });
+  } catch (error) {
+    if (
+      cotizacionId &&
+      error instanceof Error
+    ) {
+      if (
+        error.message ===
+        "COTIZACION_NO_APROBADA"
+      ) {
+        redirect(
+          `/administracion/compras/cotizaciones/${cotizacionId}?error=no-aprobada`,
+        );
+      }
+
+      if (
+        error.message ===
+          "COTIZACION_YA_TIENE_TRABAJO"
+      ) {
+        redirect(
+          `/administracion/compras/cotizaciones/${cotizacionId}?error=trabajo-duplicado`,
+        );
+      }
+
+      if (
+        error.message ===
+          "CLIENTE_COTIZACION"
+      ) {
+        redirect(
+          `/trabajos/nuevo?cotizacionId=${cotizacionId}&error=cliente`,
+        );
+      }
+    }
+
+    throw error;
+  }
 
   revalidarPaginas();
 
-  redirect("/trabajos?exito=creado");
+  if (cotizacionId) {
+    revalidatePath(
+      `/administracion/compras/cotizaciones/${cotizacionId}`,
+    );
+
+    redirect(
+      `/administracion/compras/cotizaciones/${cotizacionId}?trabajo=creado`,
+    );
+  }
+
+  redirect(
+    "/trabajos?exito=creado",
+  );
 }
 
 export async function actualizarEstadoTrabajo(

@@ -27,11 +27,25 @@ type Empleado = {
   puesto: string;
 };
 
+type CotizacionOrigen = {
+  id: number;
+  codigo: string;
+  titulo: string;
+  clienteId: number;
+  clienteNombre: string;
+  observaciones:
+    | string
+    | null;
+};
+
 type FormularioTrabajoProps = {
   clientes: Cliente[];
   vehiculos: Vehiculo[];
   empleados: Empleado[];
   fechaInicial: string;
+  cotizacion?:
+    | CotizacionOrigen
+    | null;
 };
 
 const estadosDisponibles = [
@@ -47,12 +61,22 @@ export function FormularioTrabajo({
   vehiculos,
   empleados,
   fechaInicial,
+  cotizacion = null,
 }: FormularioTrabajoProps) {
   return (
     <form
       action={crearTrabajo}
       className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
     >
+      {cotizacion && (
+        <input
+          type="hidden"
+          name="cotizacionId"
+          value={
+            cotizacion.id
+          }
+        />
+      )}
       <div className="border-b border-slate-200 bg-slate-50 px-6 py-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
@@ -68,7 +92,9 @@ export function FormularioTrabajo({
               </h2>
 
               <p className="text-sm text-slate-500">
-                Al guardar, el trabajo aparecerá automáticamente en los trabajos asignados del personal seleccionado.
+                {cotizacion
+                  ? `Trabajo originado desde la cotización ${cotizacion.codigo}.`
+                  : "Al guardar, el trabajo aparecerá automáticamente en los trabajos asignados del personal seleccionado."}
               </p>
             </div>
           </div>
@@ -84,6 +110,18 @@ export function FormularioTrabajo({
           </Link>
         </div>
       </div>
+
+      {cotizacion && (
+        <div className="mx-6 mt-6 rounded-xl border border-emerald-300 bg-emerald-50 p-4">
+          <p className="text-sm font-bold text-emerald-900">
+            Cotización aprobada: {cotizacion.codigo}
+          </p>
+
+          <p className="mt-1 text-sm text-emerald-800">
+            Cliente: {cotizacion.clienteNombre}. El trabajo quedará asociado a esta cotización y no podrá generarse otro trabajo desde la misma.
+          </p>
+        </div>
+      )}
 
       <div className="grid gap-5 p-6 md:grid-cols-2 xl:grid-cols-4">
         {clientes.length === 0 && (
@@ -120,19 +158,46 @@ export function FormularioTrabajo({
             Cliente
           </label>
 
+          {cotizacion && (
+            <input
+              type="hidden"
+              name="clienteId"
+              value={
+                cotizacion.clienteId
+              }
+            />
+          )}
+
           <select
             id="clienteId"
-            name="clienteId"
+            name={
+              cotizacion
+                ? undefined
+                : "clienteId"
+            }
             required
-            defaultValue=""
-            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"
+            defaultValue={
+              cotizacion
+                ? String(
+                    cotizacion.clienteId,
+                  )
+                : ""
+            }
+            disabled={
+              Boolean(
+                cotizacion,
+              )
+            }
+            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 disabled:bg-slate-100"
           >
-            <option
-              value=""
-              disabled
-            >
-              Selecciona un cliente
-            </option>
+            {!cotizacion && (
+              <option
+                value=""
+                disabled
+              >
+                Selecciona un cliente
+              </option>
+            )}
 
             {clientes.map(
               (cliente) => (
@@ -245,6 +310,10 @@ export function FormularioTrabajo({
             id="descripcion"
             name="descripcion"
             required
+            defaultValue={
+              cotizacion?.titulo ??
+              ""
+            }
             placeholder="Ejemplo: Instalación de equipos VRF"
             className="w-full rounded-xl border border-slate-300 px-4 py-3"
           />
@@ -380,6 +449,10 @@ export function FormularioTrabajo({
             id="observaciones"
             name="observaciones"
             rows={4}
+            defaultValue={
+              cotizacion?.observaciones ??
+              ""
+            }
             placeholder="Herramientas, equipo requerido o instrucciones para el personal..."
             className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3"
           />
@@ -388,7 +461,11 @@ export function FormularioTrabajo({
 
       <div className="flex flex-col-reverse gap-3 border-t border-slate-200 bg-slate-50 px-6 py-5 sm:flex-row sm:justify-end">
         <Link
-          href="/trabajos"
+          href={
+            cotizacion
+              ? `/administracion/compras/cotizaciones/${cotizacion.id}`
+              : "/trabajos"
+          }
           className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100"
         >
           Cancelar

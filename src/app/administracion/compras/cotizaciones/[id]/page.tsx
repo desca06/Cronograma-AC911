@@ -13,6 +13,7 @@ import {
   Trash2,
   UserRound,
   XCircle,
+  BriefcaseBusiness,
 } from "lucide-react";
 import { asc, eq } from "drizzle-orm";
 
@@ -23,7 +24,11 @@ import {
   clientes,
   cotizaciones,
   cotizacionItems,
+  trabajos,
 } from "@/db/schema";
+import {
+  cotizacionTrabajos,
+} from "@/db/schema-cotizacion-trabajo";
 import { requerirAdmin } from "@/lib/auth";
 
 import {
@@ -42,6 +47,7 @@ type PageProps = {
     creada?: string;
     estado?: string;
     error?: string;
+    trabajo?: string;
   }>;
 };
 
@@ -209,6 +215,30 @@ export default async function DetalleCotizacionPage({
       asc(cotizacionItems.id),
     );
 
+  const [trabajoVinculado] =
+    await db
+      .select({
+        id: trabajos.id,
+        fecha: trabajos.fecha,
+        estado: trabajos.estado,
+        tipo: trabajos.tipo,
+      })
+      .from(cotizacionTrabajos)
+      .innerJoin(
+        trabajos,
+        eq(
+          cotizacionTrabajos.trabajoId,
+          trabajos.id,
+        ),
+      )
+      .where(
+        eq(
+          cotizacionTrabajos.cotizacionId,
+          cotizacion.id,
+        ),
+      )
+      .limit(1);
+
   const estadoVisual = obtenerEstiloEstado(
     cotizacion.estado,
   );
@@ -290,6 +320,18 @@ export default async function DetalleCotizacionPage({
         {parametros.estado === "1" && (
           <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700">
             Estado de la cotización actualizado correctamente.
+          </div>
+        )}
+
+        {parametros.trabajo === "creado" && (
+          <div className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-4 text-sm font-semibold text-emerald-800">
+            Trabajo creado y asociado correctamente con esta cotización.
+          </div>
+        )}
+
+        {parametros.error === "trabajo-vinculado" && (
+          <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-4 text-sm font-semibold text-amber-900">
+            Esta cotización ya generó un trabajo. Para conservar la trazabilidad ya no puede cambiarse a rechazada, vencida o pendiente.
           </div>
         )}
 
@@ -609,6 +651,73 @@ export default async function DetalleCotizacionPage({
           </article>
         </div>
 
+        <article
+          className={`rounded-2xl border p-6 shadow-sm ${
+            trabajoVinculado
+              ? "border-blue-200 bg-blue-50"
+              : cotizacion.estado === "APROBADA"
+                ? "border-emerald-300 bg-emerald-50"
+                : "border-amber-200 bg-amber-50"
+          }`}
+        >
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-start gap-4">
+              <div
+                className={`grid h-12 w-12 shrink-0 place-items-center rounded-xl ${
+                  trabajoVinculado
+                    ? "bg-blue-100 text-blue-700"
+                    : cotizacion.estado === "APROBADA"
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "bg-amber-100 text-amber-700"
+                }`}
+              >
+                <BriefcaseBusiness
+                  size={23}
+                />
+              </div>
+
+              <div>
+                <h3 className="font-bold text-slate-900">
+                  Conversión a trabajo
+                </h3>
+
+                {trabajoVinculado ? (
+                  <p className="mt-1 text-sm leading-6 text-blue-900">
+                    Esta cotización ya está asociada al Trabajo #{trabajoVinculado.id}: {trabajoVinculado.tipo}, programado para {trabajoVinculado.fecha}. Estado actual: {trabajoVinculado.estado}.
+                  </p>
+                ) : cotizacion.estado === "APROBADA" ? (
+                  <p className="mt-1 text-sm leading-6 text-emerald-900">
+                    Cotización aprobada. Ya está lista para programar el trabajo, seleccionar fecha, vehículo y personal responsable.
+                  </p>
+                ) : (
+                  <p className="mt-1 text-sm leading-6 text-amber-900">
+                    Primero debes aprobar esta cotización. Solo las cotizaciones aprobadas pueden generar un trabajo.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {trabajoVinculado ? (
+              <Link
+                href={`/trabajos-asignados?trabajoId=${trabajoVinculado.id}#trabajo-${trabajoVinculado.id}`}
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700"
+              >
+                Ver trabajo asignado
+              </Link>
+            ) : cotizacion.estado === "APROBADA" ? (
+              <Link
+                href={`/trabajos/nuevo?cotizacionId=${cotizacion.id}`}
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
+              >
+                <BriefcaseBusiness
+                  size={18}
+                />
+                Crear trabajo
+              </Link>
+            ) : null}
+          </div>
+        </article>
+
         <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
@@ -622,7 +731,8 @@ export default async function DetalleCotizacionPage({
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {cotizacion.estado !== "APROBADA" && (
+              {!trabajoVinculado &&
+                cotizacion.estado !== "APROBADA" && (
                 <form action={aprobar}>
                   <button
                     type="submit"
@@ -634,7 +744,8 @@ export default async function DetalleCotizacionPage({
                 </form>
               )}
 
-              {cotizacion.estado !== "RECHAZADA" && (
+              {!trabajoVinculado &&
+                cotizacion.estado !== "RECHAZADA" && (
                 <form action={rechazar}>
                   <button
                     type="submit"
@@ -646,7 +757,8 @@ export default async function DetalleCotizacionPage({
                 </form>
               )}
 
-              {cotizacion.estado !== "VENCIDA" && (
+              {!trabajoVinculado &&
+                cotizacion.estado !== "VENCIDA" && (
                 <form action={marcarVencida}>
                   <button
                     type="submit"
@@ -658,7 +770,8 @@ export default async function DetalleCotizacionPage({
                 </form>
               )}
 
-              {cotizacion.estado !== "PENDIENTE" && (
+              {!trabajoVinculado &&
+                cotizacion.estado !== "PENDIENTE" && (
                 <form action={marcarPendiente}>
                   <button
                     type="submit"

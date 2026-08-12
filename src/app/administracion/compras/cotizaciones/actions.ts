@@ -13,6 +13,9 @@ import {
   type TipoItemCotizacion,
 } from "@/db/schema";
 import { requerirAdmin } from "@/lib/auth";
+import {
+  cotizacionTrabajos,
+} from "@/db/schema-cotizacion-trabajo";
 
 const RUTA_COTIZACIONES =
   "/administracion/compras/cotizaciones";
@@ -401,6 +404,33 @@ export async function cambiarEstadoCotizacion(
     );
   }
 
+  const [vinculoExistente] = await db
+    .select({
+      trabajoId:
+        cotizacionTrabajos.trabajoId,
+    })
+    .from(cotizacionTrabajos)
+    .where(
+      eq(
+        cotizacionTrabajos.cotizacionId,
+        cotizacionId,
+      ),
+    )
+    .limit(1);
+
+  /*
+   * Una cotización que ya generó trabajo queda
+   * congelada como APROBADA para conservar trazabilidad.
+   */
+  if (
+    vinculoExistente &&
+    nuevoEstado !== "APROBADA"
+  ) {
+    redirect(
+      `${RUTA_COTIZACIONES}/${cotizacionId}?error=trabajo-vinculado`,
+    );
+  }
+
   await db
     .update(cotizaciones)
     .set({
@@ -413,6 +443,8 @@ export async function cambiarEstadoCotizacion(
   revalidatePath(
     `${RUTA_COTIZACIONES}/${cotizacionId}`,
   );
+  revalidatePath("/trabajos");
+  revalidatePath("/trabajos-asignados");
 
   redirect(
     `${RUTA_COTIZACIONES}/${cotizacionId}?estado=1`,
