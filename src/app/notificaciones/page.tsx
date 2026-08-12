@@ -17,6 +17,7 @@ import {
 } from "./actions";
 
 import { BotonEliminarNotificacion } from "@/components/boton-eliminar-notificacion";
+import { ActivarNotificacionesPush } from "@/components/activar-notificaciones-push";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -103,6 +104,8 @@ export default async function NotificacionesPage() {
             </form>
           )}
         </div>
+
+        <ActivarNotificacionesPush />
 
         <section className="grid gap-4 sm:grid-cols-3">
           <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">

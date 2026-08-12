@@ -7,7 +7,6 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import {
   cotizaciones,
-  notificaciones,
   trabajos,
   trabajoEmpleados,
   usuarios,
@@ -16,6 +15,11 @@ import {
   cotizacionTrabajos,
 } from "@/db/schema-cotizacion-trabajo";
 import { requerirSupervisor } from "@/lib/auth";
+import {
+  notificarEstadoTrabajo,
+  notificarTrabajoActualizado,
+  notificarTrabajoAsignado,
+} from "@/lib/notificaciones";
 
 function obtenerTexto(
   formData: FormData,
@@ -142,6 +146,7 @@ export async function crearTrabajo(
     clienteId;
 
   let trabajoCreadoId = 0;
+  let usuarioIdsNotificar: number[] = [];
 
   try {
     await db.transaction(async (tx) => {
@@ -318,23 +323,8 @@ export async function crearTrabajo(
       ),
     ];
 
-    if (usuarioIds.length > 0) {
-      await tx.insert(notificaciones)
-        .values(
-          usuarioIds.map((usuarioId) => ({
-            usuarioId,
-            trabajoId,
-            titulo:
-              "Nuevo trabajo asignado",
-            mensaje:
-              `${tipo} programado para el ` +
-              `${fecha}.`,
-            tipo: "ASIGNACION",
-            leida: false,
-          })),
-        )
-;
-    }
+    usuarioIdsNotificar =
+      usuarioIds;
     });
   } catch (error) {
     if (
@@ -362,6 +352,21 @@ export async function crearTrabajo(
     }
 
     throw error;
+  }
+
+  if (
+    trabajoCreadoId > 0 &&
+    usuarioIdsNotificar.length > 0
+  ) {
+    await notificarTrabajoAsignado({
+      usuarioIds:
+        usuarioIdsNotificar,
+      trabajoId:
+        trabajoCreadoId,
+      tipoTrabajo:
+        tipo,
+      fecha,
+    });
   }
 
   revalidarPaginas();
@@ -428,6 +433,8 @@ export async function actualizarEstadoTrabajo(
     redirect("/trabajos");
   }
 
+  let usuarioIdsNotificar: number[] = [];
+
   await db.transaction(async (tx) => {
     await tx.update(trabajos)
       .set({
@@ -468,34 +475,24 @@ export async function actualizarEstadoTrabajo(
       ),
     ];
 
-    if (usuarioIds.length > 0) {
-      await tx.insert(notificaciones)
-        .values(
-          usuarioIds.map((usuarioId) => ({
-            usuarioId,
-            trabajoId: id,
-
-            titulo:
-              estado === "Cancelado"
-                ? "Trabajo cancelado"
-                : "Estado actualizado",
-
-            mensaje:
-              `El trabajo "${trabajoActual.tipo}" ` +
-              `del ${trabajoActual.fecha} ` +
-              `cambió a ${estado}.`,
-
-            tipo:
-              estado === "Cancelado"
-                ? "CANCELACION"
-                : "ESTADO",
-
-            leida: false,
-          })),
-        )
-;
-    }
+    usuarioIdsNotificar =
+      usuarioIds;
   });
+
+  if (
+    usuarioIdsNotificar.length > 0
+  ) {
+    await notificarEstadoTrabajo({
+      usuarioIds:
+        usuarioIdsNotificar,
+      trabajoId: id,
+      tipoTrabajo:
+        trabajoActual.tipo,
+      fecha:
+        trabajoActual.fecha,
+      estado,
+    });
+  }
 
   revalidarPaginas();
 
@@ -624,6 +621,8 @@ export async function actualizarTrabajoCompleto(
     );
   }
 
+  let usuarioIdsNotificar: number[] = [];
+
   await db.transaction(async (tx) => {
     await tx.update(trabajos)
       .set({
@@ -706,29 +705,24 @@ export async function actualizarTrabajoCompleto(
       ),
     ];
 
-    if (usuarioIds.length > 0) {
-      const detalleHora = horaInicio
-        ? ` a las ${horaInicio}`
-        : "";
-
-      await tx.insert(notificaciones)
-        .values(
-          usuarioIds.map((usuarioId) => ({
-            usuarioId,
-            trabajoId: id,
-            titulo: "Trabajo actualizado",
-
-            mensaje:
-              `${tipo} fue actualizado para ` +
-              `${fecha}${detalleHora}.`,
-
-            tipo: "ACTUALIZACION",
-            leida: false,
-          })),
-        )
-;
-    }
+    usuarioIdsNotificar =
+      usuarioIds;
   });
+
+  if (
+    usuarioIdsNotificar.length > 0
+  ) {
+    await notificarTrabajoActualizado({
+      usuarioIds:
+        usuarioIdsNotificar,
+      trabajoId: id,
+      tipoTrabajo:
+        tipo,
+      fecha,
+      horaInicio:
+        horaInicio || null,
+    });
+  }
 
   revalidarPaginas();
 

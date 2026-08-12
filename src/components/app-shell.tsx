@@ -9,7 +9,6 @@ import { notificaciones } from "@/db/schema";
 import { obtenerSesion } from "@/lib/auth";
 
 import { MobileSidebar } from "./mobile-sidebar";
-import { OneSignalProvider } from "./onesignal-provider";
 import { Sidebar } from "./sidebar";
 
 type AppShellProps = {
@@ -49,14 +48,6 @@ export async function AppShell({
 
   return (
     <div className="min-h-screen bg-slate-100 lg:grid lg:grid-cols-[270px_1fr]">
-      <OneSignalProvider
-        usuarioId={
-          sesion?.usuarioId ?? null
-        }
-        rol={
-          sesion?.rol ?? ""
-        }
-      />
 
       <MobileSidebar
         rol={

@@ -5,14 +5,10 @@ import { db } from "@/db";
 import {
   clientes,
   empleados,
-  cotizaciones,
   trabajos,
   trabajoEmpleados,
   vehiculos,
 } from "@/db/schema";
-import {
-  cotizacionTrabajos,
-} from "@/db/schema-cotizacion-trabajo";
 import { requerirSupervisor } from "@/lib/auth";
 
 import {
@@ -87,37 +83,34 @@ export default async function TrabajosPage({
     parametros.fecha,
   );
 
-
   const listaClientes = await db
     .select()
     .from(clientes)
     .where(eq(clientes.activo, true))
-    .orderBy(asc(clientes.nombre))
-;
+    .orderBy(asc(clientes.nombre));
 
   const listaVehiculos = await db
     .select()
     .from(vehiculos)
     .where(eq(vehiculos.activo, true))
-    .orderBy(asc(vehiculos.nombre))
-;
+    .orderBy(asc(vehiculos.nombre));
 
- const listaEmpleados = await db
-  .select()
-  .from(empleados)
-  .where(
-    and(
-      eq(empleados.activo, true),
-      inArray(
-        empleados.puesto,
-        [
-          "Técnico",
-          "Supervisor",
-        ],
+  const listaEmpleados = await db
+    .select()
+    .from(empleados)
+    .where(
+      and(
+        eq(empleados.activo, true),
+        inArray(
+          empleados.puesto,
+          [
+            "Técnico",
+            "Supervisor",
+          ],
+        ),
       ),
-    ),
-  )
-  .orderBy(asc(empleados.nombre));
+    )
+    .orderBy(asc(empleados.nombre));
 
   const listaTrabajos = await db
     .select({
@@ -132,10 +125,6 @@ export default async function TrabajosPage({
       horaInicio: trabajos.horaInicio,
       clienteNombre: clientes.nombre,
       vehiculoNombre: vehiculos.nombre,
-      cotizacionId:
-        cotizacionTrabajos.cotizacionId,
-      cotizacionCodigo:
-        cotizaciones.codigo,
     })
     .from(trabajos)
     .innerJoin(
@@ -146,25 +135,10 @@ export default async function TrabajosPage({
       vehiculos,
       eq(trabajos.vehiculoId, vehiculos.id),
     )
-    .leftJoin(
-      cotizacionTrabajos,
-      eq(
-        cotizacionTrabajos.trabajoId,
-        trabajos.id,
-      ),
-    )
-    .leftJoin(
-      cotizaciones,
-      eq(
-        cotizaciones.id,
-        cotizacionTrabajos.cotizacionId,
-      ),
-    )
     .orderBy(
       desc(trabajos.fecha),
       desc(trabajos.id),
-    )
-;
+    );
 
   const asignaciones = await db
     .select({
@@ -179,8 +153,7 @@ export default async function TrabajosPage({
         trabajoEmpleados.empleadoId,
         empleados.id,
       ),
-    )
-;
+    );
 
   const empleadosPorTrabajo: Record<
     number,
@@ -211,42 +184,42 @@ export default async function TrabajosPage({
   }
 
   const trabajosFiltrados =
-  listaTrabajos.filter((trabajo) => {
-    const idsEmpleados =
-      empleadoIdsPorTrabajo[trabajo.id] ?? [];
+    listaTrabajos.filter((trabajo) => {
+      const idsEmpleados =
+        empleadoIdsPorTrabajo[trabajo.id] ?? [];
 
-    const coincideCliente =
-      !clienteFiltro ||
-      String(trabajo.clienteId) ===
-        clienteFiltro;
+      const coincideCliente =
+        !clienteFiltro ||
+        String(trabajo.clienteId) ===
+          clienteFiltro;
 
-    const coincideEstado =
-      !estadoFiltro ||
-      trabajo.estado === estadoFiltro;
+      const coincideEstado =
+        !estadoFiltro ||
+        trabajo.estado === estadoFiltro;
 
-    const coincideEmpleado =
-      !empleadoFiltro ||
-      idsEmpleados.includes(
-        Number(empleadoFiltro),
+      const coincideEmpleado =
+        !empleadoFiltro ||
+        idsEmpleados.includes(
+          Number(empleadoFiltro),
+        );
+
+      const coincideVehiculo =
+        !vehiculoFiltro ||
+        String(trabajo.vehiculoId ?? "") ===
+          vehiculoFiltro;
+
+      const coincideFecha =
+        !fechaFiltro ||
+        trabajo.fecha === fechaFiltro;
+
+      return (
+        coincideCliente &&
+        coincideEstado &&
+        coincideEmpleado &&
+        coincideVehiculo &&
+        coincideFecha
       );
-
-    const coincideVehiculo =
-      !vehiculoFiltro ||
-      String(trabajo.vehiculoId ?? "") ===
-        vehiculoFiltro;
-
-    const coincideFecha =
-      !fechaFiltro ||
-      trabajo.fecha === fechaFiltro;
-
-    return (
-      coincideCliente &&
-      coincideEstado &&
-      coincideEmpleado &&
-      coincideVehiculo &&
-      coincideFecha
-    );
-  });
+    });
 
   const hayFiltros =
     Boolean(clienteFiltro) ||
@@ -256,13 +229,13 @@ export default async function TrabajosPage({
     Boolean(fechaFiltro);
 
   return (
-  <AppShell>
-    <PageHeader
-      title="Trabajos"
-      description="Crea, administra y consulta las órdenes de trabajo."
-    />
+    <AppShell>
+      <PageHeader
+        title="Trabajos"
+        description="Crea, administra y consulta las órdenes de trabajo."
+      />
 
-    <section className="space-y-8 p-5 md:p-8">
+      <section className="space-y-8 p-5 md:p-8">
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <Link
             href="/trabajos/nuevo"
@@ -525,16 +498,6 @@ export default async function TrabajosPage({
                       <p className="mt-1 font-medium text-blue-700">
                         {trabajo.tipo}
                       </p>
-
-                      {trabajo.cotizacionId &&
-                        trabajo.cotizacionCodigo && (
-                          <Link
-                            href={`/administracion/compras/cotizaciones/${trabajo.cotizacionId}`}
-                            className="mt-2 inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800 hover:bg-emerald-200"
-                          >
-                            Origen: {trabajo.cotizacionCodigo}
-                          </Link>
-                        )}
                     </div>
 
                     <p className="text-slate-700">

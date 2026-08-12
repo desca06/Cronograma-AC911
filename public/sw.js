@@ -1,42 +1,93 @@
-self.addEventListener("push", (event) => {
-  let datos = {
-    titulo: "AC911",
-    mensaje: "Tenés una nueva notificación.",
-    url: "/notificaciones",
-  };
+self.addEventListener(
+  "push",
+  (event) => {
+    let data = {};
 
-  if (event.data) {
     try {
-      datos = {
-        ...datos,
-        ...event.data.json(),
-      };
+      data =
+        event.data
+          ? event.data.json()
+          : {};
     } catch {
-      datos.mensaje = event.data.text();
+      data = {};
     }
-  }
 
-  event.waitUntil(
-    self.registration.showNotification(datos.titulo, {
-      body: datos.mensaje,
-      icon: "/icons/icon-192x192.png",
-      badge: "/icons/icon-192x192.png",
+    const titulo =
+      data.titulo ??
+      "AC911";
+
+    const opciones = {
+      body:
+        data.mensaje ??
+        "Tienes una nueva notificación.",
+      icon:
+        "/icons/icon-192.png",
+      badge:
+        "/icons/icon-192.png",
       data: {
-        url: datos.url,
+        url:
+          data.url ??
+          "/notificaciones",
       },
-      tag: "ac911-push",
-    }),
-  );
-});
+      tag:
+        data.url ??
+        "ac911-notificacion",
+      renotify:
+        true,
+    };
 
-self.addEventListener("notificationclick", (event) => {
-  event.notification.close();
+    event.waitUntil(
+      self.registration.showNotification(
+        titulo,
+        opciones,
+      ),
+    );
+  },
+);
 
-  const url =
-    event.notification.data?.url ??
-    "/notificaciones";
+self.addEventListener(
+  "notificationclick",
+  (event) => {
+    event.notification.close();
 
-  event.waitUntil(
-    clients.openWindow(url),
-  );
-});
+    const url =
+      event.notification.data
+        ?.url ??
+      "/notificaciones";
+
+    event.waitUntil(
+      clients
+        .matchAll({
+          type:
+            "window",
+          includeUncontrolled:
+            true,
+        })
+        .then(
+          (
+            clientList,
+          ) => {
+            for (
+              const client
+              of clientList
+            ) {
+              if (
+                "focus" in
+                client
+              ) {
+                client.navigate(
+                  url,
+                );
+
+                return client.focus();
+              }
+            }
+
+            return clients.openWindow(
+              url,
+            );
+          },
+        ),
+    );
+  },
+);

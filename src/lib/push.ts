@@ -1,10 +1,23 @@
+import "server-only";
+
+import {
+  eq,
+  inArray,
+} from "drizzle-orm";
 import * as webPush from "web-push";
-import { eq, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
   suscripcionesPush,
 } from "@/db/schema";
+
+export type ResultadoPush = {
+  usuarios: number;
+  suscripciones: number;
+  enviadas: number;
+  fallidas: number;
+  eliminadas: number;
+};
 
 type DatosPush = {
   titulo: string;
@@ -12,24 +25,7 @@ type DatosPush = {
   url?: string;
 };
 
-export async function enviarPushAUsuarios(
-  usuarioIds: number[],
-  datos: DatosPush,
-): Promise<void> {
-  const idsUnicos = [
-    ...new Set(
-      usuarioIds.filter(
-        (id) =>
-          Number.isInteger(id) &&
-          id > 0,
-      ),
-    ),
-  ];
-
-  if (idsUnicos.length === 0) {
-    return;
-  }
-
+function configurarVapid() {
   const clavePublica =
     process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
@@ -44,10 +40,9 @@ export async function enviarPushAUsuarios(
     !clavePrivada ||
     !asunto
   ) {
-    console.error(
-      "No están configuradas las variables VAPID.",
+    throw new Error(
+      "Faltan NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY o VAPID_SUBJECT.",
     );
-    return;
   }
 
   webPush.setVapidDetails(
@@ -55,9 +50,47 @@ export async function enviarPushAUsuarios(
     clavePublica,
     clavePrivada,
   );
+}
+
+export async function enviarPushAUsuarios(
+  usuarioIds: number[],
+  datos: DatosPush,
+): Promise<ResultadoPush> {
+  const idsUnicos = [
+    ...new Set(
+      usuarioIds.filter(
+        (id) =>
+          Number.isInteger(id) &&
+          id > 0,
+      ),
+    ),
+  ];
+
+  if (idsUnicos.length === 0) {
+    return {
+      usuarios: 0,
+      suscripciones: 0,
+      enviadas: 0,
+      fallidas: 0,
+      eliminadas: 0,
+    };
+  }
+
+  configurarVapid();
 
   const suscripciones = await db
-    .select()
+    .select({
+      id:
+        suscripcionesPush.id,
+      usuarioId:
+        suscripcionesPush.usuarioId,
+      endpoint:
+        suscripcionesPush.endpoint,
+      p256dh:
+        suscripcionesPush.p256dh,
+      auth:
+        suscripcionesPush.auth,
+    })
     .from(suscripcionesPush)
     .where(
       inArray(
@@ -66,15 +99,25 @@ export async function enviarPushAUsuarios(
       ),
     );
 
-  const payload = JSON.stringify({
-    titulo: datos.titulo,
-    mensaje: datos.mensaje,
-    url:
-      datos.url ??
-      "/notificaciones",
-  });
+  const payload =
+    JSON.stringify({
+      titulo:
+        datos.titulo,
+      mensaje:
+        datos.mensaje,
+      url:
+        datos.url ??
+        "/notificaciones",
+    });
 
-  for (const suscripcion of suscripciones) {
+  let enviadas = 0;
+  let fallidas = 0;
+  let eliminadas = 0;
+
+  for (
+    const suscripcion
+    of suscripciones
+  ) {
     try {
       await webPush.sendNotification(
         {
@@ -89,14 +132,18 @@ export async function enviarPushAUsuarios(
         },
         payload,
       );
+
+      enviadas += 1;
     } catch (error) {
+      fallidas += 1;
+
       const errorPush =
         error as {
           statusCode?: number;
         };
 
       console.error(
-        "No se pudo enviar una notificación push:",
+        `[AC911 PUSH] Error enviando a usuario ${suscripcion.usuarioId}:`,
         error,
       );
 
@@ -105,14 +152,28 @@ export async function enviarPushAUsuarios(
         errorPush.statusCode === 410
       ) {
         await db
-          .delete(suscripcionesPush)
+          .delete(
+            suscripcionesPush,
+          )
           .where(
             eq(
               suscripcionesPush.endpoint,
               suscripcion.endpoint,
             ),
           );
+
+        eliminadas += 1;
       }
     }
   }
+
+  return {
+    usuarios:
+      idsUnicos.length,
+    suscripciones:
+      suscripciones.length,
+    enviadas,
+    fallidas,
+    eliminadas,
+  };
 }
