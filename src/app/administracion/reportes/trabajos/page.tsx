@@ -194,6 +194,11 @@ function LineChart({
               }
               r="5"
               fill="#2563eb"
+              className="ac911-punto-animado"
+              style={{
+                animationDelay:
+                  `${180 + index * 110}ms`,
+              }}
             />
 
             <text
@@ -488,6 +493,55 @@ export default async function ReporteTrabajosPage({
 
   return (
     <AppShell>
+      <style>{`
+        @keyframes ac911-dibujar-linea {
+          from {
+            stroke-dashoffset: 1;
+          }
+          to {
+            stroke-dashoffset: 0;
+          }
+        }
+
+        @keyframes ac911-aparecer-punto {
+          from {
+            opacity: 0;
+            transform: scale(0.35);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        .ac911-linea-animada {
+          stroke-dasharray: 1;
+          stroke-dashoffset: 1;
+          animation: ac911-dibujar-linea 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        .ac911-punto-animado {
+          opacity: 0;
+          transform-box: fill-box;
+          transform-origin: center;
+          animation: ac911-aparecer-punto 420ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+          transition: transform 180ms ease;
+        }
+
+        .ac911-punto-animado:hover {
+          transform: scale(1.45);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .ac911-linea-animada,
+          .ac911-punto-animado {
+            animation: none !important;
+            opacity: 1 !important;
+            stroke-dashoffset: 0 !important;
+          }
+        }
+      `}</style>
+
       <PageHeader
         title="Reporte de Trabajos"
         description="Indicadores mensuales, productividad, estados, clientes, personal y PDF."

@@ -27,7 +27,9 @@ import {
   formatearHoraGuatemala,
   obtenerReporteCompras,
 } from "@/lib/reportes-compras";
-import { requerirAdmin } from "@/lib/auth";
+import {
+  requerirAdmin,
+} from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -389,6 +391,8 @@ function LineChart({
             strokeWidth="4"
             strokeLinecap="round"
             strokeLinejoin="round"
+            pathLength={1}
+            className="ac911-linea-animada"
           />
         )}
 
@@ -407,6 +411,11 @@ function LineChart({
                 fill={
                   colorLinea
                 }
+                className="ac911-punto-animado"
+                style={{
+                  animationDelay:
+                    `${180 + index * 110}ms`,
+                }}
               />
 
               <text
@@ -610,6 +619,56 @@ export default async function ReportesPage({
 
   return (
     <AppShell>
+      
+      <style>{`
+        @keyframes ac911-dibujar-linea {
+          from {
+            stroke-dashoffset: 1;
+          }
+          to {
+            stroke-dashoffset: 0;
+          }
+        }
+
+        @keyframes ac911-aparecer-punto {
+          from {
+            opacity: 0;
+            transform: scale(0.35);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        .ac911-linea-animada {
+          stroke-dasharray: 1;
+          stroke-dashoffset: 1;
+          animation: ac911-dibujar-linea 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        .ac911-punto-animado {
+          opacity: 0;
+          transform-box: fill-box;
+          transform-origin: center;
+          animation: ac911-aparecer-punto 420ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+          transition: transform 180ms ease;
+        }
+
+        .ac911-punto-animado:hover {
+          transform: scale(1.45);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .ac911-linea-animada,
+          .ac911-punto-animado {
+            animation: none !important;
+            opacity: 1 !important;
+            stroke-dashoffset: 0 !important;
+          }
+        }
+      `}</style>
+
       <PageHeader
         title="Reporte de Órdenes de Compra"
         description="Indicadores, análisis, gráficas y PDF de compras de AC911."

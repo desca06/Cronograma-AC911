@@ -37,7 +37,7 @@ const submodulos = [
     nombre:
       "Trabajos",
     descripcion:
-      "Trabajos del mes, finalizados, pendientes, en proceso, reprogramados, productividad y PDF.",
+      "Trabajos del mes, finalizados, pendientes, en proceso, reprogramados, productividad, gráficas y PDF.",
     href:
       "/administracion/reportes/trabajos",
     icono:
