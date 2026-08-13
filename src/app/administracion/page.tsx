@@ -1,4 +1,5 @@
 import {
+  BellRing,
   Boxes,
   ChartNoAxesCombined,
   ShoppingCart,
@@ -69,6 +70,21 @@ const modulos = [
       textoIcono: "text-purple-700",
       boton:
         "bg-purple-600 hover:bg-purple-700",
+    },
+  },
+  {
+    nombre: "Notificaciones Push",
+    descripcion:
+      "Supervisa qué usuarios tienen dispositivos registrados y quiénes aún deben activar las notificaciones.",
+    href: "/administracion/notificaciones",
+    icono: BellRing,
+    disponible: true,
+    estilos: {
+      borde: "border-cyan-200",
+      fondoIcono: "bg-cyan-100",
+      textoIcono: "text-cyan-700",
+      boton:
+        "bg-cyan-600 hover:bg-cyan-700",
     },
   },
 ];
