@@ -56,7 +56,7 @@ export async function POST() {
         {
           ok: false,
           error:
-            "Este usuario no tiene dispositivos registrados en suscripciones_push.",
+            "El usuario no tiene ninguna suscripción guardada en suscripciones_push.",
           resultado,
         },
         {
@@ -77,8 +77,8 @@ export async function POST() {
         {
           ok: false,
           error:
-            resultado.errores?.[0] ??
-            "Existe una suscripción, pero no se pudo enviar la notificación Push.",
+            resultado.errores[0] ??
+            "Existe una suscripción, pero el proveedor Web Push rechazó el envío.",
           resultado,
         },
         {
@@ -95,7 +95,7 @@ export async function POST() {
       {
         ok: true,
         mensaje:
-          "Notificación Push enviada correctamente.",
+          "Notificación push enviada correctamente.",
         resultado,
       },
       {
@@ -106,6 +106,11 @@ export async function POST() {
       },
     );
   } catch (error) {
+    const mensaje =
+      error instanceof Error
+        ? error.message
+        : "No se pudo enviar la notificación.";
+
     console.error(
       "[AC911 PUSH PRUEBA]",
       error,
@@ -115,9 +120,7 @@ export async function POST() {
       {
         ok: false,
         error:
-          error instanceof Error
-            ? error.message
-            : "No se pudo enviar la notificación Push.",
+          mensaje,
       },
       {
         status: 500,

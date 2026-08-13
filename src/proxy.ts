@@ -22,7 +22,7 @@ const rutasPublicas = [
   "/login",
   "/asistencia",
   "/manifest.webmanifest",
-  "/push/onesignal",
+  "/sw.js",
 ];
 
 function obtenerClaveSecreta(): Uint8Array {
@@ -61,21 +61,8 @@ export async function proxy(
   const esLogin =
     ruta === "/login";
 
-  /*
-   * Estas rutas deben funcionar sin sesión.
-   *
-   * /asistencia/[token]
-   * /asistencia/resultado
-   *
-   * También dejamos públicos el manifest
-   * y el Service Worker de OneSignal.
-   */
+
   if (esRutaPublica(ruta)) {
-    /*
-     * Si ya hay sesión y entran al login,
-     * mantenemos el comportamiento original:
-     * redirigir al panel correspondiente.
-     */
     if (!esLogin) {
       return NextResponse.next();
     }
@@ -124,12 +111,43 @@ export async function proxy(
     }
   }
 
+  /*
+   * Las API de Push NO son públicas.
+   *
+   * /api/push/suscribir
+   * /api/notificaciones/push/prueba
+   *
+   * Deben mantener sesión porque necesitamos
+   * conocer el usuarioId real que registra
+   * el dispositivo o solicita la prueba.
+   */
   const token =
     request.cookies.get(
       nombreCookie,
     )?.value;
 
   if (!token) {
+    /*
+     * Para páginas seguimos redirigiendo al login.
+     *
+     * Para APIs devolvemos 401 JSON para evitar
+     * que fetch() reciba HTML del login.
+     */
+    if (
+      ruta.startsWith("/api/")
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "No hay una sesión activa.",
+        },
+        {
+          status: 401,
+        },
+      );
+    }
+
     return NextResponse.redirect(
       new URL(
         "/login",
@@ -174,6 +192,28 @@ export async function proxy(
 
     return NextResponse.next();
   } catch {
+    if (
+      ruta.startsWith("/api/")
+    ) {
+      const respuesta =
+        NextResponse.json(
+          {
+            ok: false,
+            error:
+              "La sesión no es válida o expiró.",
+          },
+          {
+            status: 401,
+          },
+        );
+
+      respuesta.cookies.delete(
+        nombreCookie,
+      );
+
+      return respuesta;
+    }
+
     const respuesta =
       NextResponse.redirect(
         new URL(

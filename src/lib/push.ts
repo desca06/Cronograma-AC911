@@ -17,6 +17,7 @@ export type ResultadoPush = {
   enviadas: number;
   fallidas: number;
   eliminadas: number;
+  errores: string[];
 };
 
 type DatosPush = {
@@ -25,15 +26,51 @@ type DatosPush = {
   url?: string;
 };
 
-function configurarVapid() {
+let vapidConfigurado = false;
+
+function obtenerMensajeError(
+  error: unknown,
+): string {
+  if (
+    error instanceof Error
+  ) {
+    return error.message;
+  }
+
+  if (
+    typeof error === "string"
+  ) {
+    return error;
+  }
+
+  try {
+    return JSON.stringify(
+      error,
+    );
+  } catch {
+    return "Error desconocido.";
+  }
+}
+
+function configurarVapid(): void {
+  if (vapidConfigurado) {
+    return;
+  }
+
   const clavePublica =
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    process.env
+      .NEXT_PUBLIC_VAPID_PUBLIC_KEY
+      ?.trim();
 
   const clavePrivada =
-    process.env.VAPID_PRIVATE_KEY;
+    process.env
+      .VAPID_PRIVATE_KEY
+      ?.trim();
 
   const asunto =
-    process.env.VAPID_SUBJECT;
+    process.env
+      .VAPID_SUBJECT
+      ?.trim();
 
   if (
     !clavePublica ||
@@ -45,11 +82,35 @@ function configurarVapid() {
     );
   }
 
-  webPush.setVapidDetails(
-    asunto,
-    clavePublica,
-    clavePrivada,
-  );
+  if (
+    !(
+      asunto.startsWith(
+        "mailto:",
+      ) ||
+      asunto.startsWith(
+        "https://",
+      )
+    )
+  ) {
+    throw new Error(
+      'VAPID_SUBJECT debe comenzar con "mailto:" o "https://".',
+    );
+  }
+
+  try {
+    webPush.setVapidDetails(
+      asunto,
+      clavePublica,
+      clavePrivada,
+    );
+
+    vapidConfigurado =
+      true;
+  } catch (error) {
+    throw new Error(
+      `No se pudo configurar VAPID: ${obtenerMensajeError(error)}`,
+    );
+  }
 }
 
 export async function enviarPushAUsuarios(
@@ -66,38 +127,45 @@ export async function enviarPushAUsuarios(
     ),
   ];
 
-  if (idsUnicos.length === 0) {
+  if (
+    idsUnicos.length ===
+    0
+  ) {
     return {
       usuarios: 0,
       suscripciones: 0,
       enviadas: 0,
       fallidas: 0,
       eliminadas: 0,
+      errores: [],
     };
   }
 
   configurarVapid();
 
-  const suscripciones = await db
-    .select({
-      id:
-        suscripcionesPush.id,
-      usuarioId:
-        suscripcionesPush.usuarioId,
-      endpoint:
-        suscripcionesPush.endpoint,
-      p256dh:
-        suscripcionesPush.p256dh,
-      auth:
-        suscripcionesPush.auth,
-    })
-    .from(suscripcionesPush)
-    .where(
-      inArray(
-        suscripcionesPush.usuarioId,
-        idsUnicos,
-      ),
-    );
+  const suscripciones =
+    await db
+      .select({
+        id:
+          suscripcionesPush.id,
+        usuarioId:
+          suscripcionesPush.usuarioId,
+        endpoint:
+          suscripcionesPush.endpoint,
+        p256dh:
+          suscripcionesPush.p256dh,
+        auth:
+          suscripcionesPush.auth,
+      })
+      .from(
+        suscripcionesPush,
+      )
+      .where(
+        inArray(
+          suscripcionesPush.usuarioId,
+          idsUnicos,
+        ),
+      );
 
   const payload =
     JSON.stringify({
@@ -113,6 +181,9 @@ export async function enviarPushAUsuarios(
   let enviadas = 0;
   let fallidas = 0;
   let eliminadas = 0;
+
+  const errores: string[] =
+    [];
 
   for (
     const suscripcion
@@ -140,16 +211,41 @@ export async function enviarPushAUsuarios(
       const errorPush =
         error as {
           statusCode?: number;
+          body?: string;
+          headers?: unknown;
         };
 
+      const detalle =
+        [
+          `Usuario ${suscripcion.usuarioId}`,
+          errorPush.statusCode
+            ? `HTTP ${errorPush.statusCode}`
+            : null,
+          obtenerMensajeError(
+            error,
+          ),
+          errorPush.body
+            ? `Respuesta: ${errorPush.body}`
+            : null,
+        ]
+          .filter(Boolean)
+          .join(" · ");
+
+      errores.push(
+        detalle,
+      );
+
       console.error(
-        `[AC911 PUSH] Error enviando a usuario ${suscripcion.usuarioId}:`,
+        "[AC911 PUSH]",
+        detalle,
         error,
       );
 
       if (
-        errorPush.statusCode === 404 ||
-        errorPush.statusCode === 410
+        errorPush.statusCode ===
+          404 ||
+        errorPush.statusCode ===
+          410
       ) {
         await db
           .delete(
@@ -175,5 +271,6 @@ export async function enviarPushAUsuarios(
     enviadas,
     fallidas,
     eliminadas,
+    errores,
   };
 }

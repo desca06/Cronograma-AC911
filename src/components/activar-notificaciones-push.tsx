@@ -19,15 +19,84 @@ type EstadoPush =
   | "bloqueado"
   | "no-compatible";
 
-function urlBase64ToUint8Array(
+type RespuestaApi = {
+  ok?: boolean;
+  error?: string;
+  registrado?: boolean;
+  cantidad?: number;
+  resultado?: {
+    enviadas?: number;
+    suscripciones?: number;
+  };
+};
+
+async function leerRespuestaApi(
+  respuesta: Response,
+): Promise<RespuestaApi> {
+  const texto =
+    await respuesta.text();
+
+  if (!texto) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(
+      texto,
+    ) as RespuestaApi;
+  } catch {
+    const resumen =
+      texto
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 180);
+
+    throw new Error(
+      `La API respondió ${respuesta.status} ${respuesta.statusText} con contenido no JSON. ${resumen}`,
+    );
+  }
+}
+
+function arrayBuffersIguales(
+  a: ArrayBuffer | null,
+  b: ArrayBuffer,
+): boolean {
+  if (!a) {
+    return false;
+  }
+
+  const actual =
+    new Uint8Array(a);
+
+  const esperada =
+    new Uint8Array(b);
+
+  if (
+    actual.length !==
+    esperada.length
+  ) {
+    return false;
+  }
+
+  return actual.every(
+    (valor, indice) =>
+      valor ===
+      esperada[indice],
+  );
+}
+
+function urlBase64ToArrayBuffer(
   base64String: string,
-) {
+): ArrayBuffer {
+  const limpia =
+    base64String.trim();
+
   const padding =
     "=".repeat(
       (
         4 -
         (
-          base64String.length %
+          limpia.length %
           4
         )
       ) %
@@ -36,31 +105,58 @@ function urlBase64ToUint8Array(
 
   const base64 =
     (
-      base64String +
+      limpia +
       padding
     )
       .replace(/-/g, "+")
       .replace(/_/g, "/");
 
   const rawData =
-    window.atob(base64);
+    window.atob(
+      base64,
+    );
 
-  return Uint8Array.from(
-    [...rawData].map(
-      (caracter) =>
-        caracter.charCodeAt(0),
-    ),
+  const bytes =
+    Uint8Array.from(
+      [...rawData].map(
+        (caracter) =>
+          caracter.charCodeAt(
+            0,
+          ),
+      ),
+    );
+
+  if (
+    bytes.byteLength !==
+    65
+  ) {
+    throw new Error(
+      `La clave pública VAPID es inválida: mide ${bytes.byteLength} bytes al decodificar y debe medir 65.`,
+    );
+  }
+
+  const buffer =
+    new ArrayBuffer(
+      bytes.byteLength,
+    );
+
+  new Uint8Array(
+    buffer,
+  ).set(
+    bytes,
   );
+
+  return buffer;
 }
 
 async function obtenerRegistroServiceWorker() {
-  const registroExistente =
+  const existente =
     await navigator.serviceWorker.getRegistration(
       "/",
     );
 
-  if (registroExistente) {
-    return registroExistente;
+  if (existente) {
+    return existente;
   }
 
   return navigator.serviceWorker.register(
@@ -95,7 +191,7 @@ export function ActivarNotificacionesPush() {
   ] = useState("");
 
   useEffect(() => {
-    let activo = true;
+    let montado = true;
 
     async function verificar() {
       try {
@@ -104,7 +200,7 @@ export function ActivarNotificacionesPush() {
           !("PushManager" in window) ||
           !("Notification" in window)
         ) {
-          if (activo) {
+          if (montado) {
             setEstado(
               "no-compatible",
             );
@@ -117,7 +213,7 @@ export function ActivarNotificacionesPush() {
           Notification.permission ===
           "denied"
         ) {
-          if (activo) {
+          if (montado) {
             setEstado(
               "bloqueado",
             );
@@ -131,22 +227,59 @@ export function ActivarNotificacionesPush() {
             "/",
           );
 
-        const suscripcion =
+        const suscripcionLocal =
           registro
             ? await registro.pushManager.getSubscription()
             : null;
 
-        if (activo) {
-          setEstado(
-            suscripcion
-              ? "activo"
-              : "inactivo",
+        const respuesta =
+          await fetch(
+            "/api/push/suscribir",
+            {
+              method: "GET",
+              cache: "no-store",
+            },
+          );
+
+        const resultado =
+          await leerRespuestaApi(
+            respuesta,
+          );
+
+        if (!montado) {
+          return;
+        }
+
+        const registradoEnBd =
+          respuesta.ok &&
+          resultado.registrado ===
+            true;
+
+        setEstado(
+          suscripcionLocal &&
+          registradoEnBd
+            ? "activo"
+            : "inactivo",
+        );
+
+        if (
+          suscripcionLocal &&
+          !registradoEnBd
+        ) {
+          setMensaje(
+            "El navegador tiene permiso, pero este dispositivo todavía no está registrado en AC911. Pulsa Activar notificaciones.",
           );
         }
-      } catch {
-        if (activo) {
+      } catch (error) {
+        if (montado) {
           setEstado(
             "inactivo",
+          );
+
+          setMensaje(
+            error instanceof Error
+              ? error.message
+              : "No se pudo verificar el estado del dispositivo.",
           );
         }
       }
@@ -155,7 +288,7 @@ export function ActivarNotificacionesPush() {
     void verificar();
 
     return () => {
-      activo = false;
+      montado = false;
     };
   }, []);
 
@@ -174,24 +307,37 @@ export function ActivarNotificacionesPush() {
             "Content-Type":
               "application/json",
           },
-          body: JSON.stringify({
-            endpoint:
-              json.endpoint,
-            keys:
-              json.keys,
-            navegador:
-              navigator.userAgent,
-          }),
+          body:
+            JSON.stringify({
+              endpoint:
+                json.endpoint,
+              keys:
+                json.keys,
+              navegador:
+                navigator.userAgent,
+            }),
+          cache: "no-store",
         },
       );
 
     const resultado =
-      await respuesta.json();
+      await leerRespuestaApi(
+        respuesta,
+      );
 
     if (!respuesta.ok) {
       throw new Error(
         resultado.error ??
-          "No se pudo guardar la suscripción.",
+          `No se pudo guardar el dispositivo. HTTP ${respuesta.status}.`,
+      );
+    }
+
+    if (
+      resultado.registrado !==
+      true
+    ) {
+      throw new Error(
+        "El servidor respondió, pero no confirmó el registro del dispositivo.",
       );
     }
   }
@@ -211,19 +357,25 @@ export function ActivarNotificacionesPush() {
         );
 
         throw new Error(
-          "Este navegador no soporta notificaciones Push.",
+          "Este navegador o este origen no soporta Web Push.",
         );
       }
 
       const clavePublica =
         process.env
-          .NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+          .NEXT_PUBLIC_VAPID_PUBLIC_KEY
+          ?.trim();
 
       if (!clavePublica) {
         throw new Error(
           "Falta NEXT_PUBLIC_VAPID_PUBLIC_KEY en el .env.",
         );
       }
+
+      const claveAplicacion =
+        urlBase64ToArrayBuffer(
+          clavePublica,
+        );
 
       const permiso =
         await Notification.requestPermission();
@@ -250,6 +402,22 @@ export function ActivarNotificacionesPush() {
       let suscripcion =
         await registro.pushManager.getSubscription();
 
+      if (suscripcion) {
+        const claveActual =
+          suscripcion.options
+            .applicationServerKey;
+
+        if (
+          !arrayBuffersIguales(
+            claveActual,
+            claveAplicacion,
+          )
+        ) {
+          await suscripcion.unsubscribe();
+          suscripcion = null;
+        }
+      }
+
       if (!suscripcion) {
         suscripcion =
           await registro.pushManager.subscribe(
@@ -257,9 +425,7 @@ export function ActivarNotificacionesPush() {
               userVisibleOnly:
                 true,
               applicationServerKey:
-                urlBase64ToUint8Array(
-                  clavePublica,
-                ),
+                claveAplicacion,
             },
           );
       }
@@ -269,10 +435,19 @@ export function ActivarNotificacionesPush() {
       );
 
       setEstado("activo");
+
       setMensaje(
-        "Listo. Este dispositivo quedó registrado para recibir avisos de AC911.",
+        "Listo. Este dispositivo quedó registrado en AC911 y ya puede recibir notificaciones.",
       );
     } catch (error) {
+      setEstado(
+        (actual) =>
+          actual ===
+          "bloqueado"
+            ? actual
+            : "inactivo",
+      );
+
       setMensaje(
         error instanceof Error
           ? error.message
@@ -293,16 +468,19 @@ export function ActivarNotificacionesPush() {
           "/api/notificaciones/push/prueba",
           {
             method: "POST",
+            cache: "no-store",
           },
         );
 
       const resultado =
-        await respuesta.json();
+        await leerRespuestaApi(
+          respuesta,
+        );
 
       if (!respuesta.ok) {
         throw new Error(
           resultado.error ??
-            "No se pudo enviar la notificación de prueba.",
+            `No se pudo enviar la prueba. HTTP ${respuesta.status}.`,
         );
       }
 
@@ -313,7 +491,7 @@ export function ActivarNotificacionesPush() {
       setMensaje(
         enviadas > 0
           ? `Prueba enviada. Se enviaron ${enviadas} notificación${enviadas === 1 ? "" : "es"}.`
-          : "La prueba terminó, pero no se envió ninguna notificación.",
+          : "La API respondió, pero no envió ninguna notificación.",
       );
     } catch (error) {
       setMensaje(
@@ -406,7 +584,7 @@ export function ActivarNotificacionesPush() {
             {estado ===
               "bloqueado" && (
               <p className="mt-2 text-sm font-semibold text-red-700">
-                Chrome tiene bloqueado el permiso. Debes habilitar las notificaciones para este sitio desde la configuración del navegador.
+                Chrome tiene bloqueado el permiso. Debes habilitar las notificaciones para este sitio.
               </p>
             )}
 
@@ -439,7 +617,9 @@ export function ActivarNotificacionesPush() {
         <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
           <button
             type="button"
-            onClick={activar}
+            onClick={
+              activar
+            }
             disabled={
               cargando ||
               estado ===
