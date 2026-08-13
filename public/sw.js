@@ -16,6 +16,12 @@ self.addEventListener(
       data.titulo ??
       "AC911";
 
+    const url =
+      typeof data.url === "string" &&
+      data.url.trim()
+        ? data.url.trim()
+        : "/notificaciones";
+
     const opciones = {
       body:
         data.mensaje ??
@@ -25,13 +31,12 @@ self.addEventListener(
       badge:
         "/icons/icon-192.png",
       data: {
-        url:
-          data.url ??
-          "/notificaciones",
+        url,
       },
       tag:
-        data.url ??
-        "ac911-notificacion",
+        data.trabajoId
+          ? `ac911-trabajo-${data.trabajoId}`
+          : url,
       renotify:
         true,
     };
@@ -50,41 +55,44 @@ self.addEventListener(
   (event) => {
     event.notification.close();
 
-    const url =
-      event.notification.data
-        ?.url ??
+    const destino =
+      event.notification.data?.url ??
       "/notificaciones";
+
+    const urlDestino =
+      new URL(
+        destino,
+        self.location.origin,
+      ).href;
 
     event.waitUntil(
       clients
         .matchAll({
-          type:
-            "window",
-          includeUncontrolled:
-            true,
+          type: "window",
+          includeUncontrolled: true,
         })
         .then(
-          (
-            clientList,
+          async (
+            ventanas,
           ) => {
             for (
-              const client
-              of clientList
+              const ventana
+              of ventanas
             ) {
               if (
-                "focus" in
-                client
+                "navigate" in ventana &&
+                "focus" in ventana
               ) {
-                client.navigate(
-                  url,
+                await ventana.navigate(
+                  urlDestino,
                 );
 
-                return client.focus();
+                return ventana.focus();
               }
             }
 
             return clients.openWindow(
-              url,
+              urlDestino,
             );
           },
         ),
