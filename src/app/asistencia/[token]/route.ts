@@ -107,7 +107,7 @@ export async function GET(
     );
   }
 
-  const red = await validarRedAsistencia();
+  const red = await validarRedAsistencia(request);
 
   if (!red.autorizado) {
     return NextResponse.redirect(
