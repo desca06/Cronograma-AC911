@@ -8,7 +8,6 @@ import {
   sql,
 } from "drizzle-orm";
 
-import { ENV } from "@/config/env";
 import { db } from "@/db";
 import {
   asistencias,
@@ -53,8 +52,11 @@ function obtenerHoraGuatemala() {
   return `${valor("hour")}:${valor("minute")}:${valor("second")}`;
 }
 
-function crearUrlResultado(parametros: Record<string, string>) {
-  const url = new URL("/asistencia/resultado", ENV.appUrl);
+function crearUrlResultado(
+  request: Request,
+  parametros: Record<string, string>,
+) {
+  const url = new URL("/asistencia/resultado", request.url);
 
   for (const [clave, valor] of Object.entries(parametros)) {
     url.searchParams.set(clave, valor);
@@ -74,12 +76,16 @@ function convertirHoraAMinutos(hora: string) {
 function calcularMinutosExtra(horaSalida: string) {
   const salida = convertirHoraAMinutos(horaSalida);
   const salidaFija = convertirHoraAMinutos(HORA_SALIDA_FIJA);
+
   return Math.max(salida - salidaFija, 0);
 }
 
 function obtenerRangoMes(fecha: string) {
   const [anio, mes] = fecha.split("-").map(Number);
-  const ultimoDia = new Date(Date.UTC(anio, mes, 0)).getUTCDate();
+  const ultimoDia = new Date(
+    Date.UTC(anio, mes, 0),
+  ).getUTCDate();
+
   const prefijo = `${anio}-${String(mes).padStart(2, "0")}`;
 
   return {
@@ -100,18 +106,24 @@ export async function GET(
 
   if (!token || token.length < 32) {
     return NextResponse.redirect(
-      crearUrlResultado({
+      crearUrlResultado(request, {
         estado: "ERROR",
         mensaje: "El código QR no es válido.",
       }),
     );
   }
 
+  /*
+   * IMPORTANTE:
+   * La petición completa se pasa a validarRedAsistencia()
+   * para que pueda leer los headers que Vercel agrega con
+   * la IP pública real del dispositivo/red que escanea el QR.
+   */
   const red = await validarRedAsistencia(request);
 
   if (!red.autorizado) {
     return NextResponse.redirect(
-      crearUrlResultado({
+      crearUrlResultado(request, {
         estado: "RED_NO_AUTORIZADA",
         mensaje: red.motivo,
       }),
@@ -136,7 +148,7 @@ export async function GET(
 
   if (coincidencias.length !== 1) {
     return NextResponse.redirect(
-      crearUrlResultado({
+      crearUrlResultado(request, {
         estado: "ERROR",
         mensaje:
           coincidencias.length === 0
@@ -150,7 +162,7 @@ export async function GET(
 
   if (!empleado.activo) {
     return NextResponse.redirect(
-      crearUrlResultado({
+      crearUrlResultado(request, {
         estado: "ERROR",
         mensaje:
           "El empleado está inactivo y no puede registrar asistencia.",
@@ -162,6 +174,9 @@ export async function GET(
   const hora = obtenerHoraGuatemala();
 
   const resultado = await db.transaction(async (tx) => {
+    /*
+     * Evita dos marcaciones simultáneas para el mismo empleado.
+     */
     await tx.execute(
       sql`select pg_advisory_xact_lock(${empleado.id})`,
     );
@@ -181,9 +196,14 @@ export async function GET(
       )
       .limit(1);
 
+    /*
+     * PRIMER ESCANEO DEL DÍA = ENTRADA
+     */
     if (!registro) {
       const estadoEntrada =
-        hora > HORA_LIMITE_ENTRADA ? "TARDE" : "PRESENTE";
+        hora > HORA_LIMITE_ENTRADA
+          ? "TARDE"
+          : "PRESENTE";
 
       await tx.insert(asistencias).values({
         empleadoId: empleado.id,
@@ -208,12 +228,23 @@ export async function GET(
       };
     }
 
+    /*
+     * SEGUNDO ESCANEO = SALIDA.
+     * Se bloquea un doble escaneo accidental durante 2 minutos.
+     */
     if (!registro.horaSalida) {
       if (registro.horaEntrada) {
-        const entrada = new Date(`${fecha}T${registro.horaEntrada}`);
-        const ahora = new Date(`${fecha}T${hora}`);
+        const entrada = new Date(
+          `${fecha}T${registro.horaEntrada}`,
+        );
+
+        const ahora = new Date(
+          `${fecha}T${hora}`,
+        );
+
         const diferenciaMinutos =
-          (ahora.getTime() - entrada.getTime()) / 60000;
+          (ahora.getTime() - entrada.getTime()) /
+          60000;
 
         if (diferenciaMinutos < 2) {
           return {
@@ -225,8 +256,11 @@ export async function GET(
         }
       }
 
-      const minutosExtraPosibles = calcularMinutosExtra(hora);
-      const rangoMes = obtenerRangoMes(fecha);
+      const minutosExtraPosibles =
+        calcularMinutosExtra(hora);
+
+      const rangoMes =
+        obtenerRangoMes(fecha);
 
       const [resumenHorasExtra] = await tx
         .select({
@@ -240,28 +274,46 @@ export async function GET(
         .from(asistencias)
         .where(
           and(
-            eq(asistencias.empleadoId, empleado.id),
-            gte(asistencias.fecha, rangoMes.inicio),
-            lte(asistencias.fecha, rangoMes.fin),
-            ne(asistencias.id, registro.id),
+            eq(
+              asistencias.empleadoId,
+              empleado.id,
+            ),
+            gte(
+              asistencias.fecha,
+              rangoMes.inicio,
+            ),
+            lte(
+              asistencias.fecha,
+              rangoMes.fin,
+            ),
+            ne(
+              asistencias.id,
+              registro.id,
+            ),
           ),
         );
 
-      const minutosUtilizados = resumenHorasExtra?.utilizados ?? 0;
+      const minutosUtilizados =
+        resumenHorasExtra?.utilizados ?? 0;
+
       const limite = Math.max(
         empleado.limiteMinutosExtraMensuales ?? 0,
         0,
       );
+
       const minutosDisponibles = Math.max(
         limite - minutosUtilizados,
         0,
       );
+
       const minutosHoraExtra = Math.min(
         minutosExtraPosibles,
         minutosDisponibles,
       );
+
       const alcanzoLimite =
-        minutosExtraPosibles > minutosDisponibles;
+        minutosExtraPosibles >
+        minutosDisponibles;
 
       let observacion =
         "Entrada y salida registradas mediante código QR.";
@@ -272,7 +324,10 @@ export async function GET(
         )}.`;
       }
 
-      if (minutosExtraPosibles > 0 && minutosDisponibles === 0) {
+      if (
+        minutosExtraPosibles > 0 &&
+        minutosDisponibles === 0
+      ) {
         observacion +=
           " No se registraron horas extra porque el empleado ya alcanzó su límite mensual.";
       } else if (alcanzoLimite) {
@@ -287,7 +342,12 @@ export async function GET(
           minutosHoraExtra,
           observacion,
         })
-        .where(eq(asistencias.id, registro.id));
+        .where(
+          eq(
+            asistencias.id,
+            registro.id,
+          ),
+        );
 
       return {
         tipo: "SALIDA",
@@ -301,6 +361,9 @@ export async function GET(
       };
     }
 
+    /*
+     * Ya existe entrada y salida para hoy.
+     */
     return {
       tipo: "COMPLETA",
       hora: registro.horaSalida,
@@ -310,7 +373,7 @@ export async function GET(
   });
 
   return NextResponse.redirect(
-    crearUrlResultado({
+    crearUrlResultado(request, {
       estado: resultado.tipo,
       nombre: empleado.nombre,
       hora: resultado.hora ?? hora,
