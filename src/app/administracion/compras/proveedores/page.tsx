@@ -18,7 +18,7 @@ import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { db } from "@/db";
 import { proveedores } from "@/db/schema";
-import { requerirAdmin } from "@/lib/auth";
+import { requerirCompras } from "@/lib/auth";
 
 type PageProps = {
   searchParams: Promise<{
@@ -83,7 +83,7 @@ function obtenerEstiloTipo(tipo: string) {
 export default async function ProveedoresPage({
   searchParams,
 }: PageProps) {
-  await requerirAdmin();
+  await requerirCompras();
 
   const parametros = await searchParams;
 

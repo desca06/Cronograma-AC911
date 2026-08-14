@@ -12,7 +12,7 @@ import {
   type EstadoCotizacion,
   type TipoItemCotizacion,
 } from "@/db/schema";
-import { requerirAdmin } from "@/lib/auth";
+import { requerirCompras } from "@/lib/auth";
 import {
   cotizacionTrabajos,
 } from "@/db/schema-cotizacion-trabajo";
@@ -191,7 +191,7 @@ function generarCodigo(numero: number) {
 export async function crearCotizacion(
   formData: FormData,
 ) {
-  const sesion = await requerirAdmin();
+  const sesion = await requerirCompras();
 
   const clienteId = Number(
     formData.get("clienteId"),
@@ -385,7 +385,7 @@ export async function cambiarEstadoCotizacion(
   cotizacionId: number,
   nuevoEstado: EstadoCotizacion,
 ) {
-  await requerirAdmin();
+  await requerirCompras();
 
   const permitidos: EstadoCotizacion[] = [
     "PENDIENTE",
@@ -454,7 +454,7 @@ export async function cambiarEstadoCotizacion(
 export async function eliminarCotizacion(
   cotizacionId: number,
 ) {
-  await requerirAdmin();
+  await requerirCompras();
 
   const [cotizacion] = await db
     .select({

@@ -20,9 +20,16 @@ export async function AppShell({
 }: AppShellProps) {
   const sesion = await obtenerSesion();
 
+  const puedeVerNotificaciones = Boolean(
+    sesion &&
+      ["ADMIN", "SUPERVISOR", "TECNICO"].includes(
+        sesion.rol,
+      ),
+  );
+
   let notificacionesNoLeidas = 0;
 
-  if (sesion) {
+  if (sesion && puedeVerNotificaciones) {
     const [resultado] = await db
       .select({
         total: count(),
@@ -34,35 +41,21 @@ export async function AppShell({
             notificaciones.usuarioId,
             sesion.usuarioId,
           ),
-          eq(
-            notificaciones.leida,
-            false,
-          ),
+          eq(notificaciones.leida, false),
         ),
       )
       .limit(1);
 
-    notificacionesNoLeidas =
-      resultado?.total ?? 0;
+    notificacionesNoLeidas = resultado?.total ?? 0;
   }
 
   return (
     <div className="min-h-screen bg-slate-100 lg:grid lg:grid-cols-[270px_1fr]">
-
-      <MobileSidebar
-        rol={
-          sesion?.rol ?? ""
-        }
-      />
-
-      <Sidebar
-        rol={
-          sesion?.rol ?? ""
-        }
-      />
+      <MobileSidebar rol={sesion?.rol ?? ""} />
+      <Sidebar rol={sesion?.rol ?? ""} />
 
       <main className="relative min-w-0 bg-slate-100">
-        {sesion && (
+        {sesion && puedeVerNotificaciones && (
           <Link
             href="/notificaciones"
             aria-label={`Notificaciones: ${notificacionesNoLeidas} sin leer`}
@@ -71,11 +64,9 @@ export async function AppShell({
           >
             <Bell size={21} />
 
-            {notificacionesNoLeidas >
-              0 && (
+            {notificacionesNoLeidas > 0 && (
               <span className="absolute -right-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white ring-2 ring-white">
-                {notificacionesNoLeidas >
-                99
+                {notificacionesNoLeidas > 99
                   ? "99+"
                   : notificacionesNoLeidas}
               </span>

@@ -20,7 +20,7 @@ import {
   categoriasInventario,
   existenciasInventario,
 } from "@/db/schema";
-import { requerirAdmin } from "@/lib/auth";
+import { requerirInventario } from "@/lib/auth";
 import { cambiarEstadoArticulo } from "./actions";
 
 type PageProps = {
@@ -47,7 +47,7 @@ function formatearDinero(valorEnCentavos: number | null) {
 export default async function ArticulosPage({
   searchParams,
 }: PageProps) {
-  await requerirAdmin();
+  await requerirInventario();
 
   const parametros = await searchParams;
 

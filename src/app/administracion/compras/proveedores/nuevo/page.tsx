@@ -11,7 +11,7 @@ import {
 
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
-import { requerirAdmin } from "@/lib/auth";
+import { requerirCompras } from "@/lib/auth";
 
 import { crearProveedor } from "../actions";
 
@@ -34,7 +34,7 @@ const mensajesError: Record<string, string> = {
 export default async function NuevoProveedorPage({
   searchParams,
 }: PageProps) {
-  await requerirAdmin();
+  await requerirCompras();
 
   const parametros = await searchParams;
   const mensajeError = parametros.error

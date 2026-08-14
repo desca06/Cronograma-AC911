@@ -28,7 +28,7 @@ import {
   obtenerReporteCompras,
 } from "@/lib/reportes-compras";
 import {
-  requerirAdmin,
+  requerirReportes,
 } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -447,7 +447,7 @@ function LineChart({
 export default async function ReportesPage({
   searchParams,
 }: Props) {
-  await requerirAdmin();
+  await requerirReportes();
 
   const parametros =
     await searchParams;

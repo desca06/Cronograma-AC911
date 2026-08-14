@@ -16,7 +16,7 @@ import {
   categoriasInventario,
   existenciasInventario,
 } from "@/db/schema";
-import { requerirAdmin } from "@/lib/auth";
+import { requerirInventario } from "@/lib/auth";
 
 const RUTA_ARTICULOS =
   "/administracion/inventario/articulos";
@@ -84,7 +84,7 @@ function generarCodigo(id: number): string {
 export async function crearArticulo(
   formData: FormData,
 ) {
-  await requerirAdmin();
+  await requerirInventario();
 
   const nombre = obtenerTexto(formData, "nombre");
   const descripcion =
@@ -253,7 +253,7 @@ export async function editarArticulo(
   articuloId: number,
   formData: FormData,
 ) {
-  await requerirAdmin();
+  await requerirInventario();
 
   if (
     !Number.isInteger(articuloId) ||
@@ -403,7 +403,7 @@ export async function editarArticulo(
 export async function cambiarEstadoArticulo(
   articuloId: number,
 ) {
-  await requerirAdmin();
+  await requerirInventario();
 
   if (
     !Number.isInteger(articuloId) ||

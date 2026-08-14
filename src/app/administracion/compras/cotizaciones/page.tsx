@@ -19,7 +19,7 @@ import {
   clientes,
   cotizaciones,
 } from "@/db/schema";
-import { requerirAdmin } from "@/lib/auth";
+import { requerirCompras } from "@/lib/auth";
 import {
   cotizacionTrabajos,
 } from "@/db/schema-cotizacion-trabajo";
@@ -94,7 +94,7 @@ function obtenerEstiloEstado(estado: string) {
 export default async function CotizacionesPage({
   searchParams,
 }: PageProps) {
-  await requerirAdmin();
+  await requerirCompras();
 
   const parametros = await searchParams;
 

@@ -6,6 +6,8 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { requerirInventario } from "@/lib/auth";
+
 const RUTA_CATEGORIAS =
   "/administracion/inventario/categorias";
 
@@ -19,6 +21,7 @@ function obtenerTexto(
 export async function crearCategoria(
   formData: FormData,
 ) {
+  await requerirInventario();
   const nombre = obtenerTexto(formData, "nombre");
   const descripcion =
     obtenerTexto(formData, "descripcion") || null;
@@ -57,6 +60,7 @@ export async function editarCategoria(
   id: number,
   formData: FormData,
 ) {
+  await requerirInventario();
   const nombre = obtenerTexto(formData, "nombre");
   const descripcion =
     obtenerTexto(formData, "descripcion") || null;
@@ -108,6 +112,7 @@ export async function editarCategoria(
 export async function cambiarEstadoCategoria(
   id: number,
 ) {
+  await requerirInventario();
   if (!Number.isInteger(id) || id <= 0) {
     return;
   }

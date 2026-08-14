@@ -10,7 +10,7 @@ import {
 
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
-import { requerirAdmin } from "@/lib/auth";
+import { requerirCompras } from "@/lib/auth";
 
 const modulosCompras = [
   {
@@ -70,7 +70,7 @@ const modulosCompras = [
 export const dynamic = "force-dynamic";
 
 export default async function ComprasPage() {
-  await requerirAdmin();
+  await requerirCompras();
 
   return (
     <AppShell>

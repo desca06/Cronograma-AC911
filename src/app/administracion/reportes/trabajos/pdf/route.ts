@@ -16,7 +16,7 @@ import {
   obtenerReporteTrabajos,
 } from "@/lib/reportes-trabajos";
 import {
-  requerirAdmin,
+  requerirReportes,
 } from "@/lib/auth";
 
 export const runtime = "nodejs";
@@ -697,7 +697,7 @@ function dibujarPie(
 export async function GET(
   request: Request,
 ) {
-  await requerirAdmin();
+  await requerirReportes();
 
   const url =
     new URL(

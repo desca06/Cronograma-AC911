@@ -21,7 +21,7 @@ import {
   articulosInventario,
   movimientosInventario,
 } from "@/db/schema";
-import { requerirAdmin } from "@/lib/auth";
+import { requerirInventario } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -84,7 +84,7 @@ function formatearFecha(fecha: Date | string | null) {
 export default async function DetalleMovimientoInventarioPage({
   params,
 }: PageProps) {
-  await requerirAdmin();
+  await requerirInventario();
 
   const { id } = await params;
   const movimientoId = Number(id)

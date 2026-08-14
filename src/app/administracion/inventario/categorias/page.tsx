@@ -13,7 +13,7 @@ import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { db } from "@/db";
 import { categoriasInventario } from "@/db/schema";
-import { requerirAdmin } from "@/lib/auth";
+import { requerirInventario } from "@/lib/auth";
 import { cambiarEstadoCategoria } from "./actions";
 
 type PageProps = {
@@ -29,7 +29,7 @@ export const dynamic = "force-dynamic";
 export default async function CategoriasPage({
   searchParams,
 }: PageProps) {
-  await requerirAdmin();
+  await requerirInventario();
 
   const parametros = await searchParams;
 

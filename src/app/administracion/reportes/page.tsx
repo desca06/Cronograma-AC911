@@ -12,7 +12,7 @@ import {
   PageHeader,
 } from "@/components/page-header";
 import {
-  requerirAdmin,
+  requerirReportes,
 } from "@/lib/auth";
 
 export const dynamic =
@@ -50,7 +50,7 @@ const submodulos = [
 ];
 
 export default async function ReportesPage() {
-  await requerirAdmin();
+  await requerirReportes();
 
   return (
     <AppShell>

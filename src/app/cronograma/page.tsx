@@ -23,7 +23,7 @@ import {
   cronogramaNotas,
   trabajos,
 } from "@/db/schema";
-import { requerirAdmin } from "@/lib/auth";
+import { requerirCronograma } from "@/lib/auth";
 
 import { CalendarioEditable } from "./calendario-editable";
 
@@ -51,55 +51,42 @@ function normalizarMes(valor: string) {
 }
 
 function obtenerRangoMes(mes: string) {
-  const [anio, numeroMes] = mes
-    .split("-")
-    .map(Number);
-
+  const [anio, numeroMes] = mes.split("-").map(Number);
   const diasMes = new Date(
     Date.UTC(anio, numeroMes, 0),
   ).getUTCDate();
 
   return {
     fechaInicio: `${mes}-01`,
-    fechaFin: `${mes}-${String(
-      diasMes,
-    ).padStart(2, "0")}`,
+    fechaFin: `${mes}-${String(diasMes).padStart(2, "0")}`,
     diasMes,
   };
 }
 
 function formatearMes(mes: string) {
-  const [anio, numeroMes] = mes
-    .split("-")
-    .map(Number);
+  const [anio, numeroMes] = mes.split("-").map(Number);
 
-  const texto = new Intl.DateTimeFormat(
-    "es-GT",
-    {
-      month: "long",
-      year: "numeric",
-      timeZone: "UTC",
-    },
-  ).format(
-    new Date(
-      Date.UTC(
-        anio,
-        numeroMes - 1,
-        1,
-      ),
-    ),
+  const texto = new Intl.DateTimeFormat("es-GT", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(
+    new Date(Date.UTC(anio, numeroMes - 1, 1)),
   );
 
-  return (
-    texto.charAt(0).toUpperCase() +
-    texto.slice(1)
-  );
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
 export default async function CronogramaPage({
   searchParams,
 }: CronogramaPageProps) {
-  await requerirAdmin();
+  const sesion = await requerirCronograma();
+
+  const puedeGestionarTrabajos =
+    sesion.rol === "ADMIN" ||
+    sesion.rol === "SUPERVISOR";
+
+  const puedeEditarCronograma = sesion.rol === "ADMIN";
 
   const parametros = await searchParams;
 
@@ -108,16 +95,9 @@ export default async function CronogramaPage({
       ? parametros.mes
       : "";
 
-  const mesSeleccionado =
-    normalizarMes(mesParametro);
-
-  const {
-    fechaInicio,
-    fechaFin,
-    diasMes,
-  } = obtenerRangoMes(
-    mesSeleccionado,
-  );
+  const mesSeleccionado = normalizarMes(mesParametro);
+  const { fechaInicio, fechaFin, diasMes } =
+    obtenerRangoMes(mesSeleccionado);
 
   const listaTrabajos = await db
     .select({
@@ -130,85 +110,56 @@ export default async function CronogramaPage({
     .from(trabajos)
     .innerJoin(
       clientes,
-      eq(
-        trabajos.clienteId,
-        clientes.id,
-      ),
+      eq(trabajos.clienteId, clientes.id),
     )
     .where(
       and(
-        gte(
-          trabajos.fecha,
-          fechaInicio,
-        ),
-        lte(
-          trabajos.fecha,
-          fechaFin,
-        ),
+        gte(trabajos.fecha, fechaInicio),
+        lte(trabajos.fecha, fechaFin),
       ),
     )
-    .orderBy(
-      asc(trabajos.fecha),
-      asc(trabajos.id),
-    );
+    .orderBy(asc(trabajos.fecha), asc(trabajos.id));
 
   const notas = await db
     .select({
       id: cronogramaNotas.id,
       fecha: cronogramaNotas.fecha,
       contenido: cronogramaNotas.contenido,
-      importancia:
-        cronogramaNotas.importancia,
-      actualizadoEn:
-        cronogramaNotas.actualizadoEn,
+      importancia: cronogramaNotas.importancia,
+      actualizadoEn: cronogramaNotas.actualizadoEn,
     })
     .from(cronogramaNotas)
     .where(
       and(
-        gte(
-          cronogramaNotas.fecha,
-          fechaInicio,
-        ),
-        lte(
-          cronogramaNotas.fecha,
-          fechaFin,
-        ),
+        gte(cronogramaNotas.fecha, fechaInicio),
+        lte(cronogramaNotas.fecha, fechaFin),
       ),
     )
-    .orderBy(
-      asc(cronogramaNotas.fecha),
-    );
+    .orderBy(asc(cronogramaNotas.fecha));
 
-  const totalPendientes =
-    listaTrabajos.filter(
-      (trabajo) =>
-        trabajo.estado === "Pendiente",
-    ).length;
+  const totalPendientes = listaTrabajos.filter(
+    (trabajo) => trabajo.estado === "Pendiente",
+  ).length;
 
-  const totalEnProceso =
-    listaTrabajos.filter(
-      (trabajo) =>
-        trabajo.estado === "En proceso" ||
-        trabajo.estado === "En camino",
-    ).length;
+  const totalEnProceso = listaTrabajos.filter(
+    (trabajo) =>
+      trabajo.estado === "En proceso" ||
+      trabajo.estado === "En camino",
+  ).length;
 
-  const totalFinalizados =
-    listaTrabajos.filter(
-      (trabajo) =>
-        trabajo.estado === "Finalizado",
-    ).length;
+  const totalFinalizados = listaTrabajos.filter(
+    (trabajo) => trabajo.estado === "Finalizado",
+  ).length;
 
-  const totalUrgentes =
-    notas.filter(
-      (nota) =>
-        nota.importancia === "URGENTE",
-    ).length;
+  const totalUrgentes = notas.filter(
+    (nota) => nota.importancia === "URGENTE",
+  ).length;
 
   return (
     <AppShell>
       <PageHeader
         title="Cronograma mensual"
-        description={`Organiza y edita la programación de ${formatearMes(
+        description={`Organiza y consulta la programación de ${formatearMes(
           mesSeleccionado,
         )}.`}
       />
@@ -232,9 +183,7 @@ export default async function CronogramaPage({
                   id="mes"
                   name="mes"
                   type="month"
-                  defaultValue={
-                    mesSeleccionado
-                  }
+                  defaultValue={mesSeleccionado}
                   className="form-control w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 sm:w-52"
                 />
               </div>
@@ -257,29 +206,33 @@ export default async function CronogramaPage({
             </form>
 
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Link
-                href="/cronograma/cemaco"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-5 py-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
-              >
-                <CalendarDays size={17} />
-                Calendario CEMACO
-              </Link>
+              {puedeGestionarTrabajos && (
+                <>
+                  <Link
+                    href="/cronograma/cemaco"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-5 py-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                  >
+                    <CalendarDays size={17} />
+                    Calendario CEMACO
+                  </Link>
 
-              <Link
-                href="/trabajos-asignados"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-300 bg-blue-50 px-5 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
-              >
-                <CalendarDays size={17} />
-                Trabajos asignados
-              </Link>
+                  <Link
+                    href="/trabajos-asignados"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-300 bg-blue-50 px-5 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
+                  >
+                    <CalendarDays size={17} />
+                    Trabajos asignados
+                  </Link>
 
-              <Link
-                href="/trabajos/nuevo"
-                className="btn btn-primary inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
-              >
-                <Plus size={17} />
-                Crear trabajo
-              </Link>
+                  <Link
+                    href="/trabajos/nuevo"
+                    className="btn btn-primary inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                  >
+                    <Plus size={17} />
+                    Crear trabajo
+                  </Link>
+                </>
+              )}
 
               <Link
                 href="/dashboard"
@@ -298,13 +251,8 @@ export default async function CronogramaPage({
               <p className="text-sm font-medium text-slate-500">
                 Trabajos programados
               </p>
-
-              <CalendarDays
-                size={21}
-                className="text-blue-600"
-              />
+              <CalendarDays size={21} className="text-blue-600" />
             </div>
-
             <p className="mt-2 text-3xl font-bold text-slate-900">
               {listaTrabajos.length}
             </p>
@@ -315,10 +263,8 @@ export default async function CronogramaPage({
               <p className="text-sm font-medium text-blue-700">
                 Pendientes
               </p>
-
               <Clock3 size={21} />
             </div>
-
             <p className="mt-2 text-3xl font-bold text-blue-900">
               {totalPendientes}
             </p>
@@ -329,10 +275,8 @@ export default async function CronogramaPage({
               <p className="text-sm font-medium text-amber-700">
                 En camino o proceso
               </p>
-
               <TriangleAlert size={21} />
             </div>
-
             <p className="mt-2 text-3xl font-bold text-amber-900">
               {totalEnProceso}
             </p>
@@ -343,10 +287,8 @@ export default async function CronogramaPage({
               <p className="text-sm font-medium text-emerald-700">
                 Finalizados
               </p>
-
               <CheckCircle2 size={21} />
             </div>
-
             <p className="mt-2 text-3xl font-bold text-emerald-900">
               {totalFinalizados}
             </p>
@@ -357,10 +299,8 @@ export default async function CronogramaPage({
               <p className="text-sm font-medium text-red-700">
                 Alertas urgentes
               </p>
-
               <TriangleAlert size={21} />
             </div>
-
             <p className="mt-2 text-3xl font-bold text-red-900">
               {totalUrgentes}
             </p>
@@ -373,6 +313,8 @@ export default async function CronogramaPage({
           diasMes={diasMes}
           notasIniciales={notas}
           trabajos={listaTrabajos}
+          puedeEditar={puedeEditarCronograma}
+          puedeAbrirTrabajos={puedeGestionarTrabajos}
         />
       </section>
     </AppShell>

@@ -15,7 +15,7 @@ import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { db } from "@/db";
 import { proveedores } from "@/db/schema";
-import { requerirAdmin } from "@/lib/auth";
+import { requerirCompras } from "@/lib/auth";
 
 import { actualizarProveedor } from "../../actions";
 
@@ -45,7 +45,7 @@ export default async function EditarProveedorPage({
   params,
   searchParams,
 }: PageProps) {
-  await requerirAdmin();
+  await requerirCompras();
 
   const { id } = await params;
   const parametros = await searchParams;

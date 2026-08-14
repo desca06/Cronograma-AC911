@@ -6,7 +6,7 @@ import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { db } from "@/db";
 import { proveedores } from "@/db/schema";
-import { requerirAdmin } from "@/lib/auth";
+import { requerirCompras } from "@/lib/auth";
 
 import { FormularioOrdenCompra } from "./formulario-orden-compra";
 
@@ -29,7 +29,7 @@ const mensajesError: Record<string, string> = {
 export default async function NuevaOrdenCompraPage({
   searchParams,
 }: Props) {
-  await requerirAdmin();
+  await requerirCompras();
 
   const parametros = await searchParams;
 

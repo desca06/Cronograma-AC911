@@ -14,15 +14,12 @@ const IMPORTANCIAS = [
   "URGENTE",
 ] as const;
 
-type Importancia =
-  (typeof IMPORTANCIAS)[number];
+type Importancia = (typeof IMPORTANCIAS)[number];
 
 function esImportanciaValida(
   valor: string,
 ): valor is Importancia {
-  return IMPORTANCIAS.includes(
-    valor as Importancia,
-  );
+  return IMPORTANCIAS.includes(valor as Importancia);
 }
 
 function esFechaValida(fecha: string) {
@@ -36,14 +33,10 @@ export async function guardarNotaCalendario(
 ) {
   await requerirAdmin();
 
-  const fecha = String(
-    formData.get("fecha") ?? "",
-  ).trim();
-
+  const fecha = String(formData.get("fecha") ?? "").trim();
   const contenido = String(
     formData.get("contenido") ?? "",
   ).trim();
-
   const importancia = String(
     formData.get("importancia") ?? "",
   ).trim();
@@ -74,8 +67,7 @@ export async function guardarNotaCalendario(
   if (contenido.length > 2000) {
     return {
       ok: false,
-      mensaje:
-        "El contenido supera el límite permitido.",
+      mensaje: "El contenido supera el límite permitido.",
     };
   }
 
@@ -112,9 +104,7 @@ export async function eliminarNotaCalendario(
 ) {
   await requerirAdmin();
 
-  const fecha = String(
-    formData.get("fecha") ?? "",
-  ).trim();
+  const fecha = String(formData.get("fecha") ?? "").trim();
 
   if (!esFechaValida(fecha)) {
     return {
@@ -125,12 +115,7 @@ export async function eliminarNotaCalendario(
 
   await db
     .delete(cronogramaNotas)
-    .where(
-      eq(
-        cronogramaNotas.fecha,
-        fecha,
-      ),
-    );
+    .where(eq(cronogramaNotas.fecha, fecha));
 
   revalidatePath("/cronograma");
 

@@ -17,7 +17,7 @@ import {
   articulosInventario,
   categoriasInventario,
 } from "@/db/schema";
-import { requerirAdmin } from "@/lib/auth";
+import { requerirInventario } from "@/lib/auth";
 import { editarArticulo } from "@/app/administracion/inventario/articulos/actions";
 
 type PageProps = {
@@ -47,7 +47,7 @@ export default async function EditarArticuloPage({
   params,
   searchParams,
 }: PageProps) {
-  await requerirAdmin();
+  await requerirInventario();
 
   const { id } = await params;
   const parametros = await searchParams;

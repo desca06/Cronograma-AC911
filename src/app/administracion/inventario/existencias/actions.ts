@@ -11,7 +11,7 @@ import {
   movimientosInventario,
   type TipoMovimientoInventario,
 } from "@/db/schema";
-import { requerirAdmin } from "@/lib/auth";
+import { requerirInventario } from "@/lib/auth";
 
 type DatosMovimiento = {
   articuloId: number;
@@ -183,7 +183,7 @@ async function procesarMovimiento(
   tipoMovimiento: TipoMovimientoInventario,
   formData: FormData,
 ): Promise<ResultadoMovimiento> {
-  const sesion = await requerirAdmin();
+  const sesion = await requerirInventario();
   const usuarioId = obtenerUsuarioId(sesion);
 
   const datos = obtenerDatosMovimiento(formData);

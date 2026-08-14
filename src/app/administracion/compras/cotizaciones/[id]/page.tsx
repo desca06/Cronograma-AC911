@@ -29,7 +29,7 @@ import {
 import {
   cotizacionTrabajos,
 } from "@/db/schema-cotizacion-trabajo";
-import { requerirAdmin } from "@/lib/auth";
+import { requerirCompras } from "@/lib/auth";
 
 import {
   cambiarEstadoCotizacion,
@@ -141,7 +141,7 @@ export default async function DetalleCotizacionPage({
   params,
   searchParams,
 }: PageProps) {
-  await requerirAdmin();
+  await requerirCompras();
 
   const { id } = await params;
   const parametros = await searchParams;

@@ -3,8 +3,14 @@ import { redirect } from "next/navigation";
 import { jwtVerify, SignJWT } from "jose";
 
 const COOKIE_NAME = "control_trabajos_session";
-
 const duracionSesionSegundos = 60 * 60 * 8;
+
+export type RolUsuario =
+  | "ADMIN"
+  | "SUPERVISOR"
+  | "TECNICO"
+  | "COTIZADORA"
+  | "BODEGA";
 
 function obtenerClaveSecreta(): Uint8Array {
   const clave = process.env.SESSION_SECRET;
@@ -38,9 +44,7 @@ export async function crearSesion(
     correo: datos.correo,
     rol: datos.rol,
   })
-    .setProtectedHeader({
-      alg: "HS256",
-    })
+    .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(
       Math.floor(expiraEn.getTime() / 1000),
@@ -60,9 +64,7 @@ export async function crearSesion(
 
 export async function obtenerSesion(): Promise<DatosSesion | null> {
   const almacenamientoCookies = await cookies();
-
-  const token =
-    almacenamientoCookies.get(COOKIE_NAME)?.value;
+  const token = almacenamientoCookies.get(COOKIE_NAME)?.value;
 
   if (!token) {
     return null;
@@ -74,21 +76,10 @@ export async function obtenerSesion(): Promise<DatosSesion | null> {
       obtenerClaveSecreta(),
     );
 
-    const usuarioId = Number(
-      resultado.payload.usuarioId,
-    );
-
-    const nombre = String(
-      resultado.payload.nombre ?? "",
-    );
-
-    const correo = String(
-      resultado.payload.correo ?? "",
-    );
-
-    const rol = String(
-      resultado.payload.rol ?? "",
-    );
+    const usuarioId = Number(resultado.payload.usuarioId);
+    const nombre = String(resultado.payload.nombre ?? "");
+    const correo = String(resultado.payload.correo ?? "");
+    const rol = String(resultado.payload.rol ?? "");
 
     if (
       !Number.isInteger(usuarioId) ||
@@ -123,20 +114,21 @@ export async function requerirSesion(): Promise<DatosSesion> {
 
 export async function eliminarSesion(): Promise<void> {
   const almacenamientoCookies = await cookies();
+  almacenamientoCookies.delete(COOKIE_NAME);
+}
 
-  almacenamientoCookies.delete(
-    "control_trabajos_session",
-  );
+function tieneRol(
+  rol: string,
+  rolesPermitidos: readonly string[],
+) {
+  return rolesPermitidos.includes(rol);
 }
 
 export async function requerirSupervisor(): Promise<DatosSesion> {
   const sesion = await requerirSesion();
 
-  if (
-    sesion.rol !== "SUPERVISOR" &&
-    sesion.rol !== "ADMIN"
-  ) {
-    redirect("/mis-trabajos");
+  if (!tieneRol(sesion.rol, ["SUPERVISOR", "ADMIN"])) {
+    redirect("/dashboard");
   }
 
   return sesion;
@@ -150,4 +142,66 @@ export async function requerirAdmin(): Promise<DatosSesion> {
   }
 
   return sesion;
-} 
+}
+
+export async function requerirAdministracion(): Promise<DatosSesion> {
+  const sesion = await requerirSesion();
+
+  if (
+    !tieneRol(sesion.rol, [
+      "ADMIN",
+      "COTIZADORA",
+      "BODEGA",
+    ])
+  ) {
+    redirect("/dashboard");
+  }
+
+  return sesion;
+}
+
+export async function requerirCompras(): Promise<DatosSesion> {
+  const sesion = await requerirSesion();
+
+  if (!tieneRol(sesion.rol, ["ADMIN", "COTIZADORA"])) {
+    redirect("/dashboard");
+  }
+
+  return sesion;
+}
+
+export async function requerirInventario(): Promise<DatosSesion> {
+  const sesion = await requerirSesion();
+
+  if (!tieneRol(sesion.rol, ["ADMIN", "BODEGA"])) {
+    redirect("/dashboard");
+  }
+
+  return sesion;
+}
+
+export async function requerirReportes(): Promise<DatosSesion> {
+  const sesion = await requerirSesion();
+
+  if (!tieneRol(sesion.rol, ["ADMIN", "COTIZADORA"])) {
+    redirect("/dashboard");
+  }
+
+  return sesion;
+}
+
+export async function requerirCronograma(): Promise<DatosSesion> {
+  const sesion = await requerirSesion();
+
+  if (
+    !tieneRol(sesion.rol, [
+      "ADMIN",
+      "SUPERVISOR",
+      "COTIZADORA",
+    ])
+  ) {
+    redirect("/dashboard");
+  }
+
+  return sesion;
+}

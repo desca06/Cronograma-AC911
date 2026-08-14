@@ -17,7 +17,7 @@ import {
   formatearFechaReporte,
   obtenerReporteCompras,
 } from "@/lib/reportes-compras";
-import { requerirAdmin } from "@/lib/auth";
+import { requerirReportes } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -1287,7 +1287,7 @@ function drawOrderRow(
 export async function GET(
   request: Request,
 ) {
-  await requerirAdmin();
+  await requerirReportes();
 
   const url =
     new URL(request.url);

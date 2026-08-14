@@ -27,7 +27,7 @@ import {
   obtenerReporteTrabajos,
 } from "@/lib/reportes-trabajos";
 import {
-  requerirAdmin,
+  requerirReportes,
 } from "@/lib/auth";
 
 export const dynamic =
@@ -300,7 +300,7 @@ function claseEstado(
 export default async function ReporteTrabajosPage({
   searchParams,
 }: Props) {
-  await requerirAdmin();
+  await requerirReportes();
 
   const parametros =
     await searchParams;

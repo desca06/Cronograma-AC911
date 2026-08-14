@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import {
   BriefcaseBusiness,
   CarFront,
@@ -38,43 +38,36 @@ function obtenerFechaHoy(): string {
 }
 
 export default async function DashboardPage() {
-  /*
-   * Verifica que exista una sesión.
-   * Los técnicos no pueden entrar al dashboard administrativo.
-   */
   const sesion = await requerirSesion();
 
   if (sesion.rol === "TECNICO") {
     redirect("/mis-trabajos");
   }
 
+  const puedeGestionarTrabajos =
+    sesion.rol === "ADMIN" ||
+    sesion.rol === "SUPERVISOR";
+
+  const puedeVerCronograma =
+    sesion.rol === "ADMIN" ||
+    sesion.rol === "SUPERVISOR" ||
+    sesion.rol === "COTIZADORA";
+
   const fechaHoy = obtenerFechaHoy();
 
-  /*
-   * Empleados activos
-   */
   const empleadosActivos = await db
-    .select({
-      id: empleados.id,
-    })
+    .select({ id: empleados.id })
     .from(empleados)
-    .where(eq(empleados.activo, true))
-;
+    .where(eq(empleados.activo, true));
 
-  /*
-   * Vehículos activos
-   */
-const vehiculosActivos = await db
-  .select({
-    id: vehiculos.id,
-    estado: vehiculos.estado,
-  })
-  .from(vehiculos)
-  .where(eq(vehiculos.activo, true));;
+  const vehiculosActivos = await db
+    .select({
+      id: vehiculos.id,
+      estado: vehiculos.estado,
+    })
+    .from(vehiculos)
+    .where(eq(vehiculos.activo, true));
 
-  /*
-   * Trabajos programados para hoy
-   */
   const listaTrabajosHoy = await db
     .select({
       id: trabajos.id,
@@ -87,24 +80,11 @@ const vehiculosActivos = await db
       vehiculoNombre: vehiculos.nombre,
     })
     .from(trabajos)
-    .innerJoin(
-      clientes,
-      eq(trabajos.clienteId, clientes.id),
-    )
-    .leftJoin(
-      vehiculos,
-      eq(trabajos.vehiculoId, vehiculos.id),
-    )
+    .innerJoin(clientes, eq(trabajos.clienteId, clientes.id))
+    .leftJoin(vehiculos, eq(trabajos.vehiculoId, vehiculos.id))
     .where(eq(trabajos.fecha, fechaHoy))
-    .orderBy(
-      asc(trabajos.horaInicio),
-      asc(trabajos.id),
-    )
-;
+    .orderBy(asc(trabajos.horaInicio), asc(trabajos.id));
 
-  /*
-   * Empleados asignados a los trabajos
-   */
   const asignaciones = await db
     .select({
       trabajoId: trabajoEmpleados.trabajoId,
@@ -114,83 +94,79 @@ const vehiculosActivos = await db
     .innerJoin(
       empleados,
       eq(trabajoEmpleados.empleadoId, empleados.id),
-    )
-;
-
-  const empleadosPorTrabajo =
-    asignaciones.reduce<Record<number, string[]>>(
-      (resultado, asignacion) => {
-        if (!resultado[asignacion.trabajoId]) {
-          resultado[asignacion.trabajoId] = [];
-        }
-
-        resultado[asignacion.trabajoId].push(
-          asignacion.empleadoNombre,
-        );
-
-        return resultado;
-      },
-      {},
     );
 
-  const trabajosFinalizados =
-    listaTrabajosHoy.filter(
-      (trabajo) =>
-        trabajo.estado === "Finalizado",
-    ).length;
+  const empleadosPorTrabajo = asignaciones.reduce<
+    Record<number, string[]>
+  >((resultado, asignacion) => {
+    if (!resultado[asignacion.trabajoId]) {
+      resultado[asignacion.trabajoId] = [];
+    }
 
-  const vehiculosDisponibles =
-  vehiculosActivos.filter(
+    resultado[asignacion.trabajoId].push(
+      asignacion.empleadoNombre,
+    );
+
+    return resultado;
+  }, {});
+
+  const trabajosFinalizados = listaTrabajosHoy.filter(
+    (trabajo) => trabajo.estado === "Finalizado",
+  ).length;
+
+  const vehiculosDisponibles = vehiculosActivos.filter(
     (vehiculo) => vehiculo.estado === "Disponible",
   ).length;
-  
+
   return (
     <AppShell>
       <PageHeader
         title="Dashboard"
         description={`Bienvenido, ${sesion.nombre}. Resumen general de las operaciones del día`}
         action={
-          <a
-            href="/trabajos"
-            className="mt-14 md:mt-12 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white"
-          >
-            + Nuevo trabajo
-          </a>
+          puedeGestionarTrabajos ? (
+            <a
+              href="/trabajos"
+              className="mt-14 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white md:mt-12"
+            >
+              + Nuevo trabajo
+            </a>
+          ) : undefined
         }
       />
 
       <section className="space-y-6 p-5 md:p-8">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
-              label="Trabajos hoy"
-              value={listaTrabajosHoy.length}
-              helper="Programados para hoy"
-              icon={BriefcaseBusiness}
-              color="blue"
+            label="Trabajos hoy"
+            value={listaTrabajosHoy.length}
+            helper="Programados para hoy"
+            icon={BriefcaseBusiness}
+            color="blue"
           />
 
           <StatCard
-              label="Empleados activos"
-              value={empleadosActivos.length}
-              helper="Disponibles"
-              icon={UsersRound}
-              color="purple"
+            label="Empleados activos"
+            value={empleadosActivos.length}
+            helper="Disponibles"
+            icon={UsersRound}
+            color="purple"
           />
 
           <StatCard
-              label="Vehículos"
-              value={vehiculosDisponibles}
-              helper="Disponibles"
-              icon={CarFront}
-              color="amber"
+            label="Vehículos"
+            value={vehiculosDisponibles}
+            helper="Disponibles"
+            icon={CarFront}
+            color="amber"
           />
 
           <StatCard
-              label="Finalizados"
-              value={trabajosFinalizados}
-              helper="Completados hoy"
-              icon={CheckCircle2}
-              color="green"
+            label="Finalizados"
+            value={trabajosFinalizados}
+            helper="Completados hoy"
+            icon={CheckCircle2}
+            color="green"
           />
         </div>
 
@@ -200,18 +176,19 @@ const vehiculosActivos = await db
               <h2 className="font-bold text-slate-900">
                 Trabajos del día
               </h2>
-
               <p className="text-sm text-slate-500">
                 Asignaciones y estado actual
               </p>
             </div>
 
-            <a
-              href="/cronograma"
-              className="text-sm font-semibold text-blue-700 hover:underline"
-            >
-              Ver cronograma completo
-            </a>
+            {puedeVerCronograma && (
+              <a
+                href="/cronograma"
+                className="text-sm font-semibold text-blue-700 hover:underline"
+              >
+                Ver cronograma completo
+              </a>
+            )}
           </div>
 
           {listaTrabajosHoy.length === 0 ? (
@@ -219,109 +196,79 @@ const vehiculosActivos = await db
               <h3 className="font-bold text-slate-900">
                 No hay trabajos programados hoy
               </h3>
-
               <p className="mt-2 text-sm text-slate-500">
-                Crea un trabajo nuevo para que aparezca
-                en el dashboard.
+                No hay asignaciones programadas para la fecha de hoy.
               </p>
 
-              <a
-                href="/trabajos"
-                className="mt-5 inline-block rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700"
-              >
-                Crear trabajo
-              </a>
+              {puedeGestionarTrabajos && (
+                <a
+                  href="/trabajos"
+                  className="mt-5 inline-block rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700"
+                >
+                  Crear trabajo
+                </a>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[900px] text-left text-sm">
                 <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                   <tr>
-                    <th className="px-5 py-4">
-                      Cliente
-                    </th>
-
-                    <th className="px-5 py-4">
-                      Trabajo
-                    </th>
-
-                    <th className="px-5 py-4">
-                      Equipo
-                    </th>
-
-                    <th className="px-5 py-4">
-                      Vehículo
-                    </th>
-
-                    <th className="px-5 py-4">
-                      Hora
-                    </th>
-
-                    <th className="px-5 py-4">
-                      Estado
-                    </th>
+                    <th className="px-5 py-4">Cliente</th>
+                    <th className="px-5 py-4">Trabajo</th>
+                    <th className="px-5 py-4">Equipo</th>
+                    <th className="px-5 py-4">Vehículo</th>
+                    <th className="px-5 py-4">Hora</th>
+                    <th className="px-5 py-4">Estado</th>
                   </tr>
                 </thead>
 
                 <tbody className="divide-y divide-slate-100">
-                  {listaTrabajosHoy.map(
-                    (trabajo) => (
-                      <tr
-                        key={trabajo.id}
-                        className="hover:bg-slate-50"
-                      >
-                        <td className="px-5 py-4">
-                          <p className="font-semibold text-slate-900">
-                            {trabajo.clienteNombre}
-                          </p>
+                  {listaTrabajosHoy.map((trabajo) => (
+                    <tr key={trabajo.id} className="hover:bg-slate-50">
+                      <td className="px-5 py-4">
+                        <p className="font-semibold text-slate-900">
+                          {trabajo.clienteNombre}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          Orden #{trabajo.id}
+                        </p>
+                      </td>
 
-                          <p className="text-xs text-slate-500">
-                            Orden #{trabajo.id}
-                          </p>
-                        </td>
+                      <td className="px-5 py-4">
+                        <p className="font-medium text-slate-800">
+                          {trabajo.tipo}
+                        </p>
+                        <p className="max-w-xs truncate text-xs text-slate-500">
+                          {trabajo.descripcion}
+                        </p>
+                      </td>
 
-                        <td className="px-5 py-4">
-                          <p className="font-medium text-slate-800">
-                            {trabajo.tipo}
-                          </p>
+                      <td className="px-5 py-4 text-slate-700">
+                        {empleadosPorTrabajo[trabajo.id]?.join(", ") ||
+                          "Sin empleados"}
+                      </td>
 
-                          <p className="max-w-xs truncate text-xs text-slate-500">
-                            {trabajo.descripcion}
-                          </p>
-                        </td>
+                      <td className="px-5 py-4 font-medium text-slate-700">
+                        {trabajo.vehiculoNombre || "Sin vehículo"}
+                      </td>
 
-                        <td className="px-5 py-4 text-slate-700">
-                          {empleadosPorTrabajo[
-                            trabajo.id
-                          ]?.join(", ") ||
-                            "Sin empleados"}
-                        </td>
+                      <td className="px-5 py-4 text-slate-700">
+                        {trabajo.horaInicio || "Sin definir"}
+                      </td>
 
-                        <td className="px-5 py-4 font-medium text-slate-700">
-                          {trabajo.vehiculoNombre ||
-                            "Sin vehículo"}
-                        </td>
-
-                        <td className="px-5 py-4 text-slate-700">
-                          {trabajo.horaInicio ||
-                            "Sin definir"}
-                        </td>
-
-                        <td className="px-5 py-4">
-                          <span
-                            className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                              coloresEstado[
-                                trabajo.estado
-                              ] ??
-                              "bg-slate-100 text-slate-700"
-                            }`}
-                          >
-                            {trabajo.estado}
-                          </span>
-                        </td>
-                      </tr>
-                    ),
-                  )}
+                      <td className="px-5 py-4">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                            coloresEstado[trabajo.estado] ??
+                            "bg-slate-100 text-slate-700"
+                          }`}
+                        >
+                          {trabajo.estado}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

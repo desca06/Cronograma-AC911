@@ -9,7 +9,7 @@ import {
   proveedores,
   type TipoProveedor,
 } from "@/db/schema";
-import { requerirAdmin } from "@/lib/auth";
+import { requerirCompras } from "@/lib/auth";
 
 const RUTA_PROVEEDORES =
   "/administracion/compras/proveedores";
@@ -65,7 +65,7 @@ function generarCodigo(numero: number): string {
 export async function crearProveedor(
   formData: FormData,
 ): Promise<never> {
-  await requerirAdmin();
+  await requerirCompras();
 
   const nombreComercial = obtenerTexto(
     formData,
@@ -220,7 +220,7 @@ export async function actualizarProveedor(
   proveedorId: number,
   formData: FormData,
 ): Promise<never> {
-  await requerirAdmin();
+  await requerirCompras();
 
   if (
     !Number.isInteger(proveedorId) ||
@@ -367,7 +367,7 @@ export async function actualizarProveedor(
 export async function eliminarProveedor(
   proveedorId: number,
 ): Promise<never> {
-  await requerirAdmin();
+  await requerirCompras();
 
   if (
     !Number.isInteger(proveedorId) ||

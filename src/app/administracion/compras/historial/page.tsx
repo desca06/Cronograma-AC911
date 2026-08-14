@@ -25,7 +25,7 @@ import {
   proveedores,
   usuarios,
 } from "@/db/schema";
-import { requerirAdmin } from "@/lib/auth";
+import { requerirCompras } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -110,7 +110,7 @@ function horaGuatemala(fecha: Date) {
 export default async function HistorialComprasPage({
   searchParams,
 }: Props) {
-  await requerirAdmin();
+  await requerirCompras();
 
   const parametros = await searchParams;
 

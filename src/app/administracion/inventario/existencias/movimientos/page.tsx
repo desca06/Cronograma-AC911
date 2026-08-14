@@ -16,7 +16,7 @@ import {
   articulosInventario,
   movimientosInventario,
 } from "@/db/schema";
-import { requerirAdmin } from "@/lib/auth";
+import { requerirInventario } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +60,7 @@ function obtenerEstiloMovimiento(tipo: string) {
 }
 
 export default async function MovimientosInventarioPage() {
-  await requerirAdmin();
+  await requerirInventario();
 
   const movimientos = await db
     .select({

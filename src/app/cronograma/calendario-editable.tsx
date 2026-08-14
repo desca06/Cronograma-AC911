@@ -49,6 +49,8 @@ type Props = {
   diasMes: number;
   notasIniciales: NotaInicial[];
   trabajos: TrabajoCalendario[];
+  puedeEditar: boolean;
+  puedeAbrirTrabajos: boolean;
 };
 
 type EstadoNota = {
@@ -322,6 +324,8 @@ export function CalendarioEditable({
   diasMes,
   notasIniciales,
   trabajos,
+  puedeEditar,
+  puedeAbrirTrabajos,
 }: Props) {
   const router =
     useRouter();
@@ -462,6 +466,10 @@ export function CalendarioEditable({
   function abrir(
     fecha: string,
   ) {
+    if (!puedeEditar) {
+      return;
+    }
+
     const nota =
       notas[fecha];
 
@@ -626,7 +634,9 @@ export function CalendarioEditable({
               </h2>
 
               <p className="mt-1 text-sm text-slate-500">
-                Los trabajos azules, amarillos, verdes o rojos son clickeables y abren Trabajos asignados.
+                {puedeEditar
+                  ? "Puedes editar actividades del calendario y consultar los trabajos programados."
+                  : "Vista de consulta del cronograma y actividades programadas."}
               </p>
             </div>
 
@@ -737,7 +747,7 @@ export function CalendarioEditable({
                         <button
                           type="button"
                           disabled={
-                            !celda.perteneceAlMes
+                            !celda.perteneceAlMes || !puedeEditar
                           }
                           onClick={() =>
                             abrir(
@@ -757,7 +767,7 @@ export function CalendarioEditable({
                           }
                         </button>
 
-                        {celda.perteneceAlMes && (
+                        {celda.perteneceAlMes && puedeEditar && (
                           <button
                             type="button"
                             onClick={() =>
@@ -785,29 +795,40 @@ export function CalendarioEditable({
                               );
 
                             return (
-                              <Link
-                                key={`trabajo-${trabajo.id}`}
-                                href={`/trabajos-asignados?trabajoId=${trabajo.id}#trabajo-${trabajo.id}`}
-                                title={`${trabajo.tipo} - ${trabajo.estado}`}
-                                className="flex items-start gap-1.5 rounded px-1 py-0.5 text-[11px] leading-4 transition hover:bg-blue-50"
-                              >
-                                <span
-                                  className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${e.punto}`}
-                                />
-
-                                <span
-                                  className={`min-w-0 truncate font-medium ${e.texto}`}
+                              puedeAbrirTrabajos ? (
+                                <Link
+                                  key={`trabajo-${trabajo.id}`}
+                                  href={`/trabajos-asignados?trabajoId=${trabajo.id}#trabajo-${trabajo.id}`}
+                                  title={`${trabajo.tipo} - ${trabajo.estado}`}
+                                  className="flex items-start gap-1.5 rounded px-1 py-0.5 text-[11px] leading-4 transition hover:bg-blue-50"
                                 >
-                                  <strong>
-                                    {
-                                      trabajo.tipo
-                                    }
-                                  </strong>{" "}
-                                  {
-                                    trabajo.clienteNombre
-                                  }
-                                </span>
-                              </Link>
+                                  <span
+                                    className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${e.punto}`}
+                                  />
+                                  <span
+                                    className={`min-w-0 truncate font-medium ${e.texto}`}
+                                  >
+                                    <strong>{trabajo.tipo}</strong>{" "}
+                                    {trabajo.clienteNombre}
+                                  </span>
+                                </Link>
+                              ) : (
+                                <div
+                                  key={`trabajo-${trabajo.id}`}
+                                  title={`${trabajo.tipo} - ${trabajo.estado}`}
+                                  className="flex items-start gap-1.5 rounded px-1 py-0.5 text-[11px] leading-4"
+                                >
+                                  <span
+                                    className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${e.punto}`}
+                                  />
+                                  <span
+                                    className={`min-w-0 truncate font-medium ${e.texto}`}
+                                  >
+                                    <strong>{trabajo.tipo}</strong>{" "}
+                                    {trabajo.clienteNombre}
+                                  </span>
+                                </div>
+                              )
                             );
                           },
                         )}
@@ -820,12 +841,15 @@ export function CalendarioEditable({
                             <button
                               key={`nota-${celda.fecha}-${indice}`}
                               type="button"
+                              disabled={!puedeEditar}
                               onClick={() =>
                                 abrir(
                                   celda.fecha,
                                 )
                               }
-                              className="flex w-full items-start gap-1.5 rounded px-1 py-0.5 text-left text-[11px] leading-4 hover:bg-white"
+                              className={`flex w-full items-start gap-1.5 rounded px-1 py-0.5 text-left text-[11px] leading-4 ${
+                                puedeEditar ? "hover:bg-white" : "cursor-default"
+                              }`}
                             >
                               <span
                                 className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${
@@ -857,7 +881,7 @@ export function CalendarioEditable({
         </div>
       </section>
 
-      {fechaEditor && (
+      {puedeEditar && fechaEditor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
           <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-4">

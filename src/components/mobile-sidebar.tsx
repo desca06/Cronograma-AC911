@@ -2,21 +2,16 @@
 
 import {
   BriefcaseBusiness,
-  Building2,
   CalendarCheck,
-  CalendarDays,
   CarFront,
   ClipboardList,
   Folders,
-  Gauge,
   Handshake,
   House,
   LogOut,
   Menu,
-  Settings,
   UserCog,
   UserPlus,
-  UsersRound,
   X,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
@@ -33,7 +28,7 @@ const opciones = [
     href: "/dashboard",
     nombre: "Dashboard",
     icono: House,
-    roles: ["ADMIN", "SUPERVISOR"],
+    roles: ["ADMIN", "SUPERVISOR", "COTIZADORA", "BODEGA"],
   },
   {
     href: "/trabajos",
@@ -45,13 +40,13 @@ const opciones = [
     href: "/cronograma",
     nombre: "Cronograma",
     icono: CalendarCheck,
-    roles: ["ADMIN", "SUPERVISOR"],
+    roles: ["ADMIN", "SUPERVISOR", "COTIZADORA"],
   },
   {
     href: "/empleados",
     nombre: "Empleados",
     icono: UserPlus,
-    roles: ["ADMIN",],
+    roles: ["ADMIN"],
   },
   {
     href: "/clientes",
@@ -63,7 +58,7 @@ const opciones = [
     href: "/vehiculos",
     nombre: "Vehículos",
     icono: CarFront,
-    roles: ["ADMIN",],
+    roles: ["ADMIN"],
   },
   {
     href: "/usuarios",
@@ -87,50 +82,36 @@ const opciones = [
     href: "/administracion",
     nombre: "Administración",
     icono: Folders,
-    roles: ["ADMIN"],
-  }
+    roles: ["ADMIN", "COTIZADORA", "BODEGA"],
+  },
 ];
 
-export function MobileSidebar({
-  rol,
-}: MobileSidebarProps) {
+export function MobileSidebar({ rol }: MobileSidebarProps) {
   const pathname = usePathname();
+  const [abierto, setAbierto] = useState(false);
+  const [logoError, setLogoError] = useState(false);
 
-  const [abierto, setAbierto] =
-    useState(false);
-
-  const [logoError, setLogoError] =
-    useState(false);
-
-  const opcionesPermitidas =
-    opciones.filter((opcion) =>
-      opcion.roles.includes(rol),
-    );
+  const opcionesPermitidas = opciones.filter((opcion) =>
+    opcion.roles.includes(rol),
+  );
 
   useEffect(() => {
     setAbierto(false);
   }, [pathname]);
 
   useEffect(() => {
-    if (!abierto) {
-      return;
-    }
+    if (!abierto) return;
 
-    const overflowAnterior =
-      document.body.style.overflow;
-
-    document.body.style.overflow =
-      "hidden";
+    const overflowAnterior = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
 
     return () => {
-      document.body.style.overflow =
-        overflowAnterior;
+      document.body.style.overflow = overflowAnterior;
     };
   }, [abierto]);
 
   return (
     <div className="lg:hidden">
-      {/* Barra superior fija */}
       <header className="fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b border-slate-800 bg-slate-950 px-3 text-white shadow-sm">
         <div className="min-w-0 flex-1">
           {logoError ? (
@@ -143,9 +124,7 @@ export function MobileSidebar({
                 src="/img/logo-911.jpg"
                 alt="Logo A-C911"
                 className="h-full w-full object-contain object-left"
-                onError={() =>
-                  setLogoError(true)
-                }
+                onError={() => setLogoError(true)}
               />
             </div>
           )}
@@ -162,13 +141,8 @@ export function MobileSidebar({
         </button>
       </header>
 
-      {/* Reserva el espacio del header */}
-      <div
-        aria-hidden="true"
-        className="h-16"
-      />
+      <div aria-hidden="true" className="h-16" />
 
-      {/* Menú a pantalla completa */}
       {abierto && (
         <section
           className="fixed inset-0 flex flex-col bg-slate-950 text-white lg:hidden"
@@ -186,9 +160,7 @@ export function MobileSidebar({
                     src="/img/logo-911.jpg"
                     alt="Logo A-C911"
                     className="h-full w-full object-contain object-left"
-                    onError={() =>
-                      setLogoError(true)
-                    }
+                    onError={() => setLogoError(true)}
                   />
                 </div>
               )}
@@ -196,9 +168,7 @@ export function MobileSidebar({
 
             <button
               type="button"
-              onClick={() =>
-                setAbierto(false)
-              }
+              onClick={() => setAbierto(false)}
               aria-label="Cerrar menú"
               className="ml-3 grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-slate-700 text-slate-300 transition active:bg-slate-800 active:text-white"
             >
@@ -207,39 +177,27 @@ export function MobileSidebar({
           </header>
 
           <nav className="flex-1 space-y-2 overflow-y-auto px-4 py-5">
-            {opcionesPermitidas.map(
-              (opcion) => {
-                const Icono =
-                  opcion.icono;
+            {opcionesPermitidas.map((opcion) => {
+              const Icono = opcion.icono;
+              const activo =
+                pathname === opcion.href ||
+                pathname.startsWith(`${opcion.href}/`);
 
-                const activo =
-                  pathname === opcion.href ||
-                  pathname.startsWith(
-                    `${opcion.href}/`,
-                  );
-
-                return (
-                  <a
-                    key={opcion.href}
-                    href={opcion.href}
-                    className={`flex min-h-14 items-center gap-4 rounded-xl px-4 text-base font-medium transition ${
-                      activo
-                        ? "bg-blue-600 text-white"
-                        : "text-slate-300 active:bg-slate-800 active:text-white"
-                    }`}
-                  >
-                    <Icono
-                      size={21}
-                      className="shrink-0"
-                    />
-
-                    <span>
-                      {opcion.nombre}
-                    </span>
-                  </a>
-                );
-              },
-            )}
+              return (
+                <a
+                  key={opcion.href}
+                  href={opcion.href}
+                  className={`flex min-h-14 items-center gap-4 rounded-xl px-4 text-base font-medium transition ${
+                    activo
+                      ? "bg-blue-600 text-white"
+                      : "text-slate-300 active:bg-slate-800 active:text-white"
+                  }`}
+                >
+                  <Icono size={21} className="shrink-0" />
+                  <span>{opcion.nombre}</span>
+                </a>
+              );
+            })}
           </nav>
 
           <form
@@ -250,14 +208,8 @@ export function MobileSidebar({
               type="submit"
               className="flex min-h-14 w-full items-center justify-center gap-3 rounded-xl border border-slate-700 px-4 text-base font-semibold text-slate-300 transition active:border-red-500 active:bg-red-600 active:text-white"
             >
-              <LogOut
-                size={20}
-                className="shrink-0"
-              />
-
-              <span>
-                Cerrar sesión
-              </span>
+              <LogOut size={20} className="shrink-0" />
+              <span>Cerrar sesión</span>
             </button>
           </form>
         </section>

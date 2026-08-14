@@ -11,7 +11,7 @@ import {
   ordenesCompra,
   proveedores,
 } from "@/db/schema";
-import { requerirAdmin } from "@/lib/auth";
+import { requerirCompras } from "@/lib/auth";
 
 type ItemFormulario = {
   tipo: "PRODUCTO" | "SERVICIO";
@@ -186,7 +186,7 @@ export async function crearOrdenCompra(
   formData: FormData,
 ) {
   const sesion =
-    await requerirAdmin();
+    await requerirCompras();
 
   const proveedorId =
     entero(
@@ -416,7 +416,7 @@ export async function aprobarOrdenCompra(
   ordenId: number,
 ) {
   const sesion =
-    await requerirAdmin();
+    await requerirCompras();
 
   const ahora =
     new Date();
@@ -516,7 +516,7 @@ export async function completarOrdenCompra(
   ordenId: number,
 ) {
   const sesion =
-    await requerirAdmin();
+    await requerirCompras();
 
   const ahora =
     new Date();
@@ -618,7 +618,7 @@ export async function cancelarOrdenCompra(
   ordenId: number,
 ) {
   const sesion =
-    await requerirAdmin();
+    await requerirCompras();
 
   const ahora =
     new Date();

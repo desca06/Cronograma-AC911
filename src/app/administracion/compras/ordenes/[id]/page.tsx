@@ -26,7 +26,7 @@ import {
   proveedores,
   usuarios,
 } from "@/db/schema";
-import { requerirAdmin } from "@/lib/auth";
+import { requerirCompras } from "@/lib/auth";
 
 import {
   aprobarOrdenCompra,
@@ -137,7 +137,7 @@ export default async function DetalleOrdenCompraPage({
   params,
   searchParams,
 }: Props) {
-  await requerirAdmin();
+  await requerirCompras();
 
   const { id } = await params;
   const parametros = await searchParams;
@@ -219,7 +219,7 @@ export default async function DetalleOrdenCompraPage({
   async function eliminarOrden() {
     "use server";
 
-    await requerirAdmin();
+    await requerirCompras();
 
     const [ordenActual] = await db
       .select({

@@ -8,7 +8,7 @@ import {
 
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
-import { requerirAdmin } from "@/lib/auth";
+import { requerirInventario } from "@/lib/auth";
 
 const modulosInventario = [
   {
@@ -58,7 +58,7 @@ const modulosInventario = [
 export const dynamic = "force-dynamic";
 
 export default async function InventarioPage() {
-  await requerirAdmin();
+  await requerirInventario();
 
   return (
     <AppShell>

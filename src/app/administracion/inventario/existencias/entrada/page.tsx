@@ -6,13 +6,13 @@ import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { db } from "@/db";
 import { articulosInventario } from "@/db/schema";
-import { requerirAdmin } from "@/lib/auth";
+import { requerirInventario } from "@/lib/auth";
 import { registrarEntrada } from "../actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function RegistrarEntradaPage() {
-  await requerirAdmin();
+  await requerirInventario();
 
   const articulos = await db
     .select({

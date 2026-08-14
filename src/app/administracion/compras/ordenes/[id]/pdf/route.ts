@@ -19,7 +19,7 @@ import {
   proveedores,
   usuarios,
 } from "@/db/schema";
-import { requerirAdmin } from "@/lib/auth";
+import { requerirCompras } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -615,7 +615,7 @@ function drawHistoryItem(
 }
 
 export async function GET(request: Request, { params }: Props) {
-  await requerirAdmin();
+  await requerirCompras();
 
   const { id } = await params;
   const ordenId = Number(id);

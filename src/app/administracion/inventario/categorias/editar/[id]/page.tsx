@@ -3,7 +3,7 @@ import { ArrowLeft, Save, Tags } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
-import { requerirAdmin } from "@/lib/auth";
+import { requerirInventario } from "@/lib/auth";
 import { crearCategoria } from "@/app/administracion/inventario/categorias/actions";
 
 type PageProps = {
@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 export default async function NuevaCategoriaPage({
   searchParams,
 }: PageProps) {
-  await requerirAdmin();
+  await requerirInventario();
 
   const parametros = await searchParams;
 

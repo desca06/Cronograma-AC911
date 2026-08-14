@@ -17,7 +17,7 @@ import {
   cotizaciones,
   cotizacionItems,
 } from "@/db/schema";
-import { requerirAdmin } from "@/lib/auth";
+import { requerirCompras } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -398,7 +398,7 @@ export async function GET(
   request: Request,
   { params }: RouteProps,
 ) {
-  await requerirAdmin();
+  await requerirCompras();
 
   const { id } = await params;
   const quotationId = Number(id);

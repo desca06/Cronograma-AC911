@@ -25,7 +25,7 @@ import {
   ordenesCompra,
   proveedores,
 } from "@/db/schema";
-import { requerirAdmin } from "@/lib/auth";
+import { requerirCompras } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -115,7 +115,7 @@ function horaGuatemala(fecha: Date | null) {
 export default async function OrdenesCompraPage({
   searchParams,
 }: Props) {
-  await requerirAdmin();
+  await requerirCompras();
 
   const parametros = await searchParams;
   const buscar = parametros.buscar?.trim() ?? "";

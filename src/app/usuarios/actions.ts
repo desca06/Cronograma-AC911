@@ -20,138 +20,88 @@ function obtenerTexto(
     : "";
 }
 
-/*
- * CREAR USUARIO
- */
+function normalizarRol(rol: string) {
+  if (
+    rol === "ADMIN" ||
+    rol === "SUPERVISOR" ||
+    rol === "TECNICO" ||
+    rol === "COTIZADORA" ||
+    rol === "BODEGA"
+  ) {
+    return rol;
+  }
+
+  return "TECNICO";
+}
 
 export async function crearUsuario(
   formData: FormData,
 ): Promise<void> {
   await requerirSupervisor();
 
-  const nombre = obtenerTexto(
-    formData,
-    "nombre",
-  );
+  const nombre = obtenerTexto(formData, "nombre");
+  const correo = obtenerTexto(formData, "correo").toLowerCase();
+  const password = obtenerTexto(formData, "password");
+  const rolRecibido = obtenerTexto(formData, "rol");
+  const empleadoIdSeleccionado = Number(formData.get("empleadoId"));
 
-  const correo = obtenerTexto(
-    formData,
-    "correo",
-  ).toLowerCase();
-
-  const password = obtenerTexto(
-    formData,
-    "password",
-  );
-
-  const rolRecibido = obtenerTexto(
-    formData,
-    "rol",
-  );
-
-  const empleadoIdSeleccionado = Number(
-    formData.get("empleadoId"),
-  );
-
-  if (
-    !nombre ||
-    !correo ||
-    password.length < 8
-  ) {
+  if (!nombre || !correo || password.length < 8) {
     redirect("/usuarios?error=datos");
   }
 
-  const rolFinal =
-    rolRecibido === "ADMIN"
-      ? "ADMIN"
-      : rolRecibido === "SUPERVISOR"
-      ? "SUPERVISOR"
-      : "TECNICO";
+  const rolFinal = normalizarRol(rolRecibido);
 
   const empleadoId =
-    Number.isInteger(
-      empleadoIdSeleccionado,
-    ) &&
+    Number.isInteger(empleadoIdSeleccionado) &&
     empleadoIdSeleccionado > 0
       ? empleadoIdSeleccionado
       : null;
 
   if (
-    rolFinal === "TECNICO" &&
+    (rolFinal === "TECNICO" ||
+      rolFinal === "COTIZADORA" ||
+      rolFinal === "BODEGA") &&
     empleadoId === null
   ) {
     redirect("/usuarios?error=empleado");
   }
 
   const [correoExistente] = await db
-    .select({
-      id: usuarios.id,
-    })
+    .select({ id: usuarios.id })
     .from(usuarios)
-    .where(
-      eq(usuarios.correo, correo),
-    )
+    .where(eq(usuarios.correo, correo))
     .limit(1);
 
   if (correoExistente) {
     redirect("/usuarios?error=correo");
   }
 
-  const passwordHash = await hash(
-    password,
-    12,
-  );
+  const passwordHash = await hash(password, 12);
 
-  await db.insert(usuarios)
-    .values({
-      nombre,
-      correo,
-      passwordHash,
-      rol: rolFinal,
-      empleadoId,
-      activo: true,
-    })
-;
+  await db.insert(usuarios).values({
+    nombre,
+    correo,
+    passwordHash,
+    rol: rolFinal,
+    empleadoId,
+    activo: true,
+  });
 
   revalidatePath("/usuarios");
-
   redirect("/usuarios?exito=creado");
 }
-
-/*
- * ACTUALIZAR USUARIO
- */
 
 export async function actualizarUsuario(
   formData: FormData,
 ): Promise<void> {
   const sesion = await requerirSupervisor();
 
-  const id = Number(
-    formData.get("id"),
-  );
-
-  const nombre = obtenerTexto(
-    formData,
-    "nombre",
-  );
-
-  const correo = obtenerTexto(
-    formData,
-    "correo",
-  ).toLowerCase();
-
-  const rolRecibido = obtenerTexto(
-    formData,
-    "rol",
-  );
-
-  const empleadoIdSeleccionado = Number(
-    formData.get("empleadoId"),
-  );
-
-  const activoRecibido =
-    formData.get("activo") === "on";
+  const id = Number(formData.get("id"));
+  const nombre = obtenerTexto(formData, "nombre");
+  const correo = obtenerTexto(formData, "correo").toLowerCase();
+  const rolRecibido = obtenerTexto(formData, "rol");
+  const empleadoIdSeleccionado = Number(formData.get("empleadoId"));
+  const activoRecibido = formData.get("activo") === "on";
 
   if (
     !Number.isInteger(id) ||
@@ -163,9 +113,7 @@ export async function actualizarUsuario(
   }
 
   const [correoExistente] = await db
-    .select({
-      id: usuarios.id,
-    })
+    .select({ id: usuarios.id })
     .from(usuarios)
     .where(
       and(
@@ -179,61 +127,43 @@ export async function actualizarUsuario(
     redirect("/usuarios?error=correo");
   }
 
-  /*
-   * El usuario que tiene la sesión abierta
-   * no puede quitarse a sí mismo el rol de
-   * supervisor ni desactivar su cuenta.
-   */
-
-  const esUsuarioActual =
-    id === sesion.usuarioId;
+  const esUsuarioActual = id === sesion.usuarioId;
 
   const [usuarioActual] = await db
-    .select({
-      rol: usuarios.rol,
-    })
+    .select({ rol: usuarios.rol })
     .from(usuarios)
-    .where(
-      eq(
-        usuarios.id,
-        id,
-      ),
-    )
+    .where(eq(usuarios.id, id))
     .limit(1);
 
   if (!usuarioActual) {
     redirect("/usuarios?error=datos");
   }
 
-  const rolFinal =
-    esUsuarioActual
-      ? usuarioActual.rol
-      : rolRecibido === "ADMIN"
-        ? "ADMIN"
-        : rolRecibido === "SUPERVISOR"
-          ? "SUPERVISOR"
-          : "TECNICO";
+  const rolFinal = esUsuarioActual
+    ? usuarioActual.rol
+    : normalizarRol(rolRecibido);
 
   const activoFinal = esUsuarioActual
     ? true
     : activoRecibido;
 
   const empleadoId =
-    Number.isInteger(
-      empleadoIdSeleccionado,
-    ) &&
+    Number.isInteger(empleadoIdSeleccionado) &&
     empleadoIdSeleccionado > 0
       ? empleadoIdSeleccionado
       : null;
 
   if (
-    rolFinal === "TECNICO" &&
+    (rolFinal === "TECNICO" ||
+      rolFinal === "COTIZADORA" ||
+      rolFinal === "BODEGA") &&
     empleadoId === null
   ) {
     redirect("/usuarios?error=empleado");
   }
 
-  await db.update(usuarios)
+  await db
+    .update(usuarios)
     .set({
       nombre,
       correo,
@@ -241,33 +171,19 @@ export async function actualizarUsuario(
       empleadoId,
       activo: activoFinal,
     })
-    .where(
-      eq(usuarios.id, id),
-    )
-;
+    .where(eq(usuarios.id, id));
 
   revalidatePath("/usuarios");
-
   redirect("/usuarios?exito=actualizado");
 }
-
-/*
- * CAMBIAR CONTRASEÑA
- */
 
 export async function cambiarPasswordUsuario(
   formData: FormData,
 ): Promise<void> {
   await requerirSupervisor();
 
-  const id = Number(
-    formData.get("id"),
-  );
-
-  const password = obtenerTexto(
-    formData,
-    "password",
-  );
+  const id = Number(formData.get("id"));
+  const password = obtenerTexto(formData, "password");
 
   if (
     !Number.isInteger(id) ||
@@ -278,34 +194,22 @@ export async function cambiarPasswordUsuario(
   }
 
   const [usuarioExistente] = await db
-    .select({
-      id: usuarios.id,
-    })
+    .select({ id: usuarios.id })
     .from(usuarios)
-    .where(
-      eq(usuarios.id, id),
-    )
+    .where(eq(usuarios.id, id))
     .limit(1);
 
   if (!usuarioExistente) {
     redirect("/usuarios?error=datos");
   }
 
-  const passwordHash = await hash(
-    password,
-    12,
-  );
+  const passwordHash = await hash(password, 12);
 
-  await db.update(usuarios)
-    .set({
-      passwordHash,
-    })
-    .where(
-      eq(usuarios.id, id),
-    )
-;
+  await db
+    .update(usuarios)
+    .set({ passwordHash })
+    .where(eq(usuarios.id, id));
 
   revalidatePath("/usuarios");
-
   redirect("/usuarios?exito=password");
 }

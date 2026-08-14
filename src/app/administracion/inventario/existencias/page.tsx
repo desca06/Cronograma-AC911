@@ -20,7 +20,7 @@ import {
   categoriasInventario,
   existenciasInventario,
 } from "@/db/schema";
-import { requerirAdmin } from "@/lib/auth";
+import { requerirInventario } from "@/lib/auth";
 
 type PageProps = {
   searchParams: Promise<{
@@ -84,7 +84,7 @@ function formatearFecha(fecha: Date | null) {
 export default async function ExistenciasPage({
   searchParams,
 }: PageProps) {
-  await requerirAdmin();
+  await requerirInventario();
 
   const parametros = await searchParams;
 
