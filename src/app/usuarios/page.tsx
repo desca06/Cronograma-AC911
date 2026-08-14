@@ -3,10 +3,7 @@ import { asc, desc, eq } from "drizzle-orm";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { db } from "@/db";
-import {
-  empleados,
-  usuarios,
-} from "@/db/schema";
+import { empleados, usuarios } from "@/db/schema";
 import { requerirSupervisor } from "@/lib/auth";
 
 import {
@@ -49,8 +46,7 @@ export default async function UsuariosPage({
     })
     .from(empleados)
     .where(eq(empleados.activo, true))
-    .orderBy(asc(empleados.nombre))
-;
+    .orderBy(asc(empleados.nombre));
 
   const listaUsuarios = await db
     .select({
@@ -62,8 +58,7 @@ export default async function UsuariosPage({
       empleadoId: usuarios.empleadoId,
     })
     .from(usuarios)
-    .orderBy(desc(usuarios.id))
-;
+    .orderBy(desc(usuarios.id));
 
   const mensajeError =
     error === "correo"
@@ -71,7 +66,7 @@ export default async function UsuariosPage({
       : error === "password"
         ? "La contraseña debe tener al menos 8 caracteres."
         : error === "empleado"
-          ? "Los usuarios técnicos deben vincularse con un empleado."
+          ? "Técnico, Cotizadora y Bodega deben vincularse con un empleado."
           : error
             ? "Revisa los datos ingresados."
             : "";
@@ -110,33 +105,19 @@ export default async function UsuariosPage({
             <h2 className="text-xl font-bold text-slate-900">
               Crear usuario
             </h2>
-
             <p className="mt-1 text-sm text-slate-500">
-              Los técnicos deben vincularse con un empleado.
-              Supervisores también pueden vincularse para usar
-              Mis trabajos e Historial.
+              Técnico, Cotizadora y Bodega deben vincularse con un empleado.
             </p>
           </div>
-
-          {listaEmpleados.length === 0 && (
-            <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-800">
-              No hay empleados activos. Registra empleados antes de
-              crear una cuenta de técnico.
-            </div>
-          )}
 
           <form
             action={crearUsuario}
             className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3"
           >
             <div>
-              <label
-                htmlFor="nombre"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
+              <label htmlFor="nombre" className="mb-2 block text-sm font-semibold text-slate-700">
                 Nombre
               </label>
-
               <input
                 id="nombre"
                 name="nombre"
@@ -147,13 +128,9 @@ export default async function UsuariosPage({
             </div>
 
             <div>
-              <label
-                htmlFor="correo"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
+              <label htmlFor="correo" className="mb-2 block text-sm font-semibold text-slate-700">
                 Correo electrónico
               </label>
-
               <input
                 id="correo"
                 name="correo"
@@ -165,13 +142,9 @@ export default async function UsuariosPage({
             </div>
 
             <div>
-              <label
-                htmlFor="password"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
+              <label htmlFor="password" className="mb-2 block text-sm font-semibold text-slate-700">
                 Contraseña
               </label>
-
               <input
                 id="password"
                 name="password"
@@ -184,13 +157,9 @@ export default async function UsuariosPage({
             </div>
 
             <div>
-              <label
-                htmlFor="rol"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
+              <label htmlFor="rol" className="mb-2 block text-sm font-semibold text-slate-700">
                 Rol
               </label>
-
               <select
                 id="rol"
                 name="rol"
@@ -200,32 +169,24 @@ export default async function UsuariosPage({
                 <option value="TECNICO">Técnico</option>
                 <option value="SUPERVISOR">Supervisor</option>
                 <option value="ADMIN">Administrador</option>
+                <option value="COTIZADORA">Cotizadora</option>
+                <option value="BODEGA">Bodega</option>
               </select>
             </div>
 
             <div>
-              <label
-                htmlFor="empleadoId"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
+              <label htmlFor="empleadoId" className="mb-2 block text-sm font-semibold text-slate-700">
                 Empleado vinculado
               </label>
-
               <select
                 id="empleadoId"
                 name="empleadoId"
                 defaultValue=""
                 className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
               >
-                <option value="">
-                  Sin empleado vinculado
-                </option>
-
+                <option value="">Sin empleado vinculado</option>
                 {listaEmpleados.map((empleado) => (
-                  <option
-                    key={empleado.id}
-                    value={empleado.id}
-                  >
+                  <option key={empleado.id} value={empleado.id}>
                     {empleado.nombre} — {empleado.puesto}
                   </option>
                 ))}
@@ -248,7 +209,6 @@ export default async function UsuariosPage({
             <h2 className="text-xl font-bold text-slate-900">
               Usuarios registrados
             </h2>
-
             <p className="text-sm text-slate-500">
               Total: {listaUsuarios.length}
             </p>
@@ -256,8 +216,7 @@ export default async function UsuariosPage({
 
           <div className="space-y-5">
             {listaUsuarios.map((usuario) => {
-              const esUsuarioActual =
-                usuario.id === sesion.usuarioId;
+              const esUsuarioActual = usuario.id === sesion.usuarioId;
 
               return (
                 <article
@@ -269,14 +228,12 @@ export default async function UsuariosPage({
                       <h3 className="font-bold text-slate-900">
                         {usuario.nombre}
                       </h3>
-
                       <p className="text-sm text-slate-500">
                         {esUsuarioActual
                           ? "Esta es tu cuenta actual"
                           : `Usuario #${usuario.id}`}
                       </p>
                     </div>
-
                     <span
                       className={`rounded-full px-3 py-1 text-xs font-bold ${
                         usuario.activo
@@ -292,17 +249,12 @@ export default async function UsuariosPage({
                     action={actualizarUsuario}
                     className="grid gap-4 md:grid-cols-2 xl:grid-cols-5"
                   >
-                    <input
-                      type="hidden"
-                      name="id"
-                      value={usuario.id}
-                    />
+                    <input type="hidden" name="id" value={usuario.id} />
 
                     <div>
                       <label className="mb-2 block text-sm font-semibold text-slate-700">
                         Nombre
                       </label>
-
                       <input
                         name="nombre"
                         required
@@ -315,7 +267,6 @@ export default async function UsuariosPage({
                       <label className="mb-2 block text-sm font-semibold text-slate-700">
                         Correo
                       </label>
-
                       <input
                         name="correo"
                         type="email"
@@ -331,11 +282,7 @@ export default async function UsuariosPage({
                       </label>
 
                       {esUsuarioActual && (
-                        <input
-                          type="hidden"
-                          name="rol"
-                          value={usuario.rol}
-                        />
+                        <input type="hidden" name="rol" value={usuario.rol} />
                       )}
 
                       <select
@@ -347,6 +294,8 @@ export default async function UsuariosPage({
                         <option value="TECNICO">Técnico</option>
                         <option value="SUPERVISOR">Supervisor</option>
                         <option value="ADMIN">Administrador</option>
+                        <option value="COTIZADORA">Cotizadora</option>
+                        <option value="BODEGA">Bodega</option>
                       </select>
                     </div>
 
@@ -354,21 +303,14 @@ export default async function UsuariosPage({
                       <label className="mb-2 block text-sm font-semibold text-slate-700">
                         Empleado vinculado
                       </label>
-
                       <select
                         name="empleadoId"
                         defaultValue={usuario.empleadoId ?? ""}
                         className="w-full rounded-xl border border-slate-300 px-4 py-3"
                       >
-                        <option value="">
-                          Sin empleado vinculado
-                        </option>
-
+                        <option value="">Sin empleado vinculado</option>
                         {listaEmpleados.map((empleado) => (
-                          <option
-                            key={empleado.id}
-                            value={empleado.id}
-                          >
+                          <option key={empleado.id} value={empleado.id}>
                             {empleado.nombre}
                           </option>
                         ))}
@@ -379,7 +321,6 @@ export default async function UsuariosPage({
                       <label className="mb-2 block text-sm font-semibold text-slate-700">
                         Estado
                       </label>
-
                       <label className="flex h-[50px] items-center gap-3 rounded-xl border border-slate-300 px-4">
                         <input
                           name="activo"
@@ -388,7 +329,6 @@ export default async function UsuariosPage({
                           disabled={esUsuarioActual}
                           className="h-4 w-4"
                         />
-
                         <span className="text-sm font-medium text-slate-700">
                           Cuenta activa
                         </span>
@@ -409,12 +349,7 @@ export default async function UsuariosPage({
                     action={cambiarPasswordUsuario}
                     className="mt-5 flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row"
                   >
-                    <input
-                      type="hidden"
-                      name="id"
-                      value={usuario.id}
-                    />
-
+                    <input type="hidden" name="id" value={usuario.id} />
                     <input
                       name="password"
                       type="password"
@@ -423,7 +358,6 @@ export default async function UsuariosPage({
                       placeholder="Nueva contraseña"
                       className="flex-1 rounded-xl border border-slate-300 px-4 py-3"
                     />
-
                     <button
                       type="submit"
                       className="rounded-xl bg-amber-100 px-5 py-3 font-semibold text-amber-800 hover:bg-amber-200"
