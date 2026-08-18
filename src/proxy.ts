@@ -45,6 +45,9 @@ function rutaPermitidaParaRol(ruta: string, rol: string) {
       coincideRuta(ruta, "/mis-trabajos") ||
       coincideRuta(ruta, "/historial") ||
       coincideRuta(ruta, "/notificaciones") ||
+      // Sin esta ruta el botón "Ver o subir evidencias"
+      // redirige de vuelta a /mis-trabajos en Vercel.
+      coincideRuta(ruta, "/evidencias") ||
       coincideRuta(ruta, "/api/push") ||
       coincideRuta(ruta, "/api/notificaciones")
     );
@@ -64,6 +67,7 @@ function rutaPermitidaParaRol(ruta: string, rol: string) {
       coincideRuta(ruta, "/historial") ||
       coincideRuta(ruta, "/notificaciones") ||
       coincideRuta(ruta, "/trabajos-asignados") ||
+      coincideRuta(ruta, "/evidencias") ||
       coincideRuta(ruta, "/api/push") ||
       coincideRuta(ruta, "/api/notificaciones")
     );
@@ -195,6 +199,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

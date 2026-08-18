@@ -76,9 +76,13 @@ async function verificarAccesoAlTrabajo(
   }
 
   /*
-   * El supervisor puede consultar cualquier trabajo.
+   * Supervisores y administradores pueden
+   * consultar y subir evidencias de cualquier trabajo.
    */
-  if (sesion.rol === "SUPERVISOR") {
+  if (
+    sesion.rol === "SUPERVISOR" ||
+    sesion.rol === "ADMIN"
+  ) {
     return sesion;
   }
 

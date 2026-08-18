@@ -147,9 +147,13 @@ export default async function EvidenciasPage({
         ? "Solo se permiten imágenes JPG, PNG o WebP."
         : error === "tamano"
           ? "La fotografía no puede superar los 5 MB."
-          : error
-            ? "No se pudo subir la evidencia."
-            : "";
+          : error === "almacenamiento"
+            ? "No se pudo guardar la fotografía. Inténtalo de nuevo."
+            : error === "base-datos"
+              ? "La fotografía se subió, pero no se pudo registrar. Inténtalo de nuevo."
+              : error
+                ? "No se pudo subir la evidencia."
+                : "";
 
   const rutaRegreso =
     sesion.rol === "TECNICO"
