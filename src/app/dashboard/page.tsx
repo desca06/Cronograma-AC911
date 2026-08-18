@@ -199,15 +199,6 @@ export default async function DashboardPage() {
               <p className="mt-2 text-sm text-slate-500">
                 No hay asignaciones programadas para la fecha de hoy.
               </p>
-
-              {puedeGestionarTrabajos && (
-                <a
-                  href="/trabajos"
-                  className="mt-5 inline-block rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700"
-                >
-                  Crear trabajo
-                </a>
-              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
