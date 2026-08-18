@@ -46,29 +46,30 @@ export async function guardarArchivoPublico({
   }
 
   /*
-   * En Vercel no se puede guardar en disco.
-   * Si no hay token, avisamos con un error claro.
+   * En local guardamos en disco.
+   * En Vercel no hay disco permanente: si no hay
+   * Blob token, dejamos la foto como data URL
+   * para que el técnico pueda seguir trabajando.
    */
-  if (estaEnVercel() || process.env.NODE_ENV === "production") {
-    throw new ErrorAlmacenamiento(
-      "token",
-      "Falta BLOB_READ_WRITE_TOKEN en Vercel.",
+  if (!estaEnVercel()) {
+    const rutaRelativa = rutaLogica.replace(/^\/+/, "");
+    const rutaFisica = path.join(
+      process.cwd(),
+      "public",
+      "uploads",
+      rutaRelativa,
     );
+
+    await mkdir(path.dirname(rutaFisica), {
+      recursive: true,
+    });
+
+    await writeFile(rutaFisica, contenido);
+
+    return `/uploads/${rutaRelativa}`;
   }
 
-  const rutaRelativa = rutaLogica.replace(/^\/+/, "");
-  const rutaFisica = path.join(
-    process.cwd(),
-    "public",
-    "uploads",
-    rutaRelativa,
-  );
+  const tipo = contentType || "image/jpeg";
 
-  await mkdir(path.dirname(rutaFisica), {
-    recursive: true,
-  });
-
-  await writeFile(rutaFisica, contenido);
-
-  return `/uploads/${rutaRelativa}`;
+  return `data:${tipo};base64,${contenido.toString("base64")}`;
 }
