@@ -1,13 +1,8 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
-import {
-  mkdir,
-  unlink,
-  writeFile,
-} from "node:fs/promises";
-import path from "node:path";
 
+import { put } from "@vercel/blob";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -65,7 +60,10 @@ async function verificarAccesoAlTrabajo(
     })
     .from(trabajos)
     .where(
-      eq(trabajos.id, trabajoId),
+      eq(
+        trabajos.id,
+        trabajoId,
+      ),
     )
     .limit(1);
 
@@ -77,10 +75,17 @@ async function verificarAccesoAlTrabajo(
     );
   }
 
+  /*
+   * El supervisor puede consultar cualquier trabajo.
+   */
   if (sesion.rol === "SUPERVISOR") {
     return sesion;
   }
 
+  /*
+   * Los demás usuarios deben estar vinculados
+   * a un empleado y tener el trabajo asignado.
+   */
   const [usuario] = await db
     .select({
       empleadoId: usuarios.empleadoId,
@@ -150,13 +155,19 @@ export async function subirEvidencia(
       trabajoId,
     );
 
-  const archivo = formData.get("foto");
+  const archivo =
+    formData.get("foto");
 
-  const descripcion = obtenerTexto(
-    formData,
-    "descripcion",
-  );
+  const descripcion =
+    obtenerTexto(
+      formData,
+      "descripcion",
+    );
 
+  /*
+   * Validar que realmente recibimos
+   * un archivo.
+   */
   if (
     !(archivo instanceof File) ||
     archivo.size === 0
@@ -166,8 +177,13 @@ export async function subirEvidencia(
     );
   }
 
+  /*
+   * Validar formato.
+   */
   const extension =
-    formatosPermitidos[archivo.type];
+    formatosPermitidos[
+      archivo.type
+    ];
 
   if (!extension) {
     redirect(
@@ -175,23 +191,36 @@ export async function subirEvidencia(
     );
   }
 
-  if (archivo.size > TAMANO_MAXIMO) {
+  /*
+   * Validar tamaño máximo.
+   */
+  if (
+    archivo.size >
+    TAMANO_MAXIMO
+  ) {
     redirect(
       `/evidencias/${trabajoId}?error=tamano`,
     );
   }
 
-  const [trabajo] = await db
-    .select({
-      id: trabajos.id,
-      tipo: trabajos.tipo,
-      fecha: trabajos.fecha,
-    })
-    .from(trabajos)
-    .where(
-      eq(trabajos.id, trabajoId),
-    )
-    .limit(1);
+  /*
+   * Confirmar que el trabajo todavía existe.
+   */
+  const [trabajo] =
+    await db
+      .select({
+        id: trabajos.id,
+        tipo: trabajos.tipo,
+        fecha: trabajos.fecha,
+      })
+      .from(trabajos)
+      .where(
+        eq(
+          trabajos.id,
+          trabajoId,
+        ),
+      )
+      .limit(1);
 
   if (!trabajo) {
     redirect(
@@ -201,115 +230,153 @@ export async function subirEvidencia(
     );
   }
 
+  /*
+   * Nombre único para la fotografía.
+   */
   const nombreArchivo =
     `${randomUUID()}.${extension}`;
 
-  const carpetaDestino = path.join(
-    process.cwd(),
-    "public",
-    "uploads",
-    "evidencias",
-  );
+  /*
+   * Carpeta lógica dentro de Vercel Blob.
+   */
+  const rutaBlob =
+    `evidencias/trabajo-${trabajoId}/${nombreArchivo}`;
 
-  await mkdir(carpetaDestino, {
-    recursive: true,
-  });
-
-  const rutaFisica = path.join(
-    carpetaDestino,
-    nombreArchivo,
-  );
-
-  const contenido = Buffer.from(
-    await archivo.arrayBuffer(),
-  );
-
-  await writeFile(
-    rutaFisica,
-    contenido,
-  );
+  let urlArchivo: string;
 
   try {
-    await db.transaction(async (tx) => {
-      await tx.insert(evidencias)
-        .values({
-          trabajoId,
-          usuarioId: sesion.usuarioId,
-          archivoUrl:
-            `/uploads/evidencias/${nombreArchivo}`,
-          nombreOriginal:
-            archivo.name || nombreArchivo,
-          descripcion:
-            descripcion || null,
-        })
-;
+    /*
+     * Subir directamente desde el servidor
+     * a Vercel Blob.
+     *
+     * El token BLOB_READ_WRITE_TOKEN
+     * permanece únicamente en el servidor.
+     */
+    const blob = await put(
+      rutaBlob,
+      archivo,
+      {
+        access: "public",
+        contentType:
+          archivo.type,
+      },
+    );
 
-      /*
-       * Cuando un técnico sube una evidencia,
-       * se notifica a todos los supervisores.
-       */
-      if (sesion.rol !== "TECNICO") {
-        return;
-      }
-
-      const supervisores = await tx
-        .select({
-          usuarioId: usuarios.id,
-        })
-        .from(usuarios)
-        .where(
-          eq(
-            usuarios.rol,
-            "SUPERVISOR",
-          ),
-        )
-;
-
-      if (supervisores.length === 0) {
-        return;
-      }
-
-      const detalleDescripcion =
-        descripcion
-          ? " Incluyó una descripción."
-          : "";
-
-      await tx.insert(notificaciones)
-        .values(
-          supervisores.map(
-            (supervisor) => ({
-              usuarioId:
-                supervisor.usuarioId,
-
-              trabajoId,
-
-              titulo:
-                "Nueva evidencia subida",
-
-              mensaje:
-                `Se agregó una evidencia al trabajo ` +
-                `"${trabajo.tipo}" del ${trabajo.fecha}.` +
-                detalleDescripcion,
-
-              tipo: "EVIDENCIA",
-              leida: false,
-            }),
-          ),
-        )
-;
-    });
+    urlArchivo = blob.url;
   } catch (error) {
-    await unlink(rutaFisica).catch(() => {
-      /*
-       * Evita dejar fotografías en la carpeta
-       * cuando el registro en SQLite falla.
-       */
-    });
+    console.error(
+      "Error subiendo evidencia a Vercel Blob:",
+      error,
+    );
 
-    throw error;
+    redirect(
+      `/evidencias/${trabajoId}?error=almacenamiento`,
+    );
   }
 
-  revalidarPaginas(trabajoId);
+  /*
+   * Guardar la URL permanente de Blob
+   * en PostgreSQL.
+   */
+  try {
+    await db.transaction(
+      async (tx) => {
+        await tx
+          .insert(evidencias)
+          .values({
+            trabajoId,
+            usuarioId:
+              sesion.usuarioId,
+            archivoUrl:
+              urlArchivo,
+            nombreOriginal:
+              archivo.name ||
+              nombreArchivo,
+            descripcion:
+              descripcion ||
+              null,
+          });
+
+        /*
+         * Cuando un técnico sube evidencia,
+         * avisamos a todos los supervisores.
+         */
+        if (
+          sesion.rol !==
+          "TECNICO"
+        ) {
+          return;
+        }
+
+        const supervisores =
+          await tx
+            .select({
+              usuarioId:
+                usuarios.id,
+            })
+            .from(usuarios)
+            .where(
+              eq(
+                usuarios.rol,
+                "SUPERVISOR",
+              ),
+            );
+
+        if (
+          supervisores.length ===
+          0
+        ) {
+          return;
+        }
+
+        const detalleDescripcion =
+          descripcion
+            ? " Incluyó una descripción."
+            : "";
+
+        await tx
+          .insert(notificaciones)
+          .values(
+            supervisores.map(
+              (
+                supervisor,
+              ) => ({
+                usuarioId:
+                  supervisor.usuarioId,
+
+                trabajoId,
+
+                titulo:
+                  "Nueva evidencia subida",
+
+                mensaje:
+                  `Se agregó una evidencia al trabajo ` +
+                  `"${trabajo.tipo}" del ${trabajo.fecha}.` +
+                  detalleDescripcion,
+
+                tipo:
+                  "EVIDENCIA",
+
+                leida: false,
+              }),
+            ),
+          );
+      },
+    );
+  } catch (error) {
+    console.error(
+      "Error guardando evidencia en PostgreSQL:",
+      error,
+    );
+
+    redirect(
+      `/evidencias/${trabajoId}?error=base-datos`,
+    );
+  }
+
+  revalidarPaginas(
+    trabajoId,
+  );
 
   redirect(
     `/evidencias/${trabajoId}?exito=subida`,
