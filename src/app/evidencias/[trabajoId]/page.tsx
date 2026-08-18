@@ -1,355 +1,341 @@
-import { and, desc, eq } from "drizzle-orm";
-import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+"use server";
 
-import { AppShell } from "@/components/app-shell";
-import { PageHeader } from "@/components/page-header";
+import { randomUUID } from "node:crypto";
+
+import { put } from "@vercel/blob";
+import { and, eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+
 import { db } from "@/db";
 import {
-  clientes,
   evidencias,
+  notificaciones,
   trabajos,
   trabajoEmpleados,
   usuarios,
 } from "@/db/schema";
 import { requerirSesion } from "@/lib/auth";
 
-import { subirEvidencia } from "../actions";
+const TAMANO_MAXIMO = 5 * 1024 * 1024;
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
-type EvidenciasPageProps = {
-  params: Promise<{
-    trabajoId: string;
-  }>;
-
-  searchParams: Promise<{
-    error?: string | string[];
-    exito?: string | string[];
-  }>;
+const formatosPermitidos: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
 };
 
-export default async function EvidenciasPage({
-  params,
-  searchParams,
-}: EvidenciasPageProps) {
+function obtenerTexto(
+  formData: FormData,
+  campo: string,
+): string {
+  const valor = formData.get(campo);
+
+  return typeof valor === "string"
+    ? valor.trim()
+    : "";
+}
+
+function revalidarPaginas(
+  trabajoId: number,
+): void {
+  revalidatePath(
+    `/evidencias/${trabajoId}`,
+  );
+
+  revalidatePath("/mis-trabajos");
+  revalidatePath("/trabajos");
+  revalidatePath("/dashboard");
+  revalidatePath("/notificaciones");
+}
+
+async function verificarAccesoAlTrabajo(
+  trabajoId: number,
+) {
   const sesion = await requerirSesion();
 
-  const { trabajoId: trabajoIdTexto } = await params;
-  const parametros = await searchParams;
+  const [trabajoExiste] = await db
+    .select({
+      id: trabajos.id,
+    })
+    .from(trabajos)
+    .where(
+      eq(
+        trabajos.id,
+        trabajoId,
+      ),
+    )
+    .limit(1);
 
-  const trabajoId = Number(trabajoIdTexto);
+  if (!trabajoExiste) {
+    redirect(
+      sesion.rol === "SUPERVISOR"
+        ? "/trabajos?error=no-encontrado"
+        : "/mis-trabajos?error=no-encontrado",
+    );
+  }
+
+  if (
+    sesion.rol === "SUPERVISOR" ||
+    sesion.rol === "ADMIN"
+  ) {
+    return sesion;
+  }
+
+  const [usuario] = await db
+    .select({
+      empleadoId: usuarios.empleadoId,
+    })
+    .from(usuarios)
+    .where(
+      eq(
+        usuarios.id,
+        sesion.usuarioId,
+      ),
+    )
+    .limit(1);
+
+  if (!usuario?.empleadoId) {
+    redirect(
+      "/mis-trabajos?error=cuenta",
+    );
+  }
+
+  const [asignacion] = await db
+    .select({
+      trabajoId:
+        trabajoEmpleados.trabajoId,
+    })
+    .from(trabajoEmpleados)
+    .where(
+      and(
+        eq(
+          trabajoEmpleados.trabajoId,
+          trabajoId,
+        ),
+        eq(
+          trabajoEmpleados.empleadoId,
+          usuario.empleadoId,
+        ),
+      ),
+    )
+    .limit(1);
+
+  if (!asignacion) {
+    redirect(
+      "/mis-trabajos?error=permiso",
+    );
+  }
+
+  return sesion;
+}
+
+export async function subirEvidencia(
+  formData: FormData,
+): Promise<void> {
+  const trabajoId = Number(
+    formData.get("trabajoId"),
+  );
 
   if (
     !Number.isInteger(trabajoId) ||
     trabajoId <= 0
   ) {
-    notFound();
+    redirect(
+      "/mis-trabajos?error=datos",
+    );
   }
 
-  const [trabajo] = await db
-    .select({
-      id: trabajos.id,
-      tipo: trabajos.tipo,
-      descripcion: trabajos.descripcion,
-      fecha: trabajos.fecha,
-      estado: trabajos.estado,
-      clienteNombre: clientes.nombre,
-    })
-    .from(trabajos)
-    .innerJoin(
-      clientes,
-      eq(trabajos.clienteId, clientes.id),
-    )
-    .where(eq(trabajos.id, trabajoId))
-    .limit(1);
+  const sesion =
+    await verificarAccesoAlTrabajo(
+      trabajoId,
+    );
 
-  if (!trabajo) {
-    notFound();
+  const archivo =
+    formData.get("foto");
+
+  const descripcion =
+    obtenerTexto(
+      formData,
+      "descripcion",
+    );
+
+  if (
+    !(archivo instanceof File) ||
+    archivo.size === 0
+  ) {
+    redirect(
+      `/evidencias/${trabajoId}?error=archivo`,
+    );
   }
 
-  /*
-   * Los supervisores pueden ver cualquier trabajo.
-   * Los técnicos solo los trabajos que tengan asignados.
-   */
-  if (sesion.rol === "TECNICO") {
-    const [usuario] = await db
-      .select({
-        empleadoId: usuarios.empleadoId,
-      })
-      .from(usuarios)
-      .where(eq(usuarios.id, sesion.usuarioId))
-      .limit(1);
+  const extension =
+    formatosPermitidos[
+      archivo.type
+    ];
 
-    if (!usuario?.empleadoId) {
-      redirect("/mis-trabajos?error=cuenta");
-    }
+  if (!extension) {
+    redirect(
+      `/evidencias/${trabajoId}?error=formato`,
+    );
+  }
 
-    const [asignacion] = await db
+  if (
+    archivo.size >
+    TAMANO_MAXIMO
+  ) {
+    redirect(
+      `/evidencias/${trabajoId}?error=tamano`,
+    );
+  }
+
+  const [trabajo] =
+    await db
       .select({
-        trabajoId: trabajoEmpleados.trabajoId,
+        id: trabajos.id,
+        tipo: trabajos.tipo,
+        fecha: trabajos.fecha,
       })
-      .from(trabajoEmpleados)
+      .from(trabajos)
       .where(
-        and(
-          eq(
-            trabajoEmpleados.trabajoId,
-            trabajoId,
-          ),
-          eq(
-            trabajoEmpleados.empleadoId,
-            usuario.empleadoId,
-          ),
+        eq(
+          trabajos.id,
+          trabajoId,
         ),
       )
       .limit(1);
 
-    if (!asignacion) {
-      redirect("/mis-trabajos?error=permiso");
-    }
+  if (!trabajo) {
+    redirect(
+      sesion.rol === "SUPERVISOR"
+        ? "/trabajos?error=no-encontrado"
+        : "/mis-trabajos?error=no-encontrado",
+    );
   }
 
-  const error =
-    typeof parametros.error === "string"
-      ? parametros.error
-      : "";
+  const nombreArchivo =
+    `${randomUUID()}.${extension}`;
 
-  const exito =
-    typeof parametros.exito === "string"
-      ? parametros.exito
-      : "";
+  const rutaBlob =
+    `evidencias/trabajo-${trabajoId}/${nombreArchivo}`;
 
-  const listaEvidencias = await db
-    .select({
-      id: evidencias.id,
-      archivoUrl: evidencias.archivoUrl,
-      nombreOriginal: evidencias.nombreOriginal,
-      descripcion: evidencias.descripcion,
-      creadoEn: evidencias.creadoEn,
-      usuarioNombre: usuarios.nombre,
-    })
-    .from(evidencias)
-    .innerJoin(
-      usuarios,
-      eq(evidencias.usuarioId, usuarios.id),
-    )
-    .where(
-      eq(evidencias.trabajoId, trabajoId),
-    )
-    .orderBy(desc(evidencias.id))
-;
+  let urlArchivo: string;
 
-  const mensajeError =
-    error === "archivo"
-      ? "Selecciona una fotografía."
-      : error === "formato"
-        ? "Solo se permiten imágenes JPG, PNG o WebP."
-        : error === "tamano"
-          ? "La fotografía no puede superar los 5 MB."
-          : error
-            ? "No se pudo subir la evidencia."
+  try {
+    const blob = await put(
+      rutaBlob,
+      archivo,
+      {
+        access: "public",
+        contentType:
+          archivo.type,
+      },
+    );
+
+    urlArchivo = blob.url;
+  } catch (error) {
+    console.error(
+      "Error subiendo evidencia a Vercel Blob:",
+      error,
+    );
+
+    redirect(
+      `/evidencias/${trabajoId}?error=almacenamiento`,
+    );
+  }
+
+  try {
+    await db.transaction(
+      async (tx) => {
+        await tx
+          .insert(evidencias)
+          .values({
+            trabajoId,
+            usuarioId:
+              sesion.usuarioId,
+            archivoUrl:
+              urlArchivo,
+            nombreOriginal:
+              archivo.name ||
+              nombreArchivo,
+            descripcion:
+              descripcion ||
+              null,
+          });
+
+        if (
+          sesion.rol !==
+          "TECNICO"
+        ) {
+          return;
+        }
+
+        const supervisores =
+          await tx
+            .select({
+              usuarioId:
+                usuarios.id,
+            })
+            .from(usuarios)
+            .where(
+              eq(
+                usuarios.rol,
+                "SUPERVISOR",
+              ),
+            );
+
+        if (
+          supervisores.length ===
+          0
+        ) {
+          return;
+        }
+
+        const detalleDescripcion =
+          descripcion
+            ? " Incluyó una descripción."
             : "";
 
-  const rutaRegreso =
-    sesion.rol === "TECNICO"
-      ? "/mis-trabajos"
-      : "/trabajos";
+        await tx
+          .insert(notificaciones)
+          .values(
+            supervisores.map(
+              (
+                supervisor,
+              ) => ({
+                usuarioId:
+                  supervisor.usuarioId,
+                trabajoId,
+                titulo:
+                  "Nueva evidencia subida",
+                mensaje:
+                  `Se agregó una evidencia al trabajo ` +
+                  `"${trabajo.tipo}" del ${trabajo.fecha}.` +
+                  detalleDescripcion,
+                tipo:
+                  "EVIDENCIA",
+                leida: false,
+              }),
+            ),
+          );
+      },
+    );
+  } catch (error) {
+    console.error(
+      "Error guardando evidencia en PostgreSQL:",
+      error,
+    );
 
-  return (
-    <AppShell>
-      <PageHeader
-        title="Evidencias fotográficas"
-        description={`Trabajo #${trabajo.id} — ${trabajo.clienteNombre}`}
-      />
+    redirect(
+      `/evidencias/${trabajoId}?error=base-datos`,
+    );
+  }
 
-      <section className="space-y-6 p-5 md:p-8">
-        <div>
-          <Link
-            href={rutaRegreso}
-            className="inline-flex rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            ← Volver
-          </Link>
-        </div>
+  revalidarPaginas(
+    trabajoId,
+  );
 
-        <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="grid gap-5 md:grid-cols-3">
-            <div>
-              <p className="text-sm text-slate-500">
-                Cliente
-              </p>
-
-              <p className="font-bold text-slate-900">
-                {trabajo.clienteNombre}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-sm text-slate-500">
-                Tipo de trabajo
-              </p>
-
-              <p className="font-bold text-slate-900">
-                {trabajo.tipo}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-sm text-slate-500">
-                Fecha y estado
-              </p>
-
-              <p className="font-bold text-slate-900">
-                {trabajo.fecha} — {trabajo.estado}
-              </p>
-            </div>
-          </div>
-
-          <p className="mt-5 text-sm text-slate-600">
-            {trabajo.descripcion}
-          </p>
-        </article>
-
-        {mensajeError && (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
-            {mensajeError}
-          </div>
-        )}
-
-        {exito === "subida" && (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">
-            Evidencia subida correctamente.
-          </div>
-        )}
-
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-bold text-slate-900">
-            Subir evidencia
-          </h2>
-
-          <p className="mt-1 text-sm text-slate-500">
-            Puedes subir fotografías JPG, PNG o WebP de
-            hasta 5 MB.
-          </p>
-
-          <form
-            action={subirEvidencia}
-            encType="multipart/form-data"
-            className="mt-6 grid gap-5 md:grid-cols-2"
-          >
-            <input
-              type="hidden"
-              name="trabajoId"
-              value={trabajo.id}
-            />
-
-            <div>
-              <label
-                htmlFor="foto"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
-                Fotografía
-              </label>
-
-              <input
-                id="foto"
-                type="file"
-                name="foto"
-                accept="image/jpeg,image/png,image/webp"
-                capture="environment"
-                required
-                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="descripcion"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
-                Descripción
-              </label>
-
-              <input
-                id="descripcion"
-                name="descripcion"
-                placeholder="Ejemplo: instalación terminada"
-                className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <button
-                type="submit"
-                className="rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700"
-              >
-                Subir fotografía
-              </button>
-            </div>
-          </form>
-        </section>
-
-        <section>
-          <div className="mb-4">
-            <h2 className="text-xl font-bold text-slate-900">
-              Galería de evidencias
-            </h2>
-
-            <p className="text-sm text-slate-500">
-              Fotografías registradas:{" "}
-              {listaEvidencias.length}
-            </p>
-          </div>
-
-          {listaEvidencias.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
-              Todavía no hay fotografías para este
-              trabajo.
-            </div>
-          ) : (
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-              {listaEvidencias.map((evidencia) => (
-                <article
-                  key={evidencia.id}
-                  className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
-                >
-                  <a
-                    href={evidencia.archivoUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    <img
-                      src={evidencia.archivoUrl}
-                      alt={
-                        evidencia.descripcion ||
-                        evidencia.nombreOriginal
-                      }
-                      className="h-64 w-full object-cover"
-                    />
-                  </a>
-
-                  <div className="space-y-2 p-5">
-                    <p className="font-semibold text-slate-900">
-                      {evidencia.descripcion ||
-                        "Sin descripción"}
-                    </p>
-
-                    <p className="text-sm text-slate-500">
-                      Subida por{" "}
-                      {evidencia.usuarioNombre}
-                    </p>
-
-                    <p className="text-xs text-slate-400">
-                      {evidencia.creadoEn}
-                    </p>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
-      </section>
-    </AppShell>
+  redirect(
+    `/evidencias/${trabajoId}?exito=subida`,
   );
 }

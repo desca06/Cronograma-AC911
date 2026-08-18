@@ -1,384 +1,204 @@
-"use server";
-
-import { randomUUID } from "node:crypto";
-
-import { put } from "@vercel/blob";
-import { and, eq } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-
-import { db } from "@/db";
+import { jwtVerify } from "jose";
 import {
-  evidencias,
-  notificaciones,
-  trabajos,
-  trabajoEmpleados,
-  usuarios,
-} from "@/db/schema";
-import { requerirSesion } from "@/lib/auth";
+  NextRequest,
+  NextResponse,
+} from "next/server";
 
-const TAMANO_MAXIMO = 5 * 1024 * 1024;
+const nombreCookie = "control_trabajos_session";
 
-const formatosPermitidos: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
+const rutasPublicas = [
+  "/login",
+  "/asistencia",
+  "/manifest.webmanifest",
+  "/sw.js",
+];
+
+function obtenerClaveSecreta(): Uint8Array {
+  const clave = process.env.SESSION_SECRET;
+
+  if (!clave) {
+    throw new Error("No se encontró SESSION_SECRET.");
+  }
+
+  return new TextEncoder().encode(clave);
+}
+
+function esRutaPublica(ruta: string) {
+  return rutasPublicas.some(
+    (rutaPublica) =>
+      ruta === rutaPublica ||
+      ruta.startsWith(`${rutaPublica}/`),
+  );
+}
+
+function coincideRuta(ruta: string, base: string) {
+  return ruta === base || ruta.startsWith(`${base}/`);
+}
+
+function rutaPermitidaParaRol(ruta: string, rol: string) {
+  if (rol === "ADMIN") {
+    return true;
+  }
+
+  if (rol === "TECNICO") {
+    return (
+      coincideRuta(ruta, "/mis-trabajos") ||
+      coincideRuta(ruta, "/historial") ||
+      coincideRuta(ruta, "/notificaciones") ||
+      // Sin esta ruta el botón "Ver o subir evidencias"
+      // redirige de vuelta a /mis-trabajos en Vercel.
+      coincideRuta(ruta, "/evidencias") ||
+      coincideRuta(ruta, "/api/push") ||
+      coincideRuta(ruta, "/api/notificaciones")
+    );
+  }
+
+  if (rol === "SUPERVISOR") {
+    return (
+      coincideRuta(ruta, "/dashboard") ||
+      coincideRuta(ruta, "/trabajos") ||
+      coincideRuta(ruta, "/cronograma") ||
+      coincideRuta(ruta, "/empleados") ||
+      coincideRuta(ruta, "/clientes") ||
+      coincideRuta(ruta, "/vehiculos") ||
+      coincideRuta(ruta, "/usuarios") ||
+      coincideRuta(ruta, "/configuracion") ||
+      coincideRuta(ruta, "/mis-trabajos") ||
+      coincideRuta(ruta, "/historial") ||
+      coincideRuta(ruta, "/notificaciones") ||
+      coincideRuta(ruta, "/trabajos-asignados") ||
+      coincideRuta(ruta, "/evidencias") ||
+      coincideRuta(ruta, "/api/push") ||
+      coincideRuta(ruta, "/api/notificaciones")
+    );
+  }
+
+  if (rol === "COTIZADORA") {
+    return (
+      coincideRuta(ruta, "/dashboard") ||
+      ruta === "/cronograma" ||
+      coincideRuta(ruta, "/administracion") &&
+        (
+          ruta === "/administracion" ||
+          coincideRuta(ruta, "/administracion/compras") ||
+          coincideRuta(ruta, "/administracion/reportes")
+        )
+    );
+  }
+
+  if (rol === "BODEGA") {
+    return (
+      coincideRuta(ruta, "/dashboard") ||
+      coincideRuta(ruta, "/administracion") &&
+        (
+          ruta === "/administracion" ||
+          coincideRuta(ruta, "/administracion/inventario")
+        )
+    );
+  }
+
+  return false;
+}
+
+function destinoPorRol(rol: string) {
+  if (rol === "TECNICO") {
+    return "/mis-trabajos";
+  }
+
+  return "/dashboard";
+}
+
+export async function proxy(request: NextRequest) {
+  const ruta = request.nextUrl.pathname;
+  const esLogin = ruta === "/login";
+
+  if (esRutaPublica(ruta)) {
+    if (!esLogin) {
+      return NextResponse.next();
+    }
+
+    const tokenLogin = request.cookies.get(nombreCookie)?.value;
+
+    if (!tokenLogin) {
+      return NextResponse.next();
+    }
+
+    try {
+      const resultado = await jwtVerify(
+        tokenLogin,
+        obtenerClaveSecreta(),
+      );
+
+      const rol = String(resultado.payload.rol ?? "");
+
+      return NextResponse.redirect(
+        new URL(destinoPorRol(rol), request.url),
+      );
+    } catch {
+      const respuesta = NextResponse.next();
+      respuesta.cookies.delete(nombreCookie);
+      return respuesta;
+    }
+  }
+
+  const token = request.cookies.get(nombreCookie)?.value;
+
+  if (!token) {
+    if (ruta.startsWith("/api/")) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "No hay una sesión activa.",
+        },
+        { status: 401 },
+      );
+    }
+
+    return NextResponse.redirect(
+      new URL("/login", request.url),
+    );
+  }
+
+  try {
+    const resultado = await jwtVerify(
+      token,
+      obtenerClaveSecreta(),
+    );
+
+    const rol = String(resultado.payload.rol ?? "");
+
+    if (!rutaPermitidaParaRol(ruta, rol)) {
+      return NextResponse.redirect(
+        new URL(destinoPorRol(rol), request.url),
+      );
+    }
+
+    return NextResponse.next();
+  } catch {
+    if (ruta.startsWith("/api/")) {
+      const respuesta = NextResponse.json(
+        {
+          ok: false,
+          error: "La sesión no es válida o expiró.",
+        },
+        { status: 401 },
+      );
+
+      respuesta.cookies.delete(nombreCookie);
+      return respuesta;
+    }
+
+    const respuesta = NextResponse.redirect(
+      new URL("/login", request.url),
+    );
+
+    respuesta.cookies.delete(nombreCookie);
+    return respuesta;
+  }
+}
+
+export const config = {
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+  ],
 };
-
-function obtenerTexto(
-  formData: FormData,
-  campo: string,
-): string {
-  const valor = formData.get(campo);
-
-  return typeof valor === "string"
-    ? valor.trim()
-    : "";
-}
-
-function revalidarPaginas(
-  trabajoId: number,
-): void {
-  revalidatePath(
-    `/evidencias/${trabajoId}`,
-  );
-
-  revalidatePath("/mis-trabajos");
-  revalidatePath("/trabajos");
-  revalidatePath("/dashboard");
-  revalidatePath("/notificaciones");
-}
-
-async function verificarAccesoAlTrabajo(
-  trabajoId: number,
-) {
-  const sesion = await requerirSesion();
-
-  const [trabajoExiste] = await db
-    .select({
-      id: trabajos.id,
-    })
-    .from(trabajos)
-    .where(
-      eq(
-        trabajos.id,
-        trabajoId,
-      ),
-    )
-    .limit(1);
-
-  if (!trabajoExiste) {
-    redirect(
-      sesion.rol === "SUPERVISOR"
-        ? "/trabajos?error=no-encontrado"
-        : "/mis-trabajos?error=no-encontrado",
-    );
-  }
-
-  /*
-   * El supervisor puede consultar cualquier trabajo.
-   */
-  if (sesion.rol === "SUPERVISOR") {
-    return sesion;
-  }
-
-  /*
-   * Los demás usuarios deben estar vinculados
-   * a un empleado y tener el trabajo asignado.
-   */
-  const [usuario] = await db
-    .select({
-      empleadoId: usuarios.empleadoId,
-    })
-    .from(usuarios)
-    .where(
-      eq(
-        usuarios.id,
-        sesion.usuarioId,
-      ),
-    )
-    .limit(1);
-
-  if (!usuario?.empleadoId) {
-    redirect(
-      "/mis-trabajos?error=cuenta",
-    );
-  }
-
-  const [asignacion] = await db
-    .select({
-      trabajoId:
-        trabajoEmpleados.trabajoId,
-    })
-    .from(trabajoEmpleados)
-    .where(
-      and(
-        eq(
-          trabajoEmpleados.trabajoId,
-          trabajoId,
-        ),
-        eq(
-          trabajoEmpleados.empleadoId,
-          usuario.empleadoId,
-        ),
-      ),
-    )
-    .limit(1);
-
-  if (!asignacion) {
-    redirect(
-      "/mis-trabajos?error=permiso",
-    );
-  }
-
-  return sesion;
-}
-
-export async function subirEvidencia(
-  formData: FormData,
-): Promise<void> {
-  const trabajoId = Number(
-    formData.get("trabajoId"),
-  );
-
-  if (
-    !Number.isInteger(trabajoId) ||
-    trabajoId <= 0
-  ) {
-    redirect(
-      "/mis-trabajos?error=datos",
-    );
-  }
-
-  const sesion =
-    await verificarAccesoAlTrabajo(
-      trabajoId,
-    );
-
-  const archivo =
-    formData.get("foto");
-
-  const descripcion =
-    obtenerTexto(
-      formData,
-      "descripcion",
-    );
-
-  /*
-   * Validar que realmente recibimos
-   * un archivo.
-   */
-  if (
-    !(archivo instanceof File) ||
-    archivo.size === 0
-  ) {
-    redirect(
-      `/evidencias/${trabajoId}?error=archivo`,
-    );
-  }
-
-  /*
-   * Validar formato.
-   */
-  const extension =
-    formatosPermitidos[
-      archivo.type
-    ];
-
-  if (!extension) {
-    redirect(
-      `/evidencias/${trabajoId}?error=formato`,
-    );
-  }
-
-  /*
-   * Validar tamaño máximo.
-   */
-  if (
-    archivo.size >
-    TAMANO_MAXIMO
-  ) {
-    redirect(
-      `/evidencias/${trabajoId}?error=tamano`,
-    );
-  }
-
-  /*
-   * Confirmar que el trabajo todavía existe.
-   */
-  const [trabajo] =
-    await db
-      .select({
-        id: trabajos.id,
-        tipo: trabajos.tipo,
-        fecha: trabajos.fecha,
-      })
-      .from(trabajos)
-      .where(
-        eq(
-          trabajos.id,
-          trabajoId,
-        ),
-      )
-      .limit(1);
-
-  if (!trabajo) {
-    redirect(
-      sesion.rol === "SUPERVISOR"
-        ? "/trabajos?error=no-encontrado"
-        : "/mis-trabajos?error=no-encontrado",
-    );
-  }
-
-  /*
-   * Nombre único para la fotografía.
-   */
-  const nombreArchivo =
-    `${randomUUID()}.${extension}`;
-
-  /*
-   * Carpeta lógica dentro de Vercel Blob.
-   */
-  const rutaBlob =
-    `evidencias/trabajo-${trabajoId}/${nombreArchivo}`;
-
-  let urlArchivo: string;
-
-  try {
-    /*
-     * Subir directamente desde el servidor
-     * a Vercel Blob.
-     *
-     * El token BLOB_READ_WRITE_TOKEN
-     * permanece únicamente en el servidor.
-     */
-    const blob = await put(
-      rutaBlob,
-      archivo,
-      {
-        access: "public",
-        contentType:
-          archivo.type,
-      },
-    );
-
-    urlArchivo = blob.url;
-  } catch (error) {
-    console.error(
-      "Error subiendo evidencia a Vercel Blob:",
-      error,
-    );
-
-    redirect(
-      `/evidencias/${trabajoId}?error=almacenamiento`,
-    );
-  }
-
-  /*
-   * Guardar la URL permanente de Blob
-   * en PostgreSQL.
-   */
-  try {
-    await db.transaction(
-      async (tx) => {
-        await tx
-          .insert(evidencias)
-          .values({
-            trabajoId,
-            usuarioId:
-              sesion.usuarioId,
-            archivoUrl:
-              urlArchivo,
-            nombreOriginal:
-              archivo.name ||
-              nombreArchivo,
-            descripcion:
-              descripcion ||
-              null,
-          });
-
-        /*
-         * Cuando un técnico sube evidencia,
-         * avisamos a todos los supervisores.
-         */
-        if (
-          sesion.rol !==
-          "TECNICO"
-        ) {
-          return;
-        }
-
-        const supervisores =
-          await tx
-            .select({
-              usuarioId:
-                usuarios.id,
-            })
-            .from(usuarios)
-            .where(
-              eq(
-                usuarios.rol,
-                "SUPERVISOR",
-              ),
-            );
-
-        if (
-          supervisores.length ===
-          0
-        ) {
-          return;
-        }
-
-        const detalleDescripcion =
-          descripcion
-            ? " Incluyó una descripción."
-            : "";
-
-        await tx
-          .insert(notificaciones)
-          .values(
-            supervisores.map(
-              (
-                supervisor,
-              ) => ({
-                usuarioId:
-                  supervisor.usuarioId,
-
-                trabajoId,
-
-                titulo:
-                  "Nueva evidencia subida",
-
-                mensaje:
-                  `Se agregó una evidencia al trabajo ` +
-                  `"${trabajo.tipo}" del ${trabajo.fecha}.` +
-                  detalleDescripcion,
-
-                tipo:
-                  "EVIDENCIA",
-
-                leida: false,
-              }),
-            ),
-          );
-      },
-    );
-  } catch (error) {
-    console.error(
-      "Error guardando evidencia en PostgreSQL:",
-      error,
-    );
-
-    redirect(
-      `/evidencias/${trabajoId}?error=base-datos`,
-    );
-  }
-
-  revalidarPaginas(
-    trabajoId,
-  );
-
-  redirect(
-    `/evidencias/${trabajoId}?exito=subida`,
-  );
-}
