@@ -10,6 +10,7 @@ import Link from "next/link";
 
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
+import { CierreTrabajo } from "@/components/cierre-trabajo";
 import { db } from "@/db";
 import {
   clientes,
@@ -122,6 +123,9 @@ export default async function MisTrabajosPage({
         trabajos.observaciones,
       clienteNombre: clientes.nombre,
       vehiculoNombre: vehiculos.nombre,
+      firmaCliente: trabajos.firmaCliente,
+      firmaClienteNombre: trabajos.firmaClienteNombre,
+      firmaClienteFecha: trabajos.firmaClienteFecha,
     })
     .from(trabajoEmpleados)
     .innerJoin(
@@ -234,8 +238,25 @@ export default async function MisTrabajosPage({
         ? "Tu cuenta no está vinculada con un empleado."
         : error === "no-encontrado"
           ? "El trabajo no fue encontrado."
-          : error
-            ? "No se pudo realizar la operación."
+          : error === "firma-requerida"
+            ? "Para finalizar debes capturar la firma del cliente y su nombre."
+            : error === "firma-invalida"
+              ? "La firma capturada no es válida. Intenta firmar nuevamente."
+              : error === "firma-nombre"
+                ? "Debes ingresar el nombre completo del cliente que firma."
+                : error
+                  ? "No se pudo realizar la operación."
+                  : "";
+
+  const mensajeExito =
+    exito === "actualizado"
+      ? "Trabajo actualizado correctamente."
+      : exito === "finalizado-firma"
+        ? "¡Trabajo finalizado con firma del cliente! El PDF ya incluye la firma."
+        : exito === "firma-guardada"
+          ? "Firma del cliente guardada correctamente."
+          : exito === "sin-cambios"
+            ? "No había cambios nuevos para guardar."
             : "";
 
   return (
@@ -252,15 +273,9 @@ export default async function MisTrabajosPage({
           </div>
         )}
 
-        {exito === "actualizado" && (
+        {mensajeExito && (
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">
-            Trabajo actualizado correctamente.
-          </div>
-        )}
-
-        {exito === "sin-cambios" && (
-          <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-blue-700">
-            No había cambios nuevos para guardar.
+            {mensajeExito}
           </div>
         )}
 
@@ -271,8 +286,15 @@ export default async function MisTrabajosPage({
             </h2>
 
             <p className="mt-2 text-slate-500">
-              Tus nuevas asignaciones aparecerán aquí.
+              Tus nuevas asignaciones aparecerán aquí. Revisa el historial para ver finalizados.
             </p>
+
+            <Link
+              href="/historial"
+              className="mt-5 inline-flex rounded-xl bg-slate-900 px-5 py-3 font-semibold text-white"
+            >
+              Ver historial
+            </Link>
           </div>
         ) : (
           <div className="grid gap-5 xl:grid-cols-2">
@@ -356,7 +378,7 @@ export default async function MisTrabajosPage({
                     href={`/evidencias/${trabajo.id}`}
                     className="mt-6 block w-full rounded-xl border border-blue-300 bg-blue-50 px-5 py-3 text-center font-semibold text-blue-700 transition hover:bg-blue-100"
                   >
-                    Ver o subir evidencias
+                    📸 Ver o subir evidencias
                   </Link>
 
                   <div className="mt-6 border-t border-slate-200 pt-5">
@@ -419,75 +441,16 @@ export default async function MisTrabajosPage({
                     )}
                   </div>
 
-                  <form
-                    action={actualizarMiTrabajo}
-                    className="mt-6 space-y-4 border-t border-slate-200 pt-5"
-                  >
-                    <input
-                      type="hidden"
-                      name="trabajoId"
-                      value={trabajo.id}
-                    />
-
-                    <div>
-                      <label
-                        htmlFor={`estado-${trabajo.id}`}
-                        className="mb-2 block text-sm font-semibold text-slate-700"
-                      >
-                        Estado del trabajo
-                      </label>
-
-                      <select
-                        id={`estado-${trabajo.id}`}
-                        name="estado"
-                        defaultValue={
-                          trabajo.estado
-                        }
-                        className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"
-                      >
-                        <option value="En camino">
-                          En camino
-                        </option>
-
-                        <option value="En proceso">
-                          En proceso
-                        </option>
-
-                        <option value="Finalizado">
-                          Finalizado
-                        </option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor={`observaciones-tecnico-${trabajo.id}`}
-                        className="mb-2 block text-sm font-semibold text-slate-700"
-                      >
-                        Nueva observación del técnico
-                      </label>
-
-                      <textarea
-                        id={`observaciones-tecnico-${trabajo.id}`}
-                        name="observacionesTecnico"
-                        rows={3}
-                        defaultValue=""
-                        placeholder="Escribe una nueva observación, avance, problema, material utilizado o resultado"
-                        className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3"
-                      />
-
-                      <p className="mt-2 text-xs text-slate-500">
-                        La nueva observación se agregará al historial; las anteriores no se borrarán.
-                      </p>
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="w-full rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700"
-                    >
-                      Guardar actualización
-                    </button>
-                  </form>
+                  {/* Nuevo componente de cierre con firma */}
+                  <CierreTrabajo
+                    trabajoId={trabajo.id}
+                    estadoActual={trabajo.estado}
+                    rutaRetorno="/mis-trabajos"
+                    formAction={actualizarMiTrabajo}
+                    firmaActual={trabajo.firmaCliente}
+                    nombreFirmaActual={trabajo.firmaClienteNombre}
+                    fechaFirmaActual={trabajo.firmaClienteFecha}
+                  />
                 </article>
               );
             })}

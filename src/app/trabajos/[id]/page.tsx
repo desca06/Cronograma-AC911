@@ -113,6 +113,9 @@ export default async function ReporteTrabajoPage({
         vehiculos.nombre,
       vehiculoPlaca:
         vehiculos.placa,
+      firmaCliente: trabajos.firmaCliente,
+      firmaClienteNombre: trabajos.firmaClienteNombre,
+      firmaClienteFecha: trabajos.firmaClienteFecha,
     })
     .from(trabajos)
     .innerJoin(
@@ -267,7 +270,7 @@ export default async function ReporteTrabajoPage({
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-700"
           >
             <FileText size={17} />
-            Ver PDF
+            Ver PDF con firma
           </Link>
 
           <Link
@@ -362,6 +365,62 @@ export default async function ReporteTrabajoPage({
             />
           </div>
         </article>
+
+        {trabajo.estado === "Finalizado" && (
+          <Seccion titulo="Conformidad y firma del cliente">
+            {trabajo.firmaCliente ? (
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-3">
+                  <p className="text-sm font-bold text-slate-700">Datos de conformidad</p>
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                    <p className="text-sm font-bold text-emerald-900">
+                      ✔ Trabajo recibido a conformidad
+                    </p>
+                    <p className="mt-2 text-sm">
+                      <strong>Cliente:</strong> {trabajo.firmaClienteNombre}
+                    </p>
+                    <p className="mt-1 text-sm">
+                      <strong>Fecha firma:</strong>{" "}
+                      {trabajo.firmaClienteFecha
+                        ? formatearFechaHora(trabajo.firmaClienteFecha)
+                        : "No registrada"}
+                    </p>
+                    <p className="mt-3 text-xs leading-5 text-emerald-800">
+                      El cliente confirma que el trabajo descrito fue realizado y recibido a conformidad.
+                      Esta firma aparece en el PDF oficial.
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm font-bold text-slate-700">Firma digital</p>
+                  <div className="mt-2 overflow-hidden rounded-xl border border-slate-300 bg-white p-2">
+                    <img
+                      src={trabajo.firmaCliente}
+                      alt="Firma del cliente"
+                      className="max-h-48 w-full object-contain"
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-amber-300 bg-amber-50 p-5 text-amber-900">
+                <p className="font-bold">⚠ Trabajo finalizado sin firma</p>
+                <p className="mt-2 text-sm leading-6">
+                  Este trabajo está marcado como Finalizado pero aún no tiene firma del cliente.
+                  Pide al técnico que solicite la firma desde <strong>Mis trabajos</strong> o{" "}
+                  <strong>Evidencias</strong>. Una vez firmada, aparecerá aquí y en el PDF.
+                </p>
+                <Link
+                  href={`/evidencias/${trabajo.id}`}
+                  className="mt-4 inline-flex rounded-xl border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-100"
+                >
+                  Ir a evidencias para firmar
+                </Link>
+              </div>
+            )}
+          </Seccion>
+        )}
 
         <Seccion
           titulo="Descripción del trabajo"

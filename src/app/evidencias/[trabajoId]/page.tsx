@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
+import { CierreTrabajo } from "@/components/cierre-trabajo";
 import { db } from "@/db";
 import {
   clientes,
@@ -15,6 +16,7 @@ import {
 import { requerirSesion } from "@/lib/auth";
 
 import { subirEvidencia } from "./actions";
+import { actualizarMiTrabajo } from "@/app/mis-trabajos/actions";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -29,6 +31,16 @@ type EvidenciasPageProps = {
     exito?: string | string[];
   }>;
 };
+
+function formatearFechaHora(fecha: Date | string | null | undefined) {
+  if (!fecha) return "";
+  const valor = fecha instanceof Date ? fecha : new Date(fecha as any);
+  return new Intl.DateTimeFormat("es-GT", {
+    timeZone: "America/Guatemala",
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(valor);
+}
 
 export default async function EvidenciasPage({
   params,
@@ -56,6 +68,9 @@ export default async function EvidenciasPage({
       fecha: trabajos.fecha,
       estado: trabajos.estado,
       clienteNombre: clientes.nombre,
+      firmaCliente: trabajos.firmaCliente,
+      firmaClienteNombre: trabajos.firmaClienteNombre,
+      firmaClienteFecha: trabajos.firmaClienteFecha,
     })
     .from(trabajos)
     .innerJoin(
@@ -153,30 +168,59 @@ export default async function EvidenciasPage({
               ? "No se pudo guardar la fotografía. Inténtalo de nuevo."
               : error === "base-datos"
                 ? "La fotografía se subió, pero no se pudo registrar. Inténtalo de nuevo."
-                : error
-                  ? "No se pudo subir la evidencia."
-                  : "";
+                : error === "firma-requerida"
+                  ? "Para finalizar debes capturar la firma del cliente."
+                  : error === "firma-invalida"
+                    ? "Firma inválida. Intenta nuevamente."
+                    : error === "firma-nombre"
+                      ? "Ingresa el nombre del cliente que firma."
+                      : error
+                        ? "No se pudo subir la evidencia."
+                        : "";
+
+  const mensajeExito =
+    exito === "subida"
+      ? "Evidencia subida correctamente."
+      : exito === "actualizado"
+        ? "Trabajo actualizado correctamente."
+        : exito === "finalizado-firma"
+          ? "¡Trabajo finalizado con firma! Ya puedes ver el PDF con la firma del cliente."
+          : exito === "firma-guardada"
+            ? "Firma guardada correctamente."
+            : "";
 
   const rutaRegreso =
     sesion.rol === "TECNICO"
       ? "/mis-trabajos"
       : "/trabajos";
 
+  const puedeFinalizar = sesion.rol === "TECNICO";
+
   return (
     <AppShell>
       <PageHeader
         title="Evidencias fotográficas"
-        description={`Trabajo #${trabajo.id} — ${trabajo.clienteNombre}`}
+        description={`Trabajo #${trabajo.id} — ${trabajo.clienteNombre} · ${trabajo.estado}`}
       />
 
       <section className="space-y-6 p-5 md:p-8">
-        <div>
+        <div className="flex flex-wrap gap-3">
           <Link
             href={rutaRegreso}
             className="inline-flex rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
           >
             ← Volver
           </Link>
+
+          {trabajo.estado === "Finalizado" && trabajo.firmaCliente && (
+            <Link
+              href={`/trabajos/${trabajo.id}/pdf`}
+              target="_blank"
+              className="inline-flex rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+            >
+              📄 Ver PDF con firma
+            </Link>
+          )}
         </div>
 
         <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -215,6 +259,27 @@ export default async function EvidenciasPage({
           <p className="mt-5 text-sm text-slate-600">
             {trabajo.descripcion}
           </p>
+
+          {trabajo.firmaCliente && (
+            <div className="mt-6 rounded-xl border-2 border-emerald-300 bg-emerald-50 p-4">
+              <p className="text-sm font-bold text-emerald-900">
+                ✔ Firma de cliente registrada
+              </p>
+              <p className="mt-1 text-sm font-semibold text-slate-900">
+                {trabajo.firmaClienteNombre}
+              </p>
+              <p className="text-xs text-slate-600">
+                {trabajo.firmaClienteFecha
+                  ? `Firmado el ${formatearFechaHora(trabajo.firmaClienteFecha)}`
+                  : "Firma registrada"}
+              </p>
+              <img
+                src={trabajo.firmaCliente}
+                alt="Firma del cliente"
+                className="mt-3 max-h-28 w-full rounded-lg border border-white bg-white object-contain"
+              />
+            </div>
+          )}
         </article>
 
         {mensajeError && (
@@ -223,10 +288,38 @@ export default async function EvidenciasPage({
           </div>
         )}
 
-        {exito === "subida" && (
+        {mensajeExito && (
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">
-            Evidencia subida correctamente.
+            {mensajeExito}
           </div>
+        )}
+
+        {puedeFinalizar && (
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-bold text-slate-900">
+              {trabajo.estado === "Finalizado"
+                ? trabajo.firmaCliente
+                  ? "Actualizar firma / observación"
+                  : "Agregar firma de cierre (trabajo ya finalizado sin firma)"
+                : "Finalización del trabajo"}
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              {trabajo.estado === "Finalizado"
+                ? "Puedes agregar o reemplazar la firma del cliente aquí."
+                : "Sube evidencias y luego finaliza el trabajo solicitando la firma del cliente. La firma aparecerá en el PDF."}
+            </p>
+
+            <CierreTrabajo
+              trabajoId={trabajo.id}
+              estadoActual={trabajo.estado}
+              rutaRetorno={`/evidencias/${trabajo.id}`}
+              formAction={actualizarMiTrabajo}
+              firmaActual={trabajo.firmaCliente}
+              nombreFirmaActual={trabajo.firmaClienteNombre}
+              fechaFirmaActual={trabajo.firmaClienteFecha}
+            />
+          </section>
         )}
 
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">

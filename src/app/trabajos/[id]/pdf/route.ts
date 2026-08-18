@@ -51,6 +51,7 @@ const COLOR = {
   slate50: rgb(248 / 255, 250 / 255, 252 / 255),
   white: rgb(1, 1, 1),
   green: rgb(22 / 255, 163 / 255, 74 / 255),
+  emerald: rgb(16 / 255, 185 / 255, 129 / 255),
 };
 
 function cortar(texto: string, limite: number) {
@@ -205,6 +206,27 @@ function dibujarPie(
   );
 }
 
+function dataUrlAToBytes(dataUrl: string): { bytes: Uint8Array; tipo: "png" | "jpg" | null } | null {
+  try {
+    if (!dataUrl.startsWith("data:image/")) return null;
+    const parts = dataUrl.split(",");
+    if (parts.length < 2) return null;
+    const meta = parts[0];
+    const base64 = parts[1];
+    const binary = Buffer.from(base64, "base64");
+    let tipo: "png" | "jpg" | null = null;
+    if (meta.includes("image/png")) tipo = "png";
+    else if (meta.includes("image/jpeg") || meta.includes("image/jpg")) tipo = "jpg";
+    else if (meta.includes("image/webp")) {
+      // webp no soportado por pdf-lib directamente, lo intentamos como png
+      tipo = "png";
+    }
+    return { bytes: new Uint8Array(binary), tipo };
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(
   request: Request,
   { params }: RouteProps,
@@ -233,6 +255,9 @@ export async function GET(
       clienteTelefono: clientes.telefono,
       vehiculoNombre: vehiculos.nombre,
       vehiculoPlaca: vehiculos.placa,
+      firmaCliente: trabajos.firmaCliente,
+      firmaClienteNombre: trabajos.firmaClienteNombre,
+      firmaClienteFecha: trabajos.firmaClienteFecha,
     })
     .from(trabajos)
     .innerJoin(clientes, eq(trabajos.clienteId, clientes.id))
@@ -458,7 +483,7 @@ export async function GET(
   });
 
   let obsY = 231;
-  const historialPaginaUno = historial.slice(0, 4);
+  const historialPaginaUno = historial.slice(0, 3);
 
   if (historialPaginaUno.length === 0) {
     page.drawText("Sin observaciones técnicas registradas.", {
@@ -489,7 +514,7 @@ export async function GET(
 
       const encabezado = `${item.autor || "Técnico"} · ${item.estadoTrabajo} · ${formatearFechaHora(item.creadoEn)}`;
 
-      page.drawText(cortar(encabezado, 72), {
+      page.drawText(cortar(encabezado, 68), {
         x: rightX + 22,
         y: obsY + 1,
         size: 6.6,
@@ -513,6 +538,91 @@ export async function GET(
       if (obsY < 74) {
         break;
       }
+    }
+  }
+
+  // Reservamos espacio para firma en primera página si hay
+  if (trabajo.firmaCliente) {
+    page.drawText("CONFORMIDAD Y FIRMA DEL CLIENTE", {
+      x: rightX,
+      y: 125,
+      size: 9,
+      font: bold,
+      color: COLOR.navy,
+    });
+
+    page.drawRectangle({
+      x: rightX,
+      y: 68,
+      width: rightW,
+      height: 50,
+      color: COLOR.slate50,
+      borderColor: COLOR.green,
+      borderWidth: 1,
+    });
+
+    const nombreFirma = trabajo.firmaClienteNombre || "Cliente";
+    const fechaFirma = trabajo.firmaClienteFecha
+      ? formatearFechaHora(trabajo.firmaClienteFecha)
+      : "";
+
+    page.drawText(`Cliente: ${cortar(nombreFirma, 38)}`, {
+      x: rightX + 10,
+      y: 108,
+      size: 7.5,
+      font: bold,
+      color: COLOR.slate900,
+    });
+
+    page.drawText(`Fecha: ${fechaFirma || "Registrada"}`, {
+      x: rightX + 10,
+      y: 97,
+      size: 6.5,
+      font: regular,
+      color: COLOR.slate500,
+    });
+
+    page.drawText("Firma digital incluida", {
+      x: rightX + 10,
+      y: 86,
+      size: 6.5,
+      font: regular,
+      color: COLOR.green,
+    });
+
+    // Intentar embed firma
+    try {
+      const firmaBytes = dataUrlAToBytes(trabajo.firmaCliente);
+      if (firmaBytes) {
+        let img;
+        if (firmaBytes.tipo === "png") {
+          img = await pdf.embedPng(firmaBytes.bytes);
+        } else {
+          img = await pdf.embedJpg(firmaBytes.bytes);
+        }
+
+        const maxW = 160;
+        const maxH = 38;
+        const escala = Math.min(maxW / img.width, maxH / img.height);
+        const w = img.width * escala;
+        const h = img.height * escala;
+
+        page.drawImage(img, {
+          x: rightX + rightW - w - 10,
+          y: 72,
+          width: w,
+          height: h,
+        });
+      }
+    } catch (e) {
+      // Si falla embed, solo texto
+      page.drawText("Firma: Ver detalle en sistema", {
+        x: rightX + rightW - 120,
+        y: 85,
+        size: 6.5,
+        font: bold,
+        color: COLOR.slate500,
+      });
     }
   }
 
@@ -748,37 +858,112 @@ export async function GET(
     }
   }
 
+  // Página final de firmas si hay firma y no hemos mostrado en detalle suficiente
+  // Siempre dibujamos bloque de firmas en la última página
   const ultimaPagina = pdf.getPages()[pdf.getPageCount() - 1];
 
-  ultimaPagina.drawLine({
-    start: { x: 80, y: 52 },
-    end: { x: 280, y: 52 },
-    thickness: 0.7,
-    color: COLOR.slate500,
-  });
+  // Si es la misma primera página y ya mostramos firma, solo dibujamos líneas + intento imagen grande
+  // Para asegurar que firma sea visible siempre
 
-  ultimaPagina.drawLine({
-    start: { x: PAGE_WIDTH - 280, y: 52 },
-    end: { x: PAGE_WIDTH - 80, y: 52 },
-    thickness: 0.7,
-    color: COLOR.slate500,
-  });
+  if (PAGE_HEIGHT - 112 > 180) {
+    // Zona de firmas en pie
+    const firmaYBase = 78;
+    const lineaInicioX1 = 80;
+    const lineaFinX1 = 280;
+    const lineaInicioX2 = PAGE_WIDTH - 280;
+    const lineaFinX2 = PAGE_WIDTH - 80;
 
-  ultimaPagina.drawText("Firma técnico AC-911", {
-    x: 134,
-    y: 38,
-    size: 7,
-    font: bold,
-    color: COLOR.slate500,
-  });
+    ultimaPagina.drawLine({
+      start: { x: lineaInicioX1, y: firmaYBase + 24 },
+      end: { x: lineaFinX1, y: firmaYBase + 24 },
+      thickness: 0.8,
+      color: COLOR.slate500,
+    });
 
-  ultimaPagina.drawText("Firma cliente / responsable", {
-    x: PAGE_WIDTH - 232,
-    y: 38,
-    size: 7,
-    font: bold,
-    color: COLOR.slate500,
-  });
+    ultimaPagina.drawLine({
+      start: { x: lineaInicioX2, y: firmaYBase + 24 },
+      end: { x: lineaFinX2, y: firmaYBase + 24 },
+      thickness: 0.8,
+      color: COLOR.slate900,
+    });
+
+    if (trabajo.firmaCliente) {
+      try {
+        const firmaBytes = dataUrlAToBytes(trabajo.firmaCliente);
+        if (firmaBytes) {
+          let img;
+          if (firmaBytes.tipo === "png") {
+            img = await pdf.embedPng(firmaBytes.bytes);
+          } else {
+            img = await pdf.embedJpg(firmaBytes.bytes);
+          }
+
+          // Bot lado cliente con firma
+          const maxW = 180;
+          const maxH = 60;
+          const escala = Math.min(maxW / img.width, maxH / img.height, 1);
+          const w = img.width * escala;
+          const h = img.height * escala;
+          const centroX = (lineaInicioX2 + lineaFinX2) / 2;
+
+          ultimaPagina.drawImage(img, {
+            x: centroX - w / 2,
+            y: firmaYBase + 28,
+            width: w,
+            height: h,
+          });
+        }
+      } catch {
+        // ignore
+      }
+
+      ultimaPagina.drawText(
+        cortar(trabajo.firmaClienteNombre || "Cliente", 30),
+        {
+          x: PAGE_WIDTH - 280,
+          y: firmaYBase + 8,
+          size: 7,
+          font: bold,
+          color: COLOR.slate900,
+        },
+      );
+
+      const fechaFirmaTexto = trabajo.firmaClienteFecha
+        ? formatearFechaHora(trabajo.firmaClienteFecha)
+        : "";
+
+      if (fechaFirmaTexto) {
+        ultimaPagina.drawText(fechaFirmaTexto, {
+          x: PAGE_WIDTH - 280,
+          y: firmaYBase - 2,
+          size: 6,
+          font: regular,
+          color: COLOR.slate500,
+        });
+      }
+    }
+
+    ultimaPagina.drawText("Firma técnico AC-911", {
+      x: 128,
+      y: firmaYBase - 2,
+      size: 7,
+      font: bold,
+      color: COLOR.slate500,
+    });
+
+    ultimaPagina.drawText(
+      trabajo.firmaCliente
+        ? "Firma cliente / responsable - CONFORMIDAD"
+        : "Firma cliente / responsable",
+      {
+        x: PAGE_WIDTH - 254,
+        y: firmaYBase - 2,
+        size: 7,
+        font: bold,
+        color: trabajo.firmaCliente ? COLOR.green : COLOR.slate500,
+      },
+    );
+  }
 
   const bytes = await pdf.save();
   const cuerpoPdf = Buffer.from(bytes);

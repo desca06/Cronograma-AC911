@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
+import { CierreTrabajo } from "@/components/cierre-trabajo";
 import { db } from "@/db";
 import {
   clientes,
@@ -128,6 +129,9 @@ export default async function TrabajoAsignadoPage({
         trabajos.observaciones,
       clienteNombre: clientes.nombre,
       vehiculoNombre: vehiculos.nombre,
+      firmaCliente: trabajos.firmaCliente,
+      firmaClienteNombre: trabajos.firmaClienteNombre,
+      firmaClienteFecha: trabajos.firmaClienteFecha,
     })
     .from(trabajoEmpleados)
     .innerJoin(
@@ -214,15 +218,32 @@ export default async function TrabajoAsignadoPage({
         ? "Tu cuenta no está vinculada con un empleado."
         : error === "no-encontrado"
           ? "El trabajo no fue encontrado."
-          : error
-            ? "No se pudo realizar la operación."
+          : error === "firma-requerida"
+            ? "Para finalizar debes capturar la firma del cliente y su nombre."
+            : error === "firma-invalida"
+              ? "La firma capturada no es válida. Intenta firmar nuevamente."
+              : error === "firma-nombre"
+                ? "Debes ingresar el nombre del cliente que firma."
+                : error
+                  ? "No se pudo realizar la operación."
+                  : "";
+
+  const mensajeExito =
+    exito === "actualizado"
+      ? "Trabajo actualizado correctamente."
+      : exito === "finalizado-firma"
+        ? "¡Trabajo finalizado con firma del cliente! Ya aparece en el PDF."
+        : exito === "firma-guardada"
+          ? "Firma guardada correctamente."
+          : exito === "sin-cambios"
+            ? "No había cambios nuevos para guardar."
             : "";
 
   return (
     <AppShell>
       <PageHeader
         title="Trabajo asignado"
-        description={`Consulta y actualiza el trabajo #${trabajo.id}`}
+        description={`Consulta y actualiza el trabajo #${trabajo.id} · ${trabajo.clienteNombre}`}
       />
 
       <section className="space-y-5 p-5 md:p-8">
@@ -239,15 +260,9 @@ export default async function TrabajoAsignadoPage({
           </div>
         )}
 
-        {exito === "actualizado" && (
+        {mensajeExito && (
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">
-            Trabajo actualizado correctamente.
-          </div>
-        )}
-
-        {exito === "sin-cambios" && (
-          <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-blue-700">
-            No había cambios nuevos para guardar.
+            {mensajeExito}
           </div>
         )}
 
@@ -317,11 +332,27 @@ export default async function TrabajoAsignadoPage({
             </p>
           </div>
 
+          {trabajo.firmaCliente && (
+            <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+              <p className="text-sm font-bold text-emerald-900">
+                ✔ Firma de conformidad registrada
+              </p>
+              <p className="mt-1 text-sm text-emerald-800">
+                Cliente: {trabajo.firmaClienteNombre} · {trabajo.firmaClienteFecha ? formatearFechaHora(trabajo.firmaClienteFecha as any) : ""}
+              </p>
+              <img
+                src={trabajo.firmaCliente}
+                alt="Firma cliente"
+                className="mt-3 max-h-32 w-full rounded-lg border border-emerald-200 bg-white object-contain"
+              />
+            </div>
+          )}
+
           <Link
             href={`/evidencias/${trabajo.id}`}
             className="mt-6 block w-full rounded-xl border border-blue-300 bg-blue-50 px-5 py-3 text-center font-semibold text-blue-700 transition hover:bg-blue-100"
           >
-            Ver o subir evidencias
+            📸 Ver o subir evidencias (recomendado antes de finalizar)
           </Link>
 
           <section className="mt-6 border-t border-slate-200 pt-5">
@@ -384,85 +415,15 @@ export default async function TrabajoAsignadoPage({
             )}
           </section>
 
-          <form
-            action={actualizarMiTrabajo}
-            className="mt-6 space-y-4 border-t border-slate-200 pt-5"
-          >
-            <input
-              type="hidden"
-              name="trabajoId"
-              value={trabajo.id}
-            />
-
-            <input
-              type="hidden"
-              name="rutaRetorno"
-              value={`/mis-trabajos/${trabajo.id}`}
-            />
-
-            <div>
-              <label
-                htmlFor={`estado-${trabajo.id}`}
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
-                Estado del trabajo
-              </label>
-
-              <select
-                id={`estado-${trabajo.id}`}
-                name="estado"
-                defaultValue={
-                  trabajo.estado
-                }
-                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"
-              >
-                <option value="Pendiente">
-                  Pendiente
-                </option>
-
-                <option value="En camino">
-                  En camino
-                </option>
-
-                <option value="En proceso">
-                  En proceso
-                </option>
-
-                <option value="Finalizado">
-                  Finalizado
-                </option>
-              </select>
-            </div>
-
-            <div>
-              <label
-                htmlFor={`observaciones-tecnico-${trabajo.id}`}
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
-                Nueva observación del técnico
-              </label>
-
-              <textarea
-                id={`observaciones-tecnico-${trabajo.id}`}
-                name="observacionesTecnico"
-                rows={4}
-                defaultValue=""
-                placeholder="Escribe una nueva observación, avance, problema, material utilizado o resultado"
-                className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3"
-              />
-
-              <p className="mt-2 text-xs text-slate-500">
-                Al guardar, esta observación se agregará al historial y no reemplazará las anteriores.
-              </p>
-            </div>
-
-            <button
-              type="submit"
-              className="w-full rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700"
-            >
-              Guardar actualización
-            </button>
-          </form>
+          <CierreTrabajo
+            trabajoId={trabajo.id}
+            estadoActual={trabajo.estado}
+            rutaRetorno={`/mis-trabajos/${trabajo.id}`}
+            formAction={actualizarMiTrabajo}
+            firmaActual={trabajo.firmaCliente}
+            nombreFirmaActual={trabajo.firmaClienteNombre}
+            fechaFirmaActual={trabajo.firmaClienteFecha}
+          />
         </article>
       </section>
     </AppShell>

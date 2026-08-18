@@ -80,6 +80,12 @@ export const trabajos = pgTable("trabajos", {
   horaFin: text("hora_fin"),
   observaciones: text("observaciones"),
   observacionesTecnico: text("observaciones_tecnico"),
+  // Firma del cliente al finalizar el trabajo
+  firmaCliente: text("firma_cliente"),
+  firmaClienteNombre: text("firma_cliente_nombre"),
+  firmaClienteFecha: timestamp("firma_cliente_fecha", {
+    mode: "date",
+  }),
   creadoEn: timestamp("creado_en", { mode: "string" }).notNull().defaultNow(),
 });
 
