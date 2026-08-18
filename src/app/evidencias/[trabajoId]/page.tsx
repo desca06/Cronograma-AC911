@@ -14,7 +14,7 @@ import {
 } from "@/db/schema";
 import { requerirSesion } from "@/lib/auth";
 
-import { subirEvidencia } from "../actions";
+import { subirEvidencia } from "./actions";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
