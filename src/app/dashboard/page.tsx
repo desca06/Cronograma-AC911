@@ -126,7 +126,7 @@ export default async function DashboardPage() {
         action={
           puedeGestionarTrabajos ? (
             <a
-              href="/trabajos"
+              href="/trabajos/nuevo"
               className="mt-14 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white md:mt-12"
             >
               + Nuevo trabajo
