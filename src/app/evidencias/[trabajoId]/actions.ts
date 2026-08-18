@@ -2,7 +2,6 @@
 
 import { randomUUID } from "node:crypto";
 
-import { put } from "@vercel/blob";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -15,12 +14,17 @@ import {
   trabajoEmpleados,
   usuarios,
 } from "@/db/schema";
+import {
+  ErrorAlmacenamiento,
+  guardarArchivoPublico,
+} from "@/lib/almacenar-archivo";
 import { requerirSesion } from "@/lib/auth";
 
 const TAMANO_MAXIMO = 5 * 1024 * 1024;
 
 const formatosPermitidos: Record<string, string> = {
   "image/jpeg": "jpg",
+  "image/jpg": "jpg",
   "image/png": "png",
   "image/webp": "webp",
 };
@@ -213,30 +217,34 @@ export async function subirEvidencia(
   const nombreArchivo =
     `${randomUUID()}.${extension}`;
 
-  const rutaBlob =
+  const rutaLogica =
     `evidencias/trabajo-${trabajoId}/${nombreArchivo}`;
 
   let urlArchivo: string;
 
   try {
-    const blob = await put(
-      rutaBlob,
-      archivo,
-      {
-        access: "public",
-        contentType: archivo.type,
-      },
+    const contenido = Buffer.from(
+      await archivo.arrayBuffer(),
     );
 
-    urlArchivo = blob.url;
+    urlArchivo = await guardarArchivoPublico({
+      rutaLogica,
+      contenido,
+      contentType: archivo.type || "image/jpeg",
+    });
   } catch (error) {
     console.error(
-      "Error subiendo evidencia a Vercel Blob:",
+      "Error subiendo evidencia:",
       error,
     );
 
+    const codigo =
+      error instanceof ErrorAlmacenamiento
+        ? error.codigo
+        : "almacenamiento";
+
     redirect(
-      `/evidencias/${trabajoId}?error=almacenamiento`,
+      `/evidencias/${trabajoId}?error=${codigo}`,
     );
   }
 
