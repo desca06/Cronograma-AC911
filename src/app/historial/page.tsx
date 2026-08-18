@@ -27,6 +27,16 @@ type HistorialPageProps = {
   }>;
 };
 
+function formatearFechaHora(fecha: Date | string | Date | null | undefined) {
+  if (!fecha) return "";
+  const valor = fecha instanceof Date ? fecha : new Date(fecha as any);
+  return new Intl.DateTimeFormat("es-GT", {
+    timeZone: "America/Guatemala",
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(valor);
+}
+
 export default async function HistorialPage({ searchParams,
 }: HistorialPageProps) {
   const sesion = await requerirSesion();
@@ -94,6 +104,9 @@ export default async function HistorialPage({ searchParams,
         trabajos.observacionesTecnico,
       clienteNombre: clientes.nombre,
       vehiculoNombre: vehiculos.nombre,
+      firmaCliente: trabajos.firmaCliente,
+      firmaClienteNombre: trabajos.firmaClienteNombre,
+      firmaClienteFecha: trabajos.firmaClienteFecha,
     })
     .from(trabajoEmpleados)
     .innerJoin(
@@ -145,18 +158,26 @@ export default async function HistorialPage({ searchParams,
     <AppShell>
       <PageHeader
         title="Historial"
-        description="Consulta todos tus trabajos finalizados."
+        description="Consulta todos tus trabajos finalizados con firma de cliente."
       />
 
       <section className="space-y-6 p-5 md:p-8">
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
             label="Trabajos finalizados"
             value={historial.length}
             helper="Total de trabajos completados"
             icon={CheckCircle2}
             color="green"
+        />
+
+        <StatCard
+            label="Con firma"
+            value={historial.filter((t) => t.firmaCliente).length}
+            helper="Trabajos con firma de cliente"
+            icon={CheckCircle2}
+            color="blue"
         />
 
         <StatCard
@@ -170,6 +191,8 @@ export default async function HistorialPage({ searchParams,
             icon={CheckCircle2}
             color="blue"
         />
+
+        </div>
 
         <details className="group rounded-2xl border border-slate-200 bg-white shadow-sm">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-2xl px-4 py-4 transition hover:bg-slate-50">
@@ -267,7 +290,6 @@ export default async function HistorialPage({ searchParams,
             </div>
           </form>
         </details>
-        </div>
 
         {historial.length === 0 ? (
           <section className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center">
@@ -364,12 +386,49 @@ export default async function HistorialPage({ searchParams,
                   </p>
                 </div>
 
+                {trabajo.firmaCliente ? (
+                  <div className="mt-5 rounded-xl border-2 border-emerald-300 bg-emerald-50 p-4">
+                    <p className="text-sm font-bold text-emerald-900">
+                      ✔ Firma de conformidad del cliente
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {trabajo.firmaClienteNombre}
+                    </p>
+                    <p className="text-xs text-slate-600">
+                      {trabajo.firmaClienteFecha
+                        ? `Firmado el ${formatearFechaHora(trabajo.firmaClienteFecha)}`
+                        : "Firma registrada"}
+                    </p>
+                    <img
+                      src={trabajo.firmaCliente}
+                      alt="Firma cliente"
+                      className="mt-3 max-h-32 w-full rounded-xl border border-white bg-white object-contain shadow-sm"
+                    />
+                  </div>
+                ) : (
+                  <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                    <p className="text-sm font-bold text-amber-800">
+                      ⚠ Sin firma de cliente
+                    </p>
+                    <p className="mt-1 text-xs text-amber-700">
+                      Este trabajo fue finalizado pero no tiene firma registrada.
+                    </p>
+                  </div>
+                )}
+
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Link
                     href={`/evidencias/${trabajo.id}`}
                     className="flex-1 rounded-xl border border-blue-300 bg-blue-50 px-5 py-3 text-center font-semibold text-blue-700 transition hover:bg-blue-100"
                   >
                     📂 Ver evidencias
+                  </Link>
+
+                  <Link
+                    href={`/trabajos/${trabajo.id}`}
+                    className="flex-1 rounded-xl bg-slate-900 px-5 py-3 text-center font-semibold text-white hover:bg-slate-800"
+                  >
+                    Ver detalle / PDF
                   </Link>
                 </div>
               </article>
