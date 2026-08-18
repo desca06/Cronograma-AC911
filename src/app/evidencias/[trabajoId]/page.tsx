@@ -14,7 +14,7 @@ import {
 } from "@/db/schema";
 import { requerirSesion } from "@/lib/auth";
 
-import { subirEvidencia } from "../actions";
+import { subirEvidencia } from "./actions";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -69,6 +69,10 @@ export default async function EvidenciasPage({
     notFound();
   }
 
+  /*
+   * Los supervisores pueden ver cualquier trabajo.
+   * Los técnicos solo los trabajos que tengan asignados.
+   */
   if (sesion.rol === "TECNICO") {
     const [usuario] = await db
       .select({
@@ -133,7 +137,8 @@ export default async function EvidenciasPage({
     .where(
       eq(evidencias.trabajoId, trabajoId),
     )
-    .orderBy(desc(evidencias.id));
+    .orderBy(desc(evidencias.id))
+;
 
   const mensajeError =
     error === "archivo"
@@ -142,13 +147,15 @@ export default async function EvidenciasPage({
         ? "Solo se permiten imágenes JPG, PNG o WebP."
         : error === "tamano"
           ? "La fotografía no puede superar los 5 MB."
-          : error === "almacenamiento"
-            ? "No se pudo guardar la fotografía. Inténtalo de nuevo."
-            : error === "base-datos"
-              ? "La fotografía se subió, pero no se pudo registrar. Inténtalo de nuevo."
-              : error
-                ? "No se pudo subir la evidencia."
-                : "";
+          : error === "token"
+            ? "Falta configurar BLOB_READ_WRITE_TOKEN en Vercel. Crea un Blob Store y vuelve a desplegar."
+            : error === "almacenamiento"
+              ? "No se pudo guardar la fotografía. Inténtalo de nuevo."
+              : error === "base-datos"
+                ? "La fotografía se subió, pero no se pudo registrar. Inténtalo de nuevo."
+                : error
+                  ? "No se pudo subir la evidencia."
+                  : "";
 
   const rutaRegreso =
     sesion.rol === "TECNICO"
