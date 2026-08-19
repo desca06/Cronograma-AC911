@@ -27,6 +27,7 @@ type Cliente = {
 type Vehiculo = {
   id: number;
   nombre: string;
+  placa: string;
   estado: string;
 };
 
@@ -333,6 +334,7 @@ export function FormularioTrabajo({
                   }
                 >
                   {vehiculo.nombre} —{" "}
+                  {vehiculo.placa} —{" "}
                   {vehiculo.estado}
                 </option>
               ),
