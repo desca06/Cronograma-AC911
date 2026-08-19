@@ -130,6 +130,16 @@ export async function proxy(request: NextRequest) {
       );
 
       const rol = String(resultado.payload.rol ?? "");
+      const siguienteLogin = request.nextUrl.searchParams.get("siguiente");
+
+      if (
+        siguienteLogin &&
+        /^\/asistencia\/[a-f0-9]{32,128}$/i.test(siguienteLogin)
+      ) {
+        return NextResponse.redirect(
+          new URL(siguienteLogin, request.url),
+        );
+      }
 
       return NextResponse.redirect(
         new URL(destinoPorRol(rol), request.url),

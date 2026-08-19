@@ -113,6 +113,40 @@ function obtenerPresentacion(
     };
   }
 
+  if (estado === "CELULAR_AJENO") {
+    return {
+      icono: ShieldAlert,
+      titulo: "Teléfono no autorizado",
+      descripcion:
+        "Este celular no es el registrado para tu asistencia. Si cambiaste de teléfono, pedile a un administrador que desvincule el anterior.",
+      iconoClases:
+        "bg-orange-100 text-orange-700",
+      tarjeta: "border-orange-200",
+      encabezado:
+        "from-orange-50 via-white to-white",
+      etiqueta: "Dispositivo bloqueado",
+      etiquetaClases:
+        "bg-orange-100 text-orange-700",
+    };
+  }
+
+  if (estado === "QR_AJENO") {
+    return {
+      icono: UserRound,
+      titulo: "Este QR no es tuyo",
+      descripcion:
+        "Cada empleado debe escanear únicamente su propio código QR, con su usuario.",
+      iconoClases:
+        "bg-amber-100 text-amber-700",
+      tarjeta: "border-amber-200",
+      encabezado:
+        "from-amber-50 via-white to-white",
+      etiqueta: "Marcación bloqueada",
+      etiquetaClases:
+        "bg-amber-100 text-amber-700",
+    };
+  }
+
   if (estado === "RED_NO_AUTORIZADA") {
     return {
       icono: ShieldAlert,

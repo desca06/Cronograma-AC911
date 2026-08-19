@@ -101,6 +101,27 @@ export async function regenerarQrEmpleado(
   );
 }
 
+export async function desvincularDispositivoEmpleado(
+  empleadoId: number,
+) {
+  await requerirAdmin();
+  await validarEmpleado(empleadoId);
+
+  await db
+    .update(empleadoQr)
+    .set({
+      dispositivoToken: null,
+      dispositivoRegistradoEn: null,
+    })
+    .where(eq(empleadoQr.empleadoId, empleadoId));
+
+  revalidatePath(`${RUTA_EMPLEADOS}/${empleadoId}`);
+
+  redirect(
+    `${RUTA_EMPLEADOS}/${empleadoId}?qr=dispositivo`,
+  );
+}
+
 export async function eliminarQrEmpleado(
   empleadoId: number,
 ) {

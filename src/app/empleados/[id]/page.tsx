@@ -8,6 +8,7 @@ import {
   Phone,
   QrCode,
   RefreshCcw,
+  Smartphone,
   Trash2,
   UserRound,
 } from "lucide-react";
@@ -20,6 +21,7 @@ import { empleadoQr, empleados } from "@/db/schema";
 import { requerirAdmin } from "@/lib/auth";
 
 import {
+  desvincularDispositivoEmpleado,
   eliminarQrEmpleado,
   generarQrEmpleado,
   regenerarQrEmpleado,
@@ -72,6 +74,8 @@ export default async function DetalleEmpleadoPage({
       creadoEn: empleados.creadoEn,
       qrToken: empleadoQr.token,
       qrActualizadoEn: empleadoQr.actualizadoEn,
+      dispositivoRegistradoEn:
+        empleadoQr.dispositivoRegistradoEn,
     })
     .from(empleados)
     .leftJoin(
@@ -116,6 +120,12 @@ export default async function DetalleEmpleadoPage({
     empleado.id,
   );
 
+  const desvincular =
+    desvincularDispositivoEmpleado.bind(
+      null,
+      empleado.id,
+    );
+
   return (
     <AppShell>
       <PageHeader
@@ -147,6 +157,12 @@ export default async function DetalleEmpleadoPage({
         {parametros.qr === "eliminado" && (
           <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
             Código QR eliminado correctamente.
+          </div>
+        )}
+
+        {parametros.qr === "dispositivo" && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
+            Teléfono desvinculado. El empleado podrá registrar un celular nuevo en su próxima marcación.
           </div>
         )}
 
@@ -314,6 +330,40 @@ export default async function DetalleEmpleadoPage({
                         empleado.qrActualizadoEn,
                       )}
                     </p>
+                  )}
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-orange-100 text-orange-700">
+                      <Smartphone size={20} />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                        Teléfono vinculado
+                      </p>
+
+                      <p className="mt-1 text-sm leading-6 text-slate-700">
+                        {empleado.dispositivoRegistradoEn
+                          ? `Registrado el ${formatearFecha(
+                              empleado.dispositivoRegistradoEn,
+                            )}. Solo ese celular puede marcar asistencia.`
+                          : "Todavía no hay celular registrado. Se asignará en la primera marcación del empleado."}
+                      </p>
+                    </div>
+                  </div>
+
+                  {empleado.dispositivoRegistradoEn && (
+                    <form action={desvincular} className="mt-4">
+                      <button
+                        type="submit"
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-orange-300 bg-white px-4 py-3 text-sm font-semibold text-orange-800 transition hover:bg-orange-50"
+                      >
+                        <Smartphone size={17} />
+                        Desvincular teléfono
+                      </button>
+                    </form>
                   )}
                 </div>
 

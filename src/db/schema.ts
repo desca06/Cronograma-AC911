@@ -224,7 +224,7 @@ export const asistencias = pgTable(
       .notNull()
       .default("PRESENTE"),
 
-    
+
     minutosHoraExtra: integer(
       "minutos_hora_extra",
     )
@@ -263,15 +263,16 @@ export const asistencias = pgTable(
 
 export const vacaciones = pgTable("vacaciones", {
   id: serial("id").primaryKey(),
-  empleadoId: integer("empleado_id").notNull().references(() => empleados.id, {onDelete: "restrict"}),
-  fechaInicio: date("fecha_inicio", {mode: "string"}).notNull(),
-  fechaFin: date("fecha_fin", {mode: "string",}).notNull(),
+  empleadoId: integer("empleado_id").notNull().references(() => empleados.id, { onDelete: "restrict" }),
+  fechaInicio: date("fecha_inicio", { mode: "string" }).notNull(),
+  fechaFin: date("fecha_fin", { mode: "string", }).notNull(),
   cantidadDias: integer("cantidad_dias").notNull(),
   estado: text("estado").notNull().default("PENDIENTE"),
   observacion: text("observacion"),
-  autorizadoPor: integer("autorizado_por").references(() => usuarios.id,{onDelete: "set null"}),
-  creadoEn: timestamp("creado_en", {mode: "string"}).notNull().defaultNow(),
-  actualizadoEn: timestamp("actualizado_en",{mode: "string"}).notNull().defaultNow()});
+  autorizadoPor: integer("autorizado_por").references(() => usuarios.id, { onDelete: "set null" }),
+  creadoEn: timestamp("creado_en", { mode: "string" }).notNull().defaultNow(),
+  actualizadoEn: timestamp("actualizado_en", { mode: "string" }).notNull().defaultNow()
+});
 
 export const permisos = pgTable(
   "permisos",
@@ -463,8 +464,8 @@ export const articulosInventario = pgTable(
       .references(() => categoriasInventario.id, {
         onDelete: "restrict",
       }),
-    tipo: varchar("tipo", {length:20})
-      .$type<"ACTIVO"| "CONSUMIBLE">()
+    tipo: varchar("tipo", { length: 20 })
+      .$type<"ACTIVO" | "CONSUMIBLE">()
       .notNull(),
     unidadMedida: text("unidad_medida")
       .notNull(),
@@ -478,7 +479,7 @@ export const articulosInventario = pgTable(
     stockMinimo: integer("stock_minimo")
       .notNull()
       .default(0),
-     controlaStock: boolean("controla_stock")
+    controlaStock: boolean("controla_stock")
       .notNull()
       .default(true),
     estado: text("estado")
@@ -529,36 +530,36 @@ export const existenciasInventario = pgTable(
   },
 );
 
-export const movimientosInventario = pgTable("movimientos_inventario",{
+export const movimientosInventario = pgTable("movimientos_inventario", {
   id: serial("id").primaryKey(),
-    articuloId: integer("articulo_id")
-      .notNull()
-      .references(() => articulosInventario.id, {onDelete: "restrict"}),
-    usuarioId: integer("usuario_id").references(() => usuarios.id,{onDelete: "set null"}),
-    tipoMovimiento: varchar("tipo_movimiento",{length: 30})
-      .$type<
-        | "ENTRADA"
-        | "SALIDA"
-        | "AJUSTE_POSITIVO"
-        | "AJUSTE_NEGATIVO"
-      >()
-      .notNull(),
-    cantidad: integer("cantidad").notNull(),
-    existenciaAnterior: integer(
-      "existencia_anterior",
-    ).notNull(),
-    existenciaNueva: integer(
-      "existencia_nueva",
-    ).notNull(),
-    motivo: text("motivo").notNull(),
-    observaciones: text("observaciones"),
-    documentoReferencia: text(
-      "documento_referencia",
-    ),
-    creadoEn: timestamp("creado_en", {mode: "date"})
-      .notNull()
-      .defaultNow(),
-  },
+  articuloId: integer("articulo_id")
+    .notNull()
+    .references(() => articulosInventario.id, { onDelete: "restrict" }),
+  usuarioId: integer("usuario_id").references(() => usuarios.id, { onDelete: "set null" }),
+  tipoMovimiento: varchar("tipo_movimiento", { length: 30 })
+    .$type<
+      | "ENTRADA"
+      | "SALIDA"
+      | "AJUSTE_POSITIVO"
+      | "AJUSTE_NEGATIVO"
+    >()
+    .notNull(),
+  cantidad: integer("cantidad").notNull(),
+  existenciaAnterior: integer(
+    "existencia_anterior",
+  ).notNull(),
+  existenciaNueva: integer(
+    "existencia_nueva",
+  ).notNull(),
+  motivo: text("motivo").notNull(),
+  observaciones: text("observaciones"),
+  documentoReferencia: text(
+    "documento_referencia",
+  ),
+  creadoEn: timestamp("creado_en", { mode: "date" })
+    .notNull()
+    .defaultNow(),
+},
   (tabla) => [
     index("movimientos_inventario_articulo_idx").on(
       tabla.articuloId,
@@ -761,13 +762,13 @@ export const proveedores = pgTable("proveedores",
     direccion: text("direccion"),
     contactoPrincipal: text("contacto_principal"),
     telefonoContacto: text("telefono_contacto"),
-    tipo: varchar("tipo", {length: 20,})
+    tipo: varchar("tipo", { length: 20, })
       .$type<TipoProveedor>()
       .notNull()
       .default("PRODUCTOS"),
     observaciones: text("observaciones"),
-    creadoEn: timestamp("creado_en", {mode: "date",}).notNull().defaultNow(),
-    actualizadoEn: timestamp("actualizado_en",{mode: "date",},).notNull().defaultNow(),
+    creadoEn: timestamp("creado_en", { mode: "date", }).notNull().defaultNow(),
+    actualizadoEn: timestamp("actualizado_en", { mode: "date", },).notNull().defaultNow(),
   },
   (tabla) => [
     index("proveedores_codigo_idx").on(
@@ -854,6 +855,15 @@ export const empleadoQr = pgTable(
     })
       .notNull()
       .defaultNow(),
+
+    dispositivoToken: text("dispositivo_token"),
+
+    dispositivoRegistradoEn: timestamp(
+      "dispositivo_registrado_en",
+      {
+        mode: "date",
+      },
+    ),
   },
   (tabla) => [
     index("empleado_qr_empleado_idx").on(
@@ -1205,10 +1215,10 @@ export type NuevaExistenciaInventario = typeof existenciasInventario.$inferInser
 export type MovimientoInventario = typeof movimientosInventario.$inferSelect;
 export type NuevoMovimientoInventario = typeof movimientosInventario.$inferInsert;
 
-export type TipoMovimientoInventario =| "ENTRADA"  | "SALIDA"| "AJUSTE_POSITIVO"  | "AJUSTE_NEGATIVO";
+export type TipoMovimientoInventario = | "ENTRADA" | "SALIDA" | "AJUSTE_POSITIVO" | "AJUSTE_NEGATIVO";
 
-export type EstadoCotizacion =  |"PENDIENTE"  | "APROBADA" | "RECHAZADA"  | "VENCIDA";
+export type EstadoCotizacion = | "PENDIENTE" | "APROBADA" | "RECHAZADA" | "VENCIDA";
 
-export type TipoItemCotizacion = |"PRODUCTO"| "SERVICIO"| "COSTO_ADICIONAL";
+export type TipoItemCotizacion = | "PRODUCTO" | "SERVICIO" | "COSTO_ADICIONAL";
 
-export type TipoProveedor = |"PRODUCTOS"  | "SERVICIOS" | "MIXTO";
+export type TipoProveedor = | "PRODUCTOS" | "SERVICIOS" | "MIXTO";

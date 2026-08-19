@@ -110,6 +110,22 @@ function esIpPrivada(ip: string) {
   );
 }
 
+export function rutaRetornoAsistencia(
+  valor: string | null | undefined,
+): string | null {
+  if (!valor) {
+    return null;
+  }
+
+  const ruta = valor.trim();
+
+  if (!/^\/asistencia\/[a-f0-9]{32,128}$/i.test(ruta)) {
+    return null;
+  }
+
+  return ruta;
+}
+
 export async function validarRedAsistencia(
   request?: Request,
 ): Promise<ResultadoValidacionRed> {

@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 
 import { db } from "@/db";
 import { usuarios } from "@/db/schema";
+import { rutaRetornoAsistencia } from "@/lib/asistencias-red";
 import {
   crearSesion,
   eliminarSesion,
@@ -65,7 +66,15 @@ export async function iniciarSesion(
     rol: usuario.rol,
   });
 
-  if(usuario.rol === "TECNICO"){
+  const siguiente = rutaRetornoAsistencia(
+    obtenerTexto(formData, "siguiente"),
+  );
+
+  if (siguiente) {
+    redirect(siguiente);
+  }
+
+  if (usuario.rol === "TECNICO") {
     redirect("/mis-trabajos");
   }
 

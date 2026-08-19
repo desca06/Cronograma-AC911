@@ -13,7 +13,14 @@ import {
   asistencias,
   empleadoQr,
   empleados,
+  usuarios,
 } from "@/db/schema";
+import {
+  generarTokenDispositivo,
+  leerTokenDispositivo,
+  pegarCookieDispositivo,
+} from "@/lib/asistencia-dispositivo";
+import { obtenerSesion } from "@/lib/auth";
 import { validarRedAsistencia } from "@/lib/asistencias-red";
 
 export const runtime = "nodejs";
@@ -137,6 +144,8 @@ export async function GET(
       activo: empleados.activo,
       limiteMinutosExtraMensuales:
         empleados.limiteMinutosExtraMensuales,
+      dispositivoToken:
+        empleadoQr.dispositivoToken,
     })
     .from(empleadoQr)
     .innerJoin(
@@ -168,6 +177,71 @@ export async function GET(
           "El empleado está inactivo y no puede registrar asistencia.",
       }),
     );
+  }
+
+  const sesion = await obtenerSesion();
+
+  if (!sesion) {
+    const login = new URL("/login", request.url);
+    login.searchParams.set(
+      "siguiente",
+      `/asistencia/${token}`,
+    );
+
+    return NextResponse.redirect(login);
+  }
+
+  const [usuario] = await db
+    .select({
+      empleadoId: usuarios.empleadoId,
+    })
+    .from(usuarios)
+    .where(eq(usuarios.id, sesion.usuarioId))
+    .limit(1);
+
+  if (!usuario?.empleadoId) {
+    return NextResponse.redirect(
+      crearUrlResultado(request, {
+        estado: "QR_AJENO",
+        mensaje:
+          "Tu usuario no está vinculado a un empleado. Un administrador debe asociar tu cuenta.",
+      }),
+    );
+  }
+
+  if (usuario.empleadoId !== empleado.id) {
+    return NextResponse.redirect(
+      crearUrlResultado(request, {
+        estado: "QR_AJENO",
+        mensaje:
+          "Este código QR no es tuyo. Cada empleado debe escanear solo su propio código.",
+      }),
+    );
+  }
+
+  const tokenCelular = leerTokenDispositivo(request);
+  let tokenParaCookie: string | null = null;
+
+  if (!empleado.dispositivoToken) {
+    tokenParaCookie = generarTokenDispositivo();
+
+    await db
+      .update(empleadoQr)
+      .set({
+        dispositivoToken: tokenParaCookie,
+        dispositivoRegistradoEn: new Date(),
+      })
+      .where(eq(empleadoQr.token, token));
+  } else if (tokenCelular !== empleado.dispositivoToken) {
+    return NextResponse.redirect(
+      crearUrlResultado(request, {
+        estado: "CELULAR_AJENO",
+        mensaje:
+          "Este teléfono no está autorizado para marcar tu asistencia. Si cambiaste de celular, pedile a un administrador que desvincule el anterior.",
+      }),
+    );
+  } else {
+    tokenParaCookie = empleado.dispositivoToken;
   }
 
   const fecha = obtenerFechaGuatemala();
@@ -372,7 +446,7 @@ export async function GET(
     };
   });
 
-  return NextResponse.redirect(
+  const respuesta = NextResponse.redirect(
     crearUrlResultado(request, {
       estado: resultado.tipo,
       nombre: empleado.nombre,
@@ -381,4 +455,13 @@ export async function GET(
       mensaje: resultado.mensaje,
     }),
   );
+
+  if (tokenParaCookie) {
+    return pegarCookieDispositivo(
+      respuesta,
+      tokenParaCookie,
+    );
+  }
+
+  return respuesta;
 }

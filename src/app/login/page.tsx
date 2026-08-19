@@ -1,24 +1,35 @@
 import { redirect } from "next/navigation";
+
+import { rutaRetornoAsistencia } from "@/lib/asistencias-red";
 import { obtenerSesion } from "@/lib/auth";
+
 import { iniciarSesion } from "./actions";
+
 export const dynamic = "force-dynamic";
 
 type LoginPageProps = {
   searchParams: Promise<{
     error?: string | string[];
+    siguiente?: string | string[];
   }>;
 };
 
 export default async function LoginPage({
   searchParams,
 }: LoginPageProps) {
+  const parametros = await searchParams;
+
+  const siguiente = rutaRetornoAsistencia(
+    typeof parametros.siguiente === "string"
+      ? parametros.siguiente
+      : "",
+  );
+
   const sesion = await obtenerSesion();
 
   if (sesion) {
-    redirect("/dashboard");
+    redirect(siguiente || "/dashboard");
   }
-
-  const parametros = await searchParams;
 
   const error =
     typeof parametros.error === "string"
@@ -42,7 +53,9 @@ export default async function LoginPage({
           </h1>
 
           <p className="mt-2 text-sm text-slate-500">
-            Ingresa tus credenciales para continuar.
+            {siguiente
+              ? "Entrá con tu usuario para registrar tu propia asistencia."
+              : "Ingresa tus credenciales para continuar."}
           </p>
         </div>
 
@@ -58,6 +71,13 @@ export default async function LoginPage({
           action={iniciarSesion}
           className="space-y-5"
         >
+          {siguiente && (
+            <input
+              type="hidden"
+              name="siguiente"
+              value={siguiente}
+            />
+          )}
           <div>
             <label
               htmlFor="correo"
