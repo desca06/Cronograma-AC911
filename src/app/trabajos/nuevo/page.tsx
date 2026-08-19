@@ -18,6 +18,8 @@ import {
 } from "@/components/page-header";
 import { db } from "@/db";
 import {
+  clienteAreas,
+  clienteSubtiendas,
   clientes,
   cotizaciones,
   empleados,
@@ -201,6 +203,8 @@ export default async function NuevoTrabajoPage({
 
   const [
     listaClientes,
+    listaSubtiendas,
+    listaAreas,
     listaVehiculos,
     listaEmpleados,
     listaCotizacionesAprobadas,
@@ -224,6 +228,26 @@ export default async function NuevoTrabajoPage({
           clientes.nombre,
         ),
       ),
+
+    db
+      .select({
+        id: clienteSubtiendas.id,
+        clienteId: clienteSubtiendas.clienteId,
+        nombre: clienteSubtiendas.nombre,
+      })
+      .from(clienteSubtiendas)
+      .where(eq(clienteSubtiendas.activo, true))
+      .orderBy(asc(clienteSubtiendas.nombre)),
+
+    db
+      .select({
+        id: clienteAreas.id,
+        subtiendaId: clienteAreas.subtiendaId,
+        nombre: clienteAreas.nombre,
+      })
+      .from(clienteAreas)
+      .where(eq(clienteAreas.activo, true))
+      .orderBy(asc(clienteAreas.nombre)),
 
     db
       .select({
@@ -350,9 +374,22 @@ export default async function NuevoTrabajoPage({
             </div>
           )}
 
+          {error ===
+            "ubicacion" && (
+            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+              La subtienda o el área no pertenecen a ese cliente.
+            </div>
+          )}
+
           <FormularioTrabajo
             clientes={
               listaClientes
+            }
+            subtiendas={
+              listaSubtiendas
+            }
+            areas={
+              listaAreas
             }
             vehiculos={
               listaVehiculos

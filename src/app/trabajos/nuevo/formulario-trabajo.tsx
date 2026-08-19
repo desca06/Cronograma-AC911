@@ -13,6 +13,8 @@ import {
   useState,
 } from "react";
 
+import { SelectorUbicacionCliente } from "@/components/selector-ubicacion-cliente";
+
 import {
   crearTrabajo,
 } from "../actions";
@@ -45,8 +47,22 @@ type CotizacionOrigen = {
     | null;
 };
 
+type Subtienda = {
+  id: number;
+  clienteId: number;
+  nombre: string;
+};
+
+type Area = {
+  id: number;
+  subtiendaId: number;
+  nombre: string;
+};
+
 type FormularioTrabajoProps = {
   clientes: Cliente[];
+  subtiendas: Subtienda[];
+  areas: Area[];
   vehiculos: Vehiculo[];
   empleados: Empleado[];
   cotizacionesAprobadas:
@@ -67,6 +83,8 @@ const estadosDisponibles = [
 
 export function FormularioTrabajo({
   clientes,
+  subtiendas,
+  areas,
   vehiculos,
   empleados,
   cotizacionesAprobadas,
@@ -275,71 +293,16 @@ export function FormularioTrabajo({
           />
         </div>
 
-        <div>
-          <label
-            htmlFor="clienteId"
-            className="mb-2 block text-sm font-semibold text-slate-700"
-          >
-            Cliente
-          </label>
-
-          <select
-            id="clienteId"
-            name="clienteId"
-            required
-            value={
-              clienteId
-            }
-            onChange={(
-              evento,
-            ) =>
-              setClienteId(
-                evento.target
-                  .value,
-              )
-            }
-            disabled={
-              Boolean(
-                cotizacionSeleccionada,
-              )
-            }
-            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 disabled:bg-slate-100"
-          >
-            <option
-              value=""
-              disabled
-            >
-              Selecciona un cliente
-            </option>
-
-            {clientes.map(
-              (cliente) => (
-                <option
-                  key={
-                    cliente.id
-                  }
-                  value={
-                    cliente.id
-                  }
-                >
-                  {
-                    cliente.nombre
-                  }
-                </option>
-              ),
-            )}
-          </select>
-
-          {cotizacionSeleccionada && (
-            <input
-              type="hidden"
-              name="clienteId"
-              value={
-                clienteId
-              }
-            />
+        <SelectorUbicacionCliente
+          clientes={clientes}
+          subtiendas={subtiendas}
+          areas={areas}
+          clienteId={clienteId}
+          onClienteIdChange={setClienteId}
+          clienteDeshabilitado={Boolean(
+            cotizacionSeleccionada,
           )}
-        </div>
+        />
 
         <div>
           <label

@@ -227,6 +227,13 @@ export default async function ClientesPage({
 
                   <div className="mt-6 flex flex-wrap gap-3 border-t border-slate-200 pt-5">
                     <Link
+                      href={`/clientes/${cliente.id}`}
+                      className="rounded-xl bg-violet-100 px-4 py-2 text-sm font-semibold text-violet-800 transition hover:bg-violet-200"
+                    >
+                      Subtiendas y áreas
+                    </Link>
+
+                    <Link
                       href={`/clientes/${cliente.id}/historial`}
                       className="rounded-xl bg-purple-100 px-4 py-2 text-sm font-semibold text-purple-800 transition hover:bg-purple-200"
                     >

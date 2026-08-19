@@ -16,6 +16,10 @@ import {
 } from "@/db/schema-cotizacion-trabajo";
 import { requerirSupervisor } from "@/lib/auth";
 import {
+  leerIdOpcional,
+  validarUbicacionCliente,
+} from "@/lib/ubicacion-cliente";
+import {
   notificarEstadoTrabajo,
   notificarTrabajoActualizado,
   notificarTrabajoAsignado,
@@ -108,6 +112,14 @@ export async function crearTrabajo(
   const empleadoIds =
     obtenerEmpleadoIds(formData);
 
+  const subtiendaId = leerIdOpcional(
+    formData.get("subtiendaId"),
+  );
+
+  const areaId = leerIdOpcional(
+    formData.get("areaId"),
+  );
+
   const cotizacionSeleccionada =
     Number(
       formData.get(
@@ -119,7 +131,7 @@ export async function crearTrabajo(
     Number.isInteger(
       cotizacionSeleccionada,
     ) &&
-    cotizacionSeleccionada > 0
+      cotizacionSeleccionada > 0
       ? cotizacionSeleccionada
       : null;
 
@@ -150,183 +162,199 @@ export async function crearTrabajo(
 
   try {
     await db.transaction(async (tx) => {
-    if (cotizacionId) {
-      /*
-       * Evita dos trabajos simultáneos para la misma
-       * cotización.
-       */
-      await tx.execute(
-        sql`
+      if (cotizacionId) {
+        /*
+         * Evita dos trabajos simultáneos para la misma
+         * cotización.
+         */
+        await tx.execute(
+          sql`
           select pg_advisory_xact_lock(
             ${911000} + ${cotizacionId}
           )
         `,
-      );
-
-      const [cotizacionOrigen] =
-        await tx
-          .select({
-            id:
-              cotizaciones.id,
-            clienteId:
-              cotizaciones.clienteId,
-            estado:
-              cotizaciones.estado,
-          })
-          .from(cotizaciones)
-          .where(
-            eq(
-              cotizaciones.id,
-              cotizacionId,
-            ),
-          )
-          .limit(1);
-
-      if (!cotizacionOrigen) {
-        throw new Error(
-          "COTIZACION_NO_EXISTE",
         );
+
+        const [cotizacionOrigen] =
+          await tx
+            .select({
+              id:
+                cotizaciones.id,
+              clienteId:
+                cotizaciones.clienteId,
+              estado:
+                cotizaciones.estado,
+            })
+            .from(cotizaciones)
+            .where(
+              eq(
+                cotizaciones.id,
+                cotizacionId,
+              ),
+            )
+            .limit(1);
+
+        if (!cotizacionOrigen) {
+          throw new Error(
+            "COTIZACION_NO_EXISTE",
+          );
+        }
+
+        if (
+          cotizacionOrigen.estado !==
+          "APROBADA"
+        ) {
+          throw new Error(
+            "COTIZACION_NO_APROBADA",
+          );
+        }
+
+        /*
+         * Si el supervisor seleccionó una cotización,
+         * el cliente verdadero siempre será el cliente
+         * de esa cotización. Así no pueden quedar
+         * asociados datos inconsistentes.
+         */
+        clienteIdFinal =
+          cotizacionOrigen.clienteId;
+
+        const [yaVinculada] =
+          await tx
+            .select({
+              trabajoId:
+                cotizacionTrabajos.trabajoId,
+            })
+            .from(
+              cotizacionTrabajos,
+            )
+            .where(
+              eq(
+                cotizacionTrabajos.cotizacionId,
+                cotizacionId,
+              ),
+            )
+            .limit(1);
+
+        if (yaVinculada) {
+          throw new Error(
+            "COTIZACION_YA_TIENE_TRABAJO",
+          );
+        }
       }
 
-      if (
-        cotizacionOrigen.estado !==
-        "APROBADA"
-      ) {
-        throw new Error(
-          "COTIZACION_NO_APROBADA",
-        );
-      }
+      const ubicacion =
+        await validarUbicacionCliente(tx, {
+          clienteId: clienteIdFinal,
+          subtiendaId,
+          areaId,
+        });
 
-      /*
-       * Si el supervisor seleccionó una cotización,
-       * el cliente verdadero siempre será el cliente
-       * de esa cotización. Así no pueden quedar
-       * asociados datos inconsistentes.
-       */
-      clienteIdFinal =
-        cotizacionOrigen.clienteId;
+      const [nuevoTrabajo] = await tx
+        .insert(trabajos)
+        .values({
+          fecha,
+          clienteId:
+            clienteIdFinal,
+          subtiendaId: ubicacion.subtiendaId,
+          areaId: ubicacion.areaId,
 
-      const [yaVinculada] =
+          vehiculoId:
+            Number.isInteger(
+              vehiculoSeleccionado,
+            ) &&
+              vehiculoSeleccionado > 0
+              ? vehiculoSeleccionado
+              : null,
+
+          tipo,
+          descripcion,
+          direccion: direccion || null,
+          estado: estado || "Pendiente",
+          horaInicio: null,
+          observaciones:
+            observaciones || null,
+        })
+        .returning({ id: trabajos.id });
+
+      const trabajoId =
+        nuevoTrabajo.id;
+
+      trabajoCreadoId =
+        trabajoId;
+
+      if (cotizacionId) {
         await tx
-          .select({
-            trabajoId:
-              cotizacionTrabajos.trabajoId,
-          })
-          .from(
+          .insert(
             cotizacionTrabajos,
           )
-          .where(
-            eq(
-              cotizacionTrabajos.cotizacionId,
-              cotizacionId,
-            ),
-          )
-          .limit(1);
-
-      if (yaVinculada) {
-        throw new Error(
-          "COTIZACION_YA_TIENE_TRABAJO",
-        );
+          .values({
+            cotizacionId,
+            trabajoId,
+          });
       }
-    }
 
-    const [nuevoTrabajo] = await tx
-      .insert(trabajos)
-      .values({
-        fecha,
-        clienteId:
-          clienteIdFinal,
+      if (empleadoIds.length === 0) {
+        return;
+      }
 
-        vehiculoId:
-          Number.isInteger(
-            vehiculoSeleccionado,
-          ) &&
-          vehiculoSeleccionado > 0
-            ? vehiculoSeleccionado
-            : null,
-
-        tipo,
-        descripcion,
-        direccion: direccion || null,
-        estado: estado || "Pendiente",
-        horaInicio: null,
-        observaciones:
-          observaciones || null,
-      })
-      .returning({ id: trabajos.id });
-
-    const trabajoId =
-      nuevoTrabajo.id;
-
-    trabajoCreadoId =
-      trabajoId;
-
-    if (cotizacionId) {
-      await tx
-        .insert(
-          cotizacionTrabajos,
-        )
-        .values({
-          cotizacionId,
-          trabajoId,
-        });
-    }
-
-    if (empleadoIds.length === 0) {
-      return;
-    }
-
-    await tx.insert(trabajoEmpleados)
-      .values(
-        empleadoIds.map(
-          (empleadoId) => ({
-            trabajoId,
-            empleadoId,
-          }),
-        ),
-      )
-;
-
-    /*
-     * Busca las cuentas técnicas vinculadas
-     * con los empleados asignados.
-     */
-    const destinatarios = await tx
-      .select({
-        usuarioId: usuarios.id,
-      })
-      .from(trabajoEmpleados)
-      .innerJoin(
-        usuarios,
-        eq(
-          trabajoEmpleados.empleadoId,
-          usuarios.empleadoId,
-        ),
-      )
-      .where(
-        and(
-          eq(
-            trabajoEmpleados.trabajoId,
-            trabajoId,
+      await tx.insert(trabajoEmpleados)
+        .values(
+          empleadoIds.map(
+            (empleadoId) => ({
+              trabajoId,
+              empleadoId,
+            }),
           ),
-          eq(usuarios.rol, "TECNICO"),
-        ),
-      )
-;
+        )
+        ;
 
-    const usuarioIds = [
-      ...new Set(
-        destinatarios.map(
-          (destinatario) =>
-            destinatario.usuarioId,
-        ),
-      ),
-    ];
+      /*
+       * Busca las cuentas técnicas vinculadas
+       * con los empleados asignados.
+       */
+      const destinatarios = await tx
+        .select({
+          usuarioId: usuarios.id,
+        })
+        .from(trabajoEmpleados)
+        .innerJoin(
+          usuarios,
+          eq(
+            trabajoEmpleados.empleadoId,
+            usuarios.empleadoId,
+          ),
+        )
+        .where(
+          and(
+            eq(
+              trabajoEmpleados.trabajoId,
+              trabajoId,
+            ),
+            eq(usuarios.rol, "TECNICO"),
+          ),
+        )
+        ;
 
-    usuarioIdsNotificar =
-      usuarioIds;
+      const usuarioIds = [
+        ...new Set(
+          destinatarios.map(
+            (destinatario) =>
+              destinatario.usuarioId,
+          ),
+        ),
+      ];
+
+      usuarioIdsNotificar =
+        usuarioIds;
     });
   } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "UBICACION_INVALIDA"
+    ) {
+      redirect("/trabajos/nuevo?error=ubicacion");
+    }
+
     if (
       cotizacionId &&
       error instanceof Error
@@ -342,7 +370,7 @@ export async function crearTrabajo(
 
       if (
         error.message ===
-          "COTIZACION_YA_TIENE_TRABAJO"
+        "COTIZACION_YA_TIENE_TRABAJO"
       ) {
         redirect(
           `/administracion/compras/cotizaciones/${cotizacionId}?error=trabajo-duplicado`,
@@ -441,7 +469,7 @@ export async function actualizarEstadoTrabajo(
         estado,
       })
       .where(eq(trabajos.id, id))
-;
+      ;
 
     const destinatarios = await tx
       .select({
@@ -464,7 +492,7 @@ export async function actualizarEstadoTrabajo(
           eq(usuarios.rol, "TECNICO"),
         ),
       )
-;
+      ;
 
     const usuarioIds = [
       ...new Set(
@@ -523,11 +551,11 @@ export async function eliminarTrabajo(
           id,
         ),
       )
-;
+      ;
 
     await tx.delete(trabajos)
       .where(eq(trabajos.id, id))
-;
+      ;
   });
 
   revalidarPaginas();
@@ -595,6 +623,14 @@ export async function actualizarTrabajoCompleto(
   const empleadoIds =
     obtenerEmpleadoIds(formData);
 
+  const subtiendaId = leerIdOpcional(
+    formData.get("subtiendaId"),
+  );
+
+  const areaId = leerIdOpcional(
+    formData.get("areaId"),
+  );
+
   if (
     !Number.isInteger(id) ||
     id <= 0 ||
@@ -623,91 +659,111 @@ export async function actualizarTrabajoCompleto(
 
   let usuarioIdsNotificar: number[] = [];
 
-  await db.transaction(async (tx) => {
-    await tx.update(trabajos)
-      .set({
-        fecha,
-        clienteId,
+  try {
+    await db.transaction(async (tx) => {
+      const ubicacion =
+        await validarUbicacionCliente(tx, {
+          clienteId,
+          subtiendaId,
+          areaId,
+        });
 
-        vehiculoId:
-          Number.isInteger(
-            vehiculoSeleccionado,
-          ) &&
-          vehiculoSeleccionado > 0
-            ? vehiculoSeleccionado
-            : null,
+      await tx.update(trabajos)
+        .set({
+          fecha,
+          clienteId,
+          subtiendaId: ubicacion.subtiendaId,
+          areaId: ubicacion.areaId,
 
-        tipo,
-        descripcion,
-        direccion: direccion || null,
-        estado: estado || "Pendiente",
-        horaInicio: horaInicio || null,
-        horaFin: horaFin || null,
-        observaciones:
-          observaciones || null,
-      })
-      .where(eq(trabajos.id, id))
-;
+          vehiculoId:
+            Number.isInteger(
+              vehiculoSeleccionado,
+            ) &&
+              vehiculoSeleccionado > 0
+              ? vehiculoSeleccionado
+              : null,
 
-    await tx.delete(trabajoEmpleados)
-      .where(
-        eq(
-          trabajoEmpleados.trabajoId,
-          id,
-        ),
-      )
-;
+          tipo,
+          descripcion,
+          direccion: direccion || null,
+          estado: estado || "Pendiente",
+          horaInicio: horaInicio || null,
+          horaFin: horaFin || null,
+          observaciones:
+            observaciones || null,
+        })
+        .where(eq(trabajos.id, id))
+        ;
 
-    if (empleadoIds.length === 0) {
-      return;
-    }
-
-    await tx.insert(trabajoEmpleados)
-      .values(
-        empleadoIds.map(
-          (empleadoId) => ({
-            trabajoId: id,
-            empleadoId,
-          }),
-        ),
-      )
-;
-
-    const destinatarios = await tx
-      .select({
-        usuarioId: usuarios.id,
-      })
-      .from(trabajoEmpleados)
-      .innerJoin(
-        usuarios,
-        eq(
-          trabajoEmpleados.empleadoId,
-          usuarios.empleadoId,
-        ),
-      )
-      .where(
-        and(
+      await tx.delete(trabajoEmpleados)
+        .where(
           eq(
             trabajoEmpleados.trabajoId,
             id,
           ),
-          eq(usuarios.rol, "TECNICO"),
-        ),
-      )
-;
+        )
+        ;
 
-    const usuarioIds = [
-      ...new Set(
-        destinatarios.map(
-          (destinatario) =>
-            destinatario.usuarioId,
-        ),
-      ),
-    ];
+      if (empleadoIds.length === 0) {
+        return;
+      }
 
-    usuarioIdsNotificar =
-      usuarioIds;
-  });
+      await tx.insert(trabajoEmpleados)
+        .values(
+          empleadoIds.map(
+            (empleadoId) => ({
+              trabajoId: id,
+              empleadoId,
+            }),
+          ),
+        )
+        ;
+
+      const destinatarios = await tx
+        .select({
+          usuarioId: usuarios.id,
+        })
+        .from(trabajoEmpleados)
+        .innerJoin(
+          usuarios,
+          eq(
+            trabajoEmpleados.empleadoId,
+            usuarios.empleadoId,
+          ),
+        )
+        .where(
+          and(
+            eq(
+              trabajoEmpleados.trabajoId,
+              id,
+            ),
+            eq(usuarios.rol, "TECNICO"),
+          ),
+        )
+        ;
+
+      const usuarioIds = [
+        ...new Set(
+          destinatarios.map(
+            (destinatario) =>
+              destinatario.usuarioId,
+          ),
+        ),
+      ];
+
+      usuarioIdsNotificar =
+        usuarioIds;
+    });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "UBICACION_INVALIDA"
+    ) {
+      redirect(`/trabajos/${id}/editar?error=ubicacion`);
+    }
+
+    throw error;
+  }
 
   if (
     usuarioIdsNotificar.length > 0

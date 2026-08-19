@@ -71,6 +71,14 @@ export const trabajos = pgTable("trabajos", {
   id: serial("id").primaryKey(),
   fecha: text("fecha").notNull(),
   clienteId: integer("cliente_id").notNull().references(() => clientes.id),
+    subtiendaId: integer("subtienda_id").references(
+    () => clienteSubtiendas.id,
+    { onDelete: "set null" },
+  ),
+  areaId: integer("area_id").references(
+    () => clienteAreas.id,
+    { onDelete: "set null" },
+  ),
   vehiculoId: integer("vehiculo_id").references(() => vehiculos.id),
   tipo: text("tipo").notNull(),
   descripcion: text("descripcion").notNull(),
@@ -1127,6 +1135,38 @@ export const ordenCompraEventos = pgTable(
     index("orden_eventos_fecha_idx").on(
       tabla.creadoEn,
     ),
+  ],
+);
+
+export const clienteSubtiendas = pgTable(
+  "cliente_subtiendas",
+  {
+    id: serial("id").primaryKey(),
+    clienteId: integer("cliente_id")
+      .notNull()
+      .references(() => clientes.id, { onDelete: "cascade" }),
+    nombre: text("nombre").notNull(),
+    activo: boolean("activo").notNull().default(true),
+    creadoEn: timestamp("creado_en", { mode: "string" }).notNull().defaultNow(),
+  },
+  (tabla) => [
+    index("cliente_subtiendas_cliente_idx").on(tabla.clienteId),
+  ],
+);
+
+export const clienteAreas = pgTable(
+  "cliente_areas",
+  {
+    id: serial("id").primaryKey(),
+    subtiendaId: integer("subtienda_id")
+      .notNull()
+      .references(() => clienteSubtiendas.id, { onDelete: "cascade" }),
+    nombre: text("nombre").notNull(),
+    activo: boolean("activo").notNull().default(true),
+    creadoEn: timestamp("creado_en", { mode: "string" }).notNull().defaultNow(),
+  },
+  (tabla) => [
+    index("cliente_areas_subtienda_idx").on(tabla.subtiendaId),
   ],
 );
 

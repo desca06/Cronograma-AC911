@@ -17,6 +17,8 @@ import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { db } from "@/db";
 import {
+  clienteAreas,
+  clienteSubtiendas,
   clientes,
   empleados,
   evidencias,
@@ -109,10 +111,20 @@ export default async function ReporteTrabajoPage({
         clientes.nombre,
       clienteTelefono:
         clientes.telefono,
+      subtiendaNombre:
+        clienteSubtiendas.nombre,
+      areaNombre:
+        clienteAreas.nombre,
       vehiculoNombre:
         vehiculos.nombre,
       vehiculoPlaca:
         vehiculos.placa,
+      firmaClienteUrl:
+        trabajos.firmaClienteUrl,
+      firmaClienteNombre:
+        trabajos.firmaClienteNombre,
+      firmaClienteEn:
+        trabajos.firmaClienteEn,
     })
     .from(trabajos)
     .innerJoin(
@@ -120,6 +132,20 @@ export default async function ReporteTrabajoPage({
       eq(
         trabajos.clienteId,
         clientes.id,
+      ),
+    )
+    .leftJoin(
+      clienteSubtiendas,
+      eq(
+        trabajos.subtiendaId,
+        clienteSubtiendas.id,
+      ),
+    )
+    .leftJoin(
+      clienteAreas,
+      eq(
+        trabajos.areaId,
+        clienteAreas.id,
       ),
     )
     .leftJoin(
@@ -323,6 +349,22 @@ export default async function ReporteTrabajoPage({
             />
 
             <Dato
+              titulo="Subtienda"
+              valor={
+                trabajo.subtiendaNombre ||
+                "Sin subtienda"
+              }
+            />
+
+            <Dato
+              titulo="Área"
+              valor={
+                trabajo.areaNombre ||
+                "Sin área"
+              }
+            />
+
+            <Dato
               titulo="Dirección"
               valor={
                 trabajo.direccion ||
@@ -425,6 +467,33 @@ export default async function ReporteTrabajoPage({
                 ),
               )}
             </div>
+          )}
+        </Seccion>
+
+        <Seccion titulo="Firma del cliente">
+          {trabajo.firmaClienteUrl ? (
+            <div className="space-y-3">
+              <p className="text-sm font-semibold text-slate-800">
+                {trabajo.firmaClienteNombre || "Cliente"}
+              </p>
+
+              <img
+                src={trabajo.firmaClienteUrl}
+                alt="Firma del cliente"
+                className="h-32 w-full max-w-md rounded-xl border border-slate-200 bg-white object-contain"
+              />
+
+              {trabajo.firmaClienteEn && (
+                <p className="text-xs text-slate-500">
+                  Firmado el{" "}
+                  {formatearFechaHora(trabajo.firmaClienteEn)}
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500">
+              Este trabajo todavía no tiene firma del cliente.
+            </p>
           )}
         </Seccion>
 
