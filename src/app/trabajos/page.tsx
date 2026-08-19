@@ -563,24 +563,6 @@ export default async function TrabajosPage({
                         PDF
                       </Link>
                     </div>
-
-                    <form
-                      action={actualizarEstadoTrabajo}
-                      className="flex flex-col gap-2 sm:flex-row"
-                    >
-                      <input
-                        type="hidden"
-                        name="id"
-                        value={trabajo.id}
-                      />
-                      <button
-                        type="submit"
-                        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-                      >
-                        Actualizar
-                      </button>
-                    </form>
-
                     <form action={eliminarTrabajo}>
                       <input
                         type="hidden"
