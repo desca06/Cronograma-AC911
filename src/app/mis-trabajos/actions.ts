@@ -60,6 +60,7 @@ function revalidarPaginas(
   revalidatePath("/dashboard");
   revalidatePath("/cronograma");
   revalidatePath("/trabajos");
+  revalidatePath("/historial");
   revalidatePath("/notificaciones");
 }
 
@@ -96,11 +97,6 @@ export async function actualizarMiTrabajo(
     "estado",
   );
 
-  /*
-   * Este campo representa UNA NUEVA observación.
-   * Ya no contiene todo el historial ni reemplaza
-   * la observación anterior.
-   */
   const nuevaObservacion =
     obtenerTexto(
       formData,
@@ -183,6 +179,8 @@ export async function actualizarMiTrabajo(
       tipo: trabajos.tipo,
       fecha: trabajos.fecha,
       estado: trabajos.estado,
+      firmaClienteUrl: trabajos.firmaClienteUrl,
+      firmaClienteNombre: trabajos.firmaClienteNombre,
     })
     .from(trabajos)
     .where(
@@ -203,13 +201,48 @@ export async function actualizarMiTrabajo(
     );
   }
 
+  const firmaCliente = obtenerTexto(
+    formData,
+    "firmaCliente",
+  );
+
+  const firmaClienteNombre = obtenerTexto(
+    formData,
+    "firmaClienteNombre",
+  );
+
+  const firmaNueva =
+    firmaCliente.startsWith("data:image/");
+
+  if (estado === "Finalizado") {
+    const yaTeniaFirma = Boolean(
+      trabajoActual.firmaClienteUrl,
+    );
+
+    if (!yaTeniaFirma && !firmaNueva) {
+      redirect(
+        agregarParametro(
+          rutaRetorno,
+          "error",
+          "firma",
+        ),
+      );
+    }
+
+    if (!yaTeniaFirma && !firmaClienteNombre) {
+      redirect(
+        agregarParametro(
+          rutaRetorno,
+          "error",
+          "firma-nombre",
+        ),
+      );
+    }
+  }
+
   const cambioEstado =
     trabajoActual.estado !== estado;
 
-  /*
-   * Cualquier texto no vacío es una nueva entrada
-   * histórica, aunque sea parecido a una anterior.
-   */
   const agregoObservacion =
     nuevaObservacion.length > 0;
 
@@ -229,12 +262,6 @@ export async function actualizarMiTrabajo(
   const ahora = new Date();
 
   await db.transaction(async (tx) => {
-    /*
-     * Conservamos observacionesTecnico como "última
-     * observación" por compatibilidad con pantallas
-     * antiguas. El historial real vive en
-     * trabajo_observaciones_tecnico.
-     */
     await tx
       .update(trabajos)
       .set({
@@ -243,6 +270,15 @@ export async function actualizarMiTrabajo(
           ? {
               observacionesTecnico:
                 nuevaObservacion,
+            }
+          : {}),
+        ...(estado === "Finalizado" && firmaNueva
+          ? {
+              firmaClienteUrl: firmaCliente,
+              firmaClienteNombre:
+                firmaClienteNombre ||
+                trabajoActual.firmaClienteNombre,
+              firmaClienteEn: ahora.toISOString(),
             }
           : {}),
       })

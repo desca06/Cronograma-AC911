@@ -20,6 +20,7 @@ import {
 import { requerirSesion } from "@/lib/auth";
 
 import { actualizarMiTrabajo } from "../actions";
+import { CierreTrabajo } from "@/components/cierre-trabajo";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -268,12 +269,11 @@ export default async function TrabajoAsignadoPage({
             </div>
 
             <span
-              className={`w-fit rounded-full px-3 py-1 text-xs font-bold ${
-                coloresEstado[
-                  trabajo.estado
+              className={`w-fit rounded-full px-3 py-1 text-xs font-bold ${coloresEstado[
+                trabajo.estado
                 ] ??
                 "bg-slate-100 text-slate-700"
-              }`}
+                }`}
             >
               {trabajo.estado}
             </span>
@@ -408,30 +408,11 @@ export default async function TrabajoAsignadoPage({
                 Estado del trabajo
               </label>
 
-              <select
-                id={`estado-${trabajo.id}`}
-                name="estado"
-                defaultValue={
-                  trabajo.estado
-                }
-                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"
-              >
-                <option value="Pendiente">
-                  Pendiente
-                </option>
-
-                <option value="En camino">
-                  En camino
-                </option>
-
-                <option value="En proceso">
-                  En proceso
-                </option>
-
-                <option value="Finalizado">
-                  Finalizado
-                </option>
-              </select>
+              <CierreTrabajo
+                trabajoId={trabajo.id}
+                estadoInicial={trabajo.estado}
+                incluirPendiente
+              />
             </div>
 
             <div>

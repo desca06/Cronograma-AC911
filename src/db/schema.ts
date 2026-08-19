@@ -80,6 +80,11 @@ export const trabajos = pgTable("trabajos", {
   horaFin: text("hora_fin"),
   observaciones: text("observaciones"),
   observacionesTecnico: text("observaciones_tecnico"),
+  firmaClienteUrl: text("firma_cliente_url"),
+  firmaClienteNombre: text("firma_cliente_nombre"),
+  firmaClienteEn: timestamp("firma_cliente_en", {
+    mode: "string",
+  }),
   creadoEn: timestamp("creado_en", { mode: "string" }).notNull().defaultNow(),
 });
 
@@ -1114,6 +1119,8 @@ export const ordenCompraEventos = pgTable(
     ),
   ],
 );
+
+
 
 export type OrdenCompra =
   typeof ordenesCompra.$inferSelect;

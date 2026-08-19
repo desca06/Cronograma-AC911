@@ -9,6 +9,7 @@ import {
 import Link from "next/link";
 
 import { AppShell } from "@/components/app-shell";
+import { CierreTrabajo } from "@/components/cierre-trabajo";
 import { PageHeader } from "@/components/page-header";
 import { db } from "@/db";
 import {
@@ -40,48 +41,31 @@ type MisTrabajosPageProps = {
   }>;
 };
 
-function formatearFechaHora(
-  fecha: Date,
-) {
-  return new Intl.DateTimeFormat(
-    "es-GT",
-    {
-      timeZone:
-        "America/Guatemala",
-      dateStyle: "medium",
-      timeStyle: "short",
-    },
-  ).format(fecha);
+function formatearFechaHora(fecha: Date) {
+  return new Intl.DateTimeFormat("es-GT", {
+    timeZone: "America/Guatemala",
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(fecha);
 }
 
 export default async function MisTrabajosPage({
   searchParams,
 }: MisTrabajosPageProps) {
   const sesion = await requerirSesion();
-
   const parametros = await searchParams;
 
   const error =
-    typeof parametros.error === "string"
-      ? parametros.error
-      : "";
-
+    typeof parametros.error === "string" ? parametros.error : "";
   const exito =
-    typeof parametros.exito === "string"
-      ? parametros.exito
-      : "";
+    typeof parametros.exito === "string" ? parametros.exito : "";
 
   const [usuario] = await db
     .select({
       empleadoId: usuarios.empleadoId,
     })
     .from(usuarios)
-    .where(
-      eq(
-        usuarios.id,
-        sesion.usuarioId,
-      ),
-    )
+    .where(eq(usuarios.id, sesion.usuarioId))
     .limit(1);
 
   if (!usuario?.empleadoId) {
@@ -97,10 +81,8 @@ export default async function MisTrabajosPage({
             <h2 className="text-xl font-bold text-amber-900">
               Cuenta sin empleado vinculado
             </h2>
-
             <p className="mt-2 text-amber-700">
-              Un supervisor debe vincular tu usuario
-              con un empleado.
+              Un supervisor debe vincular tu usuario con un empleado.
             </p>
           </div>
         </section>
@@ -118,113 +100,53 @@ export default async function MisTrabajosPage({
       estado: trabajos.estado,
       horaInicio: trabajos.horaInicio,
       horaFin: trabajos.horaFin,
-      observacionesSupervisor:
-        trabajos.observaciones,
+      observacionesSupervisor: trabajos.observaciones,
       clienteNombre: clientes.nombre,
       vehiculoNombre: vehiculos.nombre,
     })
     .from(trabajoEmpleados)
-    .innerJoin(
-      trabajos,
-      eq(
-        trabajoEmpleados.trabajoId,
-        trabajos.id,
-      ),
-    )
-    .innerJoin(
-      clientes,
-      eq(
-        trabajos.clienteId,
-        clientes.id,
-      ),
-    )
-    .leftJoin(
-      vehiculos,
-      eq(
-        trabajos.vehiculoId,
-        vehiculos.id,
-      ),
-    )
+    .innerJoin(trabajos, eq(trabajoEmpleados.trabajoId, trabajos.id))
+    .innerJoin(clientes, eq(trabajos.clienteId, clientes.id))
+    .leftJoin(vehiculos, eq(trabajos.vehiculoId, vehiculos.id))
     .where(
       and(
-        eq(
-          trabajoEmpleados.empleadoId,
-          usuario.empleadoId,
-        ),
-        ne(
-          trabajos.estado,
-          "Finalizado",
-        ),
+        eq(trabajoEmpleados.empleadoId, usuario.empleadoId),
+        ne(trabajos.estado, "Finalizado"),
       ),
     )
-    .orderBy(
-      asc(trabajos.fecha),
-      asc(trabajos.horaInicio),
-    );
+    .orderBy(asc(trabajos.fecha), asc(trabajos.horaInicio));
 
-  const idsTrabajos =
-    listaTrabajos.map(
-      (trabajo) => trabajo.id,
-    );
+  const idsTrabajos = listaTrabajos.map((trabajo) => trabajo.id);
 
   const observaciones =
     idsTrabajos.length > 0
       ? await db
           .select({
-            id:
-              trabajoObservacionesTecnico.id,
-            trabajoId:
-              trabajoObservacionesTecnico.trabajoId,
-            observacion:
-              trabajoObservacionesTecnico.observacion,
-            estadoTrabajo:
-              trabajoObservacionesTecnico.estadoTrabajo,
-            creadoEn:
-              trabajoObservacionesTecnico.creadoEn,
-            autor:
-              usuarios.nombre,
+            id: trabajoObservacionesTecnico.id,
+            trabajoId: trabajoObservacionesTecnico.trabajoId,
+            observacion: trabajoObservacionesTecnico.observacion,
+            estadoTrabajo: trabajoObservacionesTecnico.estadoTrabajo,
+            creadoEn: trabajoObservacionesTecnico.creadoEn,
+            autor: usuarios.nombre,
           })
-          .from(
-            trabajoObservacionesTecnico,
-          )
+          .from(trabajoObservacionesTecnico)
           .leftJoin(
             usuarios,
-            eq(
-              trabajoObservacionesTecnico.usuarioId,
-              usuarios.id,
-            ),
+            eq(trabajoObservacionesTecnico.usuarioId, usuarios.id),
           )
           .where(
-            inArray(
-              trabajoObservacionesTecnico.trabajoId,
-              idsTrabajos,
-            ),
+            inArray(trabajoObservacionesTecnico.trabajoId, idsTrabajos),
           )
-          .orderBy(
-            desc(
-              trabajoObservacionesTecnico.creadoEn,
-            ),
-          )
+          .orderBy(desc(trabajoObservacionesTecnico.creadoEn))
       : [];
 
-  const observacionesPorTrabajo =
-    new Map<
-      number,
-      typeof observaciones
-    >();
+  const observacionesPorTrabajo = new Map<number, typeof observaciones>();
 
   for (const observacion of observaciones) {
     const actuales =
-      observacionesPorTrabajo.get(
-        observacion.trabajoId,
-      ) ?? [];
-
+      observacionesPorTrabajo.get(observacion.trabajoId) ?? [];
     actuales.push(observacion);
-
-    observacionesPorTrabajo.set(
-      observacion.trabajoId,
-      actuales,
-    );
+    observacionesPorTrabajo.set(observacion.trabajoId, actuales);
   }
 
   const mensajeError =
@@ -234,9 +156,13 @@ export default async function MisTrabajosPage({
         ? "Tu cuenta no está vinculada con un empleado."
         : error === "no-encontrado"
           ? "El trabajo no fue encontrado."
-          : error
-            ? "No se pudo realizar la operación."
-            : "";
+          : error === "firma"
+            ? "Para finalizar el trabajo, el cliente debe firmar."
+            : error === "firma-nombre"
+              ? "Escribe el nombre de quien firma."
+              : error
+                ? "No se pudo realizar la operación."
+                : "";
 
   return (
     <AppShell>
@@ -269,7 +195,6 @@ export default async function MisTrabajosPage({
             <h2 className="text-xl font-bold text-slate-900">
               No tienes trabajos asignados
             </h2>
-
             <p className="mt-2 text-slate-500">
               Tus nuevas asignaciones aparecerán aquí.
             </p>
@@ -278,9 +203,7 @@ export default async function MisTrabajosPage({
           <div className="grid gap-5 xl:grid-cols-2">
             {listaTrabajos.map((trabajo) => {
               const historial =
-                observacionesPorTrabajo.get(
-                  trabajo.id,
-                ) ?? [];
+                observacionesPorTrabajo.get(trabajo.id) ?? [];
 
               return (
                 <article
@@ -292,11 +215,9 @@ export default async function MisTrabajosPage({
                       <p className="text-sm font-semibold text-blue-700">
                         {trabajo.fecha}
                       </p>
-
                       <h2 className="mt-1 text-xl font-bold text-slate-900">
                         {trabajo.clienteNombre}
                       </h2>
-
                       <p className="mt-1 font-medium text-slate-700">
                         {trabajo.tipo}
                       </p>
@@ -304,9 +225,7 @@ export default async function MisTrabajosPage({
 
                     <span
                       className={`w-fit rounded-full px-3 py-1 text-xs font-bold ${
-                        coloresEstado[
-                          trabajo.estado
-                        ] ??
+                        coloresEstado[trabajo.estado] ??
                         "bg-slate-100 text-slate-700"
                       }`}
                     >
@@ -321,23 +240,16 @@ export default async function MisTrabajosPage({
                   <div className="mt-5 grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
                     <p>
                       <strong>Hora:</strong>{" "}
-                      {trabajo.horaInicio ||
-                        "Sin definir"}
-                      {trabajo.horaFin
-                        ? ` - ${trabajo.horaFin}`
-                        : ""}
+                      {trabajo.horaInicio || "Sin definir"}
+                      {trabajo.horaFin ? ` - ${trabajo.horaFin}` : ""}
                     </p>
-
                     <p>
                       <strong>Vehículo:</strong>{" "}
-                      {trabajo.vehiculoNombre ||
-                        "Sin vehículo"}
+                      {trabajo.vehiculoNombre || "Sin vehículo"}
                     </p>
-
                     <p className="sm:col-span-2">
                       <strong>Dirección:</strong>{" "}
-                      {trabajo.direccion ||
-                        "Sin dirección"}
+                      {trabajo.direccion || "Sin dirección"}
                     </p>
                   </div>
 
@@ -345,7 +257,6 @@ export default async function MisTrabajosPage({
                     <p className="text-sm font-bold text-amber-900">
                       Indicaciones del supervisor
                     </p>
-
                     <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-amber-900">
                       {trabajo.observacionesSupervisor ||
                         "El supervisor no agregó indicaciones."}
@@ -365,12 +276,10 @@ export default async function MisTrabajosPage({
                         <h3 className="font-bold text-slate-900">
                           Historial de observaciones
                         </h3>
-
                         <p className="mt-1 text-sm text-slate-500">
                           Cada actualización queda guardada y no reemplaza las anteriores.
                         </p>
                       </div>
-
                       <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700">
                         {historial.length}
                       </span>
@@ -382,39 +291,27 @@ export default async function MisTrabajosPage({
                       </div>
                     ) : (
                       <div className="mt-4 max-h-72 space-y-3 overflow-y-auto pr-1">
-                        {historial.map(
-                          (registro) => (
-                            <div
-                              key={registro.id}
-                              className="rounded-xl border border-slate-200 bg-slate-50 p-4"
-                            >
-                              <div className="flex flex-wrap items-center justify-between gap-2">
-                                <p className="text-sm font-bold text-slate-900">
-                                  {registro.autor ||
-                                    "Técnico"}
-                                </p>
-
-                                <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
-                                  {
-                                    registro.estadoTrabajo
-                                  }
-                                </span>
-                              </div>
-
-                              <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
-                                {
-                                  registro.observacion
-                                }
+                        {historial.map((registro) => (
+                          <div
+                            key={registro.id}
+                            className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <p className="text-sm font-bold text-slate-900">
+                                {registro.autor || "Técnico"}
                               </p>
-
-                              <p className="mt-3 text-xs font-medium text-slate-500">
-                                {formatearFechaHora(
-                                  registro.creadoEn,
-                                )}
-                              </p>
+                              <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
+                                {registro.estadoTrabajo}
+                              </span>
                             </div>
-                          ),
-                        )}
+                            <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
+                              {registro.observacion}
+                            </p>
+                            <p className="mt-3 text-xs font-medium text-slate-500">
+                              {formatearFechaHora(registro.creadoEn)}
+                            </p>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -429,35 +326,10 @@ export default async function MisTrabajosPage({
                       value={trabajo.id}
                     />
 
-                    <div>
-                      <label
-                        htmlFor={`estado-${trabajo.id}`}
-                        className="mb-2 block text-sm font-semibold text-slate-700"
-                      >
-                        Estado del trabajo
-                      </label>
-
-                      <select
-                        id={`estado-${trabajo.id}`}
-                        name="estado"
-                        defaultValue={
-                          trabajo.estado
-                        }
-                        className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"
-                      >
-                        <option value="En camino">
-                          En camino
-                        </option>
-
-                        <option value="En proceso">
-                          En proceso
-                        </option>
-
-                        <option value="Finalizado">
-                          Finalizado
-                        </option>
-                      </select>
-                    </div>
+                    <CierreTrabajo
+                      trabajoId={trabajo.id}
+                      estadoInicial={trabajo.estado}
+                    />
 
                     <div>
                       <label
@@ -466,7 +338,6 @@ export default async function MisTrabajosPage({
                       >
                         Nueva observación del técnico
                       </label>
-
                       <textarea
                         id={`observaciones-tecnico-${trabajo.id}`}
                         name="observacionesTecnico"
@@ -475,10 +346,6 @@ export default async function MisTrabajosPage({
                         placeholder="Escribe una nueva observación, avance, problema, material utilizado o resultado"
                         className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3"
                       />
-
-                      <p className="mt-2 text-xs text-slate-500">
-                        La nueva observación se agregará al historial; las anteriores no se borrarán.
-                      </p>
                     </div>
 
                     <button

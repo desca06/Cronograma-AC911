@@ -94,6 +94,8 @@ export default async function HistorialPage({ searchParams,
         trabajos.observacionesTecnico,
       clienteNombre: clientes.nombre,
       vehiculoNombre: vehiculos.nombre,
+      firmaClienteUrl: trabajos.firmaClienteUrl,
+      firmaClienteNombre: trabajos.firmaClienteNombre,
     })
     .from(trabajoEmpleados)
     .innerJoin(

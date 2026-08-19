@@ -125,6 +125,8 @@ export default async function TrabajosPage({
       horaInicio: trabajos.horaInicio,
       clienteNombre: clientes.nombre,
       vehiculoNombre: vehiculos.nombre,
+      firmaClienteUrl: trabajos.firmaClienteUrl,
+      firmaClienteNombre: trabajos.firmaClienteNombre,
     })
     .from(trabajos)
     .innerJoin(
@@ -191,7 +193,7 @@ export default async function TrabajosPage({
       const coincideCliente =
         !clienteFiltro ||
         String(trabajo.clienteId) ===
-          clienteFiltro;
+        clienteFiltro;
 
       const coincideEstado =
         !estadoFiltro ||
@@ -206,7 +208,7 @@ export default async function TrabajosPage({
       const coincideVehiculo =
         !vehiculoFiltro ||
         String(trabajo.vehiculoId ?? "") ===
-          vehiculoFiltro;
+        vehiculoFiltro;
 
       const coincideFecha =
         !fechaFiltro ||
@@ -484,12 +486,11 @@ export default async function TrabajosPage({
                         </h3>
 
                         <span
-                          className={`rounded-full px-3 py-1 text-xs font-bold ${
-                            coloresEstado[
-                              trabajo.estado
+                          className={`rounded-full px-3 py-1 text-xs font-bold ${coloresEstado[
+                            trabajo.estado
                             ] ??
                             "bg-slate-100 text-slate-700"
-                          }`}
+                            }`}
                         >
                           {trabajo.estado}
                         </span>
@@ -546,8 +547,23 @@ export default async function TrabajosPage({
                       >
                         Editar
                       </Link>
-
+                      {trabajo.firmaClienteUrl && (
+                        <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                          <p className="text-sm font-bold text-emerald-900">
+                            Firma del cliente
+                          </p>
+                          <p className="mt-1 text-sm text-emerald-800">
+                            {trabajo.firmaClienteNombre || "Cliente"}
+                          </p>
+                          <img
+                            src={trabajo.firmaClienteUrl}
+                            alt="Firma del cliente"
+                            className="mt-3 h-24 w-full rounded-xl border border-emerald-200 bg-white object-contain"
+                          />
+                        </div>
+                      )}
                       <Link
+
                         href={`/evidencias/${trabajo.id}`}
                         className="rounded-lg bg-emerald-100 px-4 py-2 text-center text-sm font-semibold text-emerald-800 hover:bg-emerald-200"
                       >
