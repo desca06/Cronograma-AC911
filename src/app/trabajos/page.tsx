@@ -547,21 +547,6 @@ export default async function TrabajosPage({
                       >
                         Editar
                       </Link>
-                      {trabajo.firmaClienteUrl && (
-                        <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                          <p className="text-sm font-bold text-emerald-900">
-                            Firma del cliente
-                          </p>
-                          <p className="mt-1 text-sm text-emerald-800">
-                            {trabajo.firmaClienteNombre || "Cliente"}
-                          </p>
-                          <img
-                            src={trabajo.firmaClienteUrl}
-                            alt="Firma del cliente"
-                            className="mt-3 h-24 w-full rounded-xl border border-emerald-200 bg-white object-contain"
-                          />
-                        </div>
-                      )}
                       <Link
 
                         href={`/evidencias/${trabajo.id}`}
@@ -588,24 +573,6 @@ export default async function TrabajosPage({
                         name="id"
                         value={trabajo.id}
                       />
-
-                      <select
-                        name="estado"
-                        defaultValue={trabajo.estado}
-                        className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                      >
-                        {estadosDisponibles.map(
-                          (estado) => (
-                            <option
-                              key={estado}
-                              value={estado}
-                            >
-                              {estado}
-                            </option>
-                          ),
-                        )}
-                      </select>
-
                       <button
                         type="submit"
                         className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
