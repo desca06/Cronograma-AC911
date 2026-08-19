@@ -27,7 +27,7 @@ type Cliente = {
 type Vehiculo = {
   id: number;
   nombre: string;
-  placa: string;
+  placa?: string | null;
   estado: string;
 };
 
