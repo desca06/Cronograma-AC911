@@ -1030,14 +1030,14 @@ export async function GET(
 
   y -= 62;
 
-  drawField(
+    drawField(
     page,
     "Fecha de salida",
     formatExitDate(expediente.fechaSalida),
     {
       x: MARGIN,
       y,
-      width: halfWidth,
+      width: CONTENT_WIDTH,
       normal,
       bold,
       background: expediente.fechaSalida
@@ -1046,10 +1046,25 @@ export async function GET(
     },
   );
 
+  y -= 62;
+
   drawField(
     page,
     "Salario inicial",
     formatMoney(expediente.salarioInicial),
+    {
+      x: MARGIN,
+      y,
+      width: halfWidth,
+      normal,
+      bold,
+    },
+  );
+
+  drawField(
+    page,
+    "Salario actual",
+    formatMoney(expediente.salarioActual),
     {
       x: MARGIN + halfWidth + gap,
       y,
@@ -1060,19 +1075,6 @@ export async function GET(
   );
 
   y -= 62;
-
-  drawField(
-    page,
-    "Salario actual",
-    formatMoney(expediente.salarioActual),
-    {
-      x: MARGIN,
-      y,
-      width: CONTENT_WIDTH,
-      normal,
-      bold,
-    },
-  );
 
   drawField(
     page,
