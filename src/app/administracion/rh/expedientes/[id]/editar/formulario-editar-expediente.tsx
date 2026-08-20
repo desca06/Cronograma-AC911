@@ -221,9 +221,8 @@ export function FormularioEditarExpediente({
           >
             Fecha de salida
           </label>
-        </div>
 
-        <input
+          <input
           id="fechaSalida"
           name="fechaSalida"
           type="date"
@@ -232,6 +231,7 @@ export function FormularioEditarExpediente({
           }
           className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
         />
+        </div>
 
         <div>
           <label
@@ -240,8 +240,7 @@ export function FormularioEditarExpediente({
           >
             Salario actual (Q)
           </label>
-        </div>
-
+          
         <input
           id="salarioInicial"
           name="salarioInicial"
@@ -252,8 +251,9 @@ export function FormularioEditarExpediente({
               : ""
           }
           className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-
         />
+        </div>
+
 
         <div>
           <label
@@ -263,7 +263,7 @@ export function FormularioEditarExpediente({
             Salario actual (Q)
           </label>
         </div>
-        
+
         <input
           id="salarioActual"
           name="salarioActual"
