@@ -232,7 +232,16 @@ export function FormularioEditarExpediente({
           }
           className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
         />
-        
+
+        <div>
+          <label
+            htmlFor="salarioActual"
+            className="mb-2 block text-sm font-semibold text-slate-700"
+          >
+            Salario actual (Q)
+          </label>
+        </div>
+
         <input
           id="salarioInicial"
           name="salarioInicial"
@@ -246,6 +255,15 @@ export function FormularioEditarExpediente({
 
         />
 
+        <div>
+          <label
+            htmlFor="salarioActual"
+            className="mb-2 block text-sm font-semibold text-slate-700"
+          >
+            Salario actual (Q)
+          </label>
+        </div>
+        
         <input
           id="salarioActual"
           name="salarioActual"
