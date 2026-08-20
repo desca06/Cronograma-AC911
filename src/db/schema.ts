@@ -416,6 +416,8 @@ export const expedientes = pgTable("expedientes", {
   fechaSalida: date("fecha_salida", {
     mode: "string",
   }),
+  salarioInicial: integer("salario_inicial"),
+  salarioActual: integer("salario_actual"),
   contactoEmergencia: text(
     "contacto_emergencia",
   ).notNull(),

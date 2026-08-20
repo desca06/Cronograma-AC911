@@ -47,6 +47,26 @@ function safeText(value: string | null | undefined) {
   return value?.trim() || "No registrado";
 }
 
+function formatMoney(valueInCents: number | null | undefined) {
+  if (valueInCents == null) {
+    return "No registrado";
+  }
+
+  return new Intl.NumberFormat("es-GT", {
+    style: "currency",
+    currency: "GTQ",
+    minimumFractionDigits: 2,
+  }).format(valueInCents / 100);
+}
+
+function formatExitDate(value: string | null | undefined) {
+  if (!value) {
+    return "Sigue laborando";
+  }
+
+  return formatDate(value);
+}
+
 function formatDate(value: string | null | undefined) {
   if (!value) {
     return "No registrada";
@@ -604,6 +624,9 @@ export async function GET(
       nit: expedientes.nit,
       igss: expedientes.igss,
       fechaIngreso: expedientes.fechaIngreso,
+      fechaSalida: expedientes.fechaSalida,
+      salarioInicial: expedientes.salarioInicial,
+      salarioActual: expedientes.salarioActual,
       contactoEmergencia: expedientes.contactoEmergencia,
       telefonoEmergencia: expedientes.telefonoEmergencia,
       direccion: expedientes.direccion,
@@ -685,7 +708,7 @@ export async function GET(
   };
 
   // Perfil del empleado y espacio para fotografía.
-  const profileHeight = 132;
+  const profileHeight = 150;
 
   drawCard(page, {
     x: MARGIN,
@@ -713,9 +736,9 @@ export async function GET(
   if (fotoEmpleado) {
     const escala = Math.min(
       photoWidth /
-        fotoEmpleado.width,
+      fotoEmpleado.width,
       photoHeight /
-        fotoEmpleado.height,
+      fotoEmpleado.height,
     );
 
     const ancho =
@@ -732,12 +755,12 @@ export async function GET(
         x:
           photoX +
           (photoWidth - ancho) /
-            2,
+          2,
 
         y:
           photoY +
           (photoHeight - alto) /
-            2,
+          2,
 
         width: ancho,
         height: alto,
@@ -928,6 +951,23 @@ export async function GET(
     maxWidth: 110,
   });
 
+    page.drawText("Fecha de salida", {
+    x: profileX,
+    y: y - 128,
+    size: 7.2,
+    font: bold,
+    color: MUTED,
+  });
+
+  page.drawText(formatExitDate(expediente.fechaSalida), {
+    x: profileX + 94,
+    y: y - 128,
+    size: 8.5,
+    font: bold,
+    color: TEXT,
+    maxWidth: 280,
+  });
+
   y -= profileHeight + 16;
 
   // Información personal.
@@ -989,6 +1029,50 @@ export async function GET(
   );
 
   y -= 62;
+
+  drawField(
+    page,
+    "Fecha de salida",
+    formatExitDate(expediente.fechaSalida),
+    {
+      x: MARGIN,
+      y,
+      width: halfWidth,
+      normal,
+      bold,
+      background: expediente.fechaSalida
+        ? LIGHT
+        : GREEN_LIGHT,
+    },
+  );
+
+  drawField(
+    page,
+    "Salario inicial",
+    formatMoney(expediente.salarioInicial),
+    {
+      x: MARGIN + halfWidth + gap,
+      y,
+      width: halfWidth,
+      normal,
+      bold,
+    },
+  );
+
+  y -= 62;
+
+  drawField(
+    page,
+    "Salario actual",
+    formatMoney(expediente.salarioActual),
+    {
+      x: MARGIN,
+      y,
+      width: CONTENT_WIDTH,
+      normal,
+      bold,
+    },
+  );
 
   drawField(
     page,
@@ -1204,9 +1288,8 @@ export async function GET(
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `${
-        download ? "attachment" : "inline"
-      }; filename="${fileName || `expediente-${expediente.id}`}.pdf"`,
+      "Content-Disposition": `${download ? "attachment" : "inline"
+        }; filename="${fileName || `expediente-${expediente.id}`}.pdf"`,
       "Cache-Control": "no-store",
     },
   });

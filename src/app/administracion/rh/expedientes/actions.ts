@@ -77,6 +77,28 @@ function leerFechaSalida(
   return fechaSalida;
 }
 
+function leerSalarioCentavos(
+  formData: FormData,
+  campo: string,
+) {
+  const texto = obtenerTexto(
+    formData,
+    campo,
+  ).replace(",", ".");
+
+  if (!texto) {
+    return null;
+  }
+
+  const valor = Number(texto);
+
+  if (!Number.isFinite(valor) || valor < 0) {
+    throw new Error("SALARIO");
+  }
+
+  return Math.round(valor * 100);
+}
+
 function generarCodigo(
   expedienteId: number,
 ) {
@@ -261,7 +283,7 @@ export async function crearExpediente(
       "/administracion/rh/expedientes/nuevo?error=campos",
     );
   }
-    let fechaSalida: string | null = null;
+  let fechaSalida: string | null = null;
 
   try {
     fechaSalida = leerFechaSalida(
@@ -271,6 +293,24 @@ export async function crearExpediente(
   } catch {
     redirect(
       "/administracion/rh/expedientes/nuevo?error=fecha-salida",
+    );
+  }
+
+  let salarioInicial: number | null = null;
+  let salarioActual: number | null = null;
+
+  try {
+    salarioInicial = leerSalarioCentavos(
+      formData,
+      "salarioInicial",
+    );
+    salarioActual = leerSalarioCentavos(
+      formData,
+      "salarioActual",
+    );
+  } catch {
+    redirect(
+      "/administracion/rh/expedientes/nuevo?error=salario",
     );
   }
 
@@ -346,6 +386,8 @@ export async function crearExpediente(
         igss: igss || null,
         fechaIngreso,
         fechaSalida,
+        salarioInicial,
+        salarioActual,
         contactoEmergencia,
         telefonoEmergencia,
         direccion,
@@ -439,6 +481,18 @@ export async function actualizarExpediente(
       "fechaIngreso",
     );
 
+  const salarioInicial =
+    leerSalarioCentavos(
+      formData,
+      "salarioInicial",
+    );
+
+  const salarioActual =
+    leerSalarioCentavos(
+      formData,
+      "salarioActual",
+    );
+
   const contactoEmergencia =
     obtenerTexto(
       formData,
@@ -484,7 +538,7 @@ export async function actualizarExpediente(
       `/administracion/rh/expedientes/${expedienteId}/editar?error=campos`,
     );
   }
-    let fechaSalida: string | null = null;
+  let fechaSalida: string | null = null;
 
   try {
     fechaSalida = leerFechaSalida(
@@ -610,6 +664,8 @@ export async function actualizarExpediente(
       igss: igss || null,
       fechaIngreso,
       fechaSalida,
+      salarioInicial,
+      salarioActual,
       contactoEmergencia,
       telefonoEmergencia,
       direccion,

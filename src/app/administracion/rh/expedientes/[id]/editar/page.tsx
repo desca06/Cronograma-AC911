@@ -83,6 +83,10 @@ export default async function EditarExpedientePage({
         igss: expedientes.igss,
         fechaIngreso:
           expedientes.fechaIngreso,
+        salarioInicial:
+          expedientes.salarioInicial,
+        salarioActual:
+          expedientes.salarioActual,
         fechaSalida:
           expedientes.fechaSalida,
         contactoEmergencia:

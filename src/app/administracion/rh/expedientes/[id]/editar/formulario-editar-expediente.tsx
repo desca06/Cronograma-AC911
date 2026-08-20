@@ -29,6 +29,8 @@ type FormularioEditarExpedienteProps = {
     igss: string | null;
     fechaIngreso: string;
     fechaSalida: string | null;
+    salarioInicial: number | null;
+    salarioActual: number | null;
     contactoEmergencia: string;
     telefonoEmergencia: string;
     direccion: string;
@@ -213,14 +215,14 @@ export function FormularioEditarExpediente({
         </div>
 
         <input
-            id="fechaSalida"
-            name="fechaSalida"
-            type="date"
-            defaultValue={
-              expediente.fechaSalida ?? ""
-            }
-            className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-          />
+          id="fechaSalida"
+          name="fechaSalida"
+          type="date"
+          defaultValue={
+            expediente.fechaSalida ?? ""
+          }
+          className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+        />
 
         <div>
           <label

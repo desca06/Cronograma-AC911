@@ -169,6 +169,56 @@ export function FormularioExpediente({
             className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
           />
 
+          <div>
+            <label
+              htmlFor="salarioInicial"
+              className="mb-2 block text-sm font-semibold text-slate-700"
+            >
+              Salario inicial
+            </label>
+
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-500">
+                Q
+              </span>
+
+              <input
+                id="salarioInicial"
+                name="salarioInicial"
+                type="number"
+                min={0}
+                step="0.01"
+                placeholder="1000.00"
+                className="w-full rounded-xl border border-slate-300 py-3 pl-9 pr-4 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label
+              htmlFor="salarioActual"
+              className="mb-2 block text-sm font-semibold text-slate-700"
+            >
+              Salario actual
+            </label>
+
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-500">
+                Q
+              </span>
+
+              <input
+                id="salarioActual"
+                name="salarioActual"
+                type="number"
+                min={0}
+                step="0.01"
+                placeholder="4000.00"
+                className="w-full rounded-xl border border-slate-300 py-3 pl-9 pr-4 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              />
+            </div>
+          </div>
+
           <p className="mt-2 text-xs leading-5 text-slate-500">
             Si lo dejás vacío, el empleado sigue laborando en la empresa.
           </p>
