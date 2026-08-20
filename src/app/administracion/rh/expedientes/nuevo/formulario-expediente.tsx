@@ -188,7 +188,7 @@ export function FormularioExpediente({
                 type="number"
                 min={0}
                 step="0.01"
-                placeholder="1000.00"
+                placeholder="0.00"
                 className="w-full rounded-xl border border-slate-300 py-3 pl-9 pr-4 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               />
             </div>
@@ -213,7 +213,7 @@ export function FormularioExpediente({
                 type="number"
                 min={0}
                 step="0.01"
-                placeholder="4000.00"
+                placeholder="0.00"
                 className="w-full rounded-xl border border-slate-300 py-3 pl-9 pr-4 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               />
             </div>
