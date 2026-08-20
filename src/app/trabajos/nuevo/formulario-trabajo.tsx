@@ -43,9 +43,11 @@ type CotizacionOrigen = {
   titulo: string;
   clienteId: number;
   clienteNombre: string;
+  subtiendaId?: number | null;
+  areaId?: number | null;
   observaciones:
-  | string
-  | null;
+    | string
+    | null;
 };
 
 type Subtienda = {
@@ -67,11 +69,11 @@ type FormularioTrabajoProps = {
   vehiculos: Vehiculo[];
   empleados: Empleado[];
   cotizacionesAprobadas:
-  CotizacionOrigen[];
+    CotizacionOrigen[];
   fechaInicial: string;
   cotizacion?:
-  | CotizacionOrigen
-  | null;
+    | CotizacionOrigen
+    | null;
 };
 
 const estadosDisponibles = [
@@ -98,8 +100,8 @@ export function FormularioTrabajo({
   ] = useState(
     cotizacion
       ? String(
-        cotizacion.id,
-      )
+          cotizacion.id,
+        )
       : "",
   );
 
@@ -109,8 +111,8 @@ export function FormularioTrabajo({
   ] = useState(
     cotizacion
       ? String(
-        cotizacion.clienteId,
-      )
+          cotizacion.clienteId,
+        )
       : "",
   );
 
@@ -119,7 +121,7 @@ export function FormularioTrabajo({
     setDescripcion,
   ] = useState(
     cotizacion?.titulo ??
-    "",
+      "",
   );
 
   const [
@@ -127,7 +129,7 @@ export function FormularioTrabajo({
     setObservaciones,
   ] = useState(
     cotizacion?.observaciones ??
-    "",
+      "",
   );
 
   const cotizacionSeleccionada =
@@ -141,9 +143,9 @@ export function FormularioTrabajo({
             cotizacionId,
         ) ??
         (cotizacion &&
-          String(
-            cotizacion.id,
-          ) === cotizacionId
+        String(
+          cotizacion.id,
+        ) === cotizacionId
           ? cotizacion
           : null),
       [
@@ -172,9 +174,9 @@ export function FormularioTrabajo({
           ) === valor,
       ) ??
       (cotizacion &&
-        String(
-          cotizacion.id,
-        ) === valor
+      String(
+        cotizacion.id,
+      ) === valor
         ? cotizacion
         : null);
 
@@ -194,7 +196,7 @@ export function FormularioTrabajo({
 
     setObservaciones(
       seleccionada.observaciones ??
-      "",
+        "",
     );
   }
 
@@ -269,10 +271,10 @@ export function FormularioTrabajo({
       <div className="grid gap-5 p-6 md:grid-cols-2 xl:grid-cols-4">
         {clientes.length ===
           0 && (
-            <div className="md:col-span-2 xl:col-span-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800">
-              Primero debes registrar al menos un cliente activo.
-            </div>
-          )}
+          <div className="md:col-span-2 xl:col-span-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800">
+            Primero debes registrar al menos un cliente activo.
+          </div>
+        )}
 
         <div>
           <label
@@ -295,6 +297,7 @@ export function FormularioTrabajo({
         </div>
 
         <SelectorUbicacionCliente
+          key={cotizacionId || "sin-cotizacion"}
           clientes={clientes}
           subtiendas={subtiendas}
           areas={areas}
@@ -303,6 +306,20 @@ export function FormularioTrabajo({
           clienteDeshabilitado={Boolean(
             cotizacionSeleccionada,
           )}
+          subtiendaInicial={
+            cotizacionSeleccionada?.subtiendaId
+              ? String(
+                  cotizacionSeleccionada.subtiendaId,
+                )
+              : ""
+          }
+          areaInicial={
+            cotizacionSeleccionada?.areaId
+              ? String(
+                  cotizacionSeleccionada.areaId,
+                )
+              : ""
+          }
         />
 
         <div>
@@ -326,8 +343,12 @@ export function FormularioTrabajo({
             {vehiculos.map(
               (vehiculo) => (
                 <option
-                  key={vehiculo.id}
-                  value={vehiculo.id}
+                  key={
+                    vehiculo.id
+                  }
+                  value={
+                    vehiculo.id
+                  }
                 >
                   {vehiculo.placa
                     ? `${vehiculo.nombre} — ${vehiculo.placa} — ${vehiculo.estado}`
@@ -540,7 +561,7 @@ export function FormularioTrabajo({
           </div>
 
           {empleados.length ===
-            0 ? (
+          0 ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-800">
               No hay técnicos o supervisores activos para asignar.
             </div>

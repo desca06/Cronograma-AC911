@@ -11,7 +11,6 @@ import {
   Package,
   ReceiptText,
   Trash2,
-  UserRound,
   XCircle,
   BriefcaseBusiness,
 } from "lucide-react";
@@ -21,6 +20,8 @@ import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { db } from "@/db";
 import {
+  clienteAreas,
+  clienteSubtiendas,
   clientes,
   cotizaciones,
   cotizacionItems,
@@ -161,6 +162,8 @@ export default async function DetalleCotizacionPage({
       codigo: cotizaciones.codigo,
       clienteId: cotizaciones.clienteId,
       clienteNombre: clientes.nombre,
+      subtiendaNombre: clienteSubtiendas.nombre,
+      areaNombre: clienteAreas.nombre,
       colaborador: cotizaciones.colaborador,
       titulo: cotizaciones.titulo,
       fechaSolicitud: cotizaciones.fechaSolicitud,
@@ -187,6 +190,14 @@ export default async function DetalleCotizacionPage({
     .innerJoin(
       clientes,
       eq(cotizaciones.clienteId, clientes.id),
+    )
+    .leftJoin(
+      clienteSubtiendas,
+      eq(cotizaciones.subtiendaId, clienteSubtiendas.id),
+    )
+    .leftJoin(
+      clienteAreas,
+      eq(cotizaciones.areaId, clienteAreas.id),
     )
     .where(eq(cotizaciones.id, cotizacionId))
     .limit(1);
@@ -292,24 +303,24 @@ export default async function DetalleCotizacionPage({
             <ArrowLeft size={18} />
             Regresar a Cotizaciones
           </Link>
-          
-            <Link
-                href={`/administracion/compras/cotizaciones/${cotizacion.id}/pdf`}
-                target="_blank"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-300 bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
-            >
-                <FileText size={17} />
-                Ver PDF
-            </Link>
 
-            <Link
-                href={`/administracion/compras/cotizaciones/${cotizacion.id}/pdf?download=1`}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
-            >
-                <Download size={17} />
-                Descargar PDF
-            </Link>
-            </div>
+          <Link
+            href={`/administracion/compras/cotizaciones/${cotizacion.id}/pdf`}
+            target="_blank"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-300 bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
+          >
+            <FileText size={17} />
+            Ver PDF
+          </Link>
+
+          <Link
+            href={`/administracion/compras/cotizaciones/${cotizacion.id}/pdf?download=1`}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+          >
+            <Download size={17} />
+            Descargar PDF
+          </Link>
+        </div>
 
         {parametros.creada === "1" && (
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
@@ -406,7 +417,25 @@ export default async function DetalleCotizacionPage({
 
               <div className="rounded-xl bg-slate-50 p-4">
                 <dt className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                  Colaborador o área
+                  Subtienda
+                </dt>
+                <dd className="mt-1 font-semibold text-slate-900">
+                  {cotizacion.subtiendaNombre || "Sin subtienda"}
+                </dd>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-4">
+                <dt className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                  Área
+                </dt>
+                <dd className="mt-1 font-semibold text-slate-900">
+                  {cotizacion.areaNombre || "Sin área"}
+                </dd>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-4">
+                <dt className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                  Colaborador
                 </dt>
                 <dd className="mt-1 font-semibold text-slate-900">
                   {cotizacion.colaborador}

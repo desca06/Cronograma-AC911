@@ -71,7 +71,7 @@ export const trabajos = pgTable("trabajos", {
   id: serial("id").primaryKey(),
   fecha: text("fecha").notNull(),
   clienteId: integer("cliente_id").notNull().references(() => clientes.id),
-    subtiendaId: integer("subtienda_id").references(
+  subtiendaId: integer("subtienda_id").references(
     () => clienteSubtiendas.id,
     { onDelete: "set null" },
   ),
@@ -598,6 +598,16 @@ export const cotizaciones = pgTable(
       .references(() => clientes.id, {
         onDelete: "restrict",
       }),
+
+    subtiendaId: integer("subtienda_id").references(
+      () => clienteSubtiendas.id,
+      { onDelete: "set null" },
+    ),
+
+    areaId: integer("area_id").references(
+      () => clienteAreas.id,
+      { onDelete: "set null" },
+    ),
 
     creadoPorId: integer("creado_por_id")
       .references(() => usuarios.id, {
@@ -1171,7 +1181,13 @@ export const clienteAreas = pgTable(
 );
 
 
+export type ClienteSubtienda =
+  typeof clienteSubtiendas.$inferSelect;
+export type NuevaClienteSubtienda =
+  typeof clienteSubtiendas.$inferInsert;
 
+export type ClienteArea = typeof clienteAreas.$inferSelect;
+export type NuevaClienteArea = typeof clienteAreas.$inferInsert;
 export type OrdenCompra =
   typeof ordenesCompra.$inferSelect;
 

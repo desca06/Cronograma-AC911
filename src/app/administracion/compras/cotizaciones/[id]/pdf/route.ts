@@ -1,6 +1,5 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { ENV } from "@/config/env";
 import {
   PDFDocument,
   StandardFonts,
@@ -13,6 +12,8 @@ import { asc, eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
+  clienteAreas,
+  clienteSubtiendas,
   clientes,
   cotizaciones,
   cotizacionItems,
@@ -436,11 +437,21 @@ export async function GET(
         cotizaciones.subtotalCostosAdicionales,
       total: cotizaciones.total,
       clienteNombre: clientes.nombre,
+      subtiendaNombre: clienteSubtiendas.nombre,
+      areaNombre: clienteAreas.nombre,
     })
     .from(cotizaciones)
     .innerJoin(
       clientes,
       eq(cotizaciones.clienteId, clientes.id),
+    )
+    .leftJoin(
+      clienteSubtiendas,
+      eq(cotizaciones.subtiendaId, clienteSubtiendas.id),
+    )
+    .leftJoin(
+      clienteAreas,
+      eq(cotizaciones.areaId, clienteAreas.id),
     )
     .where(eq(cotizaciones.id, quotationId))
     .limit(1);
@@ -520,8 +531,7 @@ export async function GET(
     }
   };
 
-  // Información general
-  const infoHeight = 92;
+  const infoHeight = 118;
 
   drawRoundedCard(page, {
     x: MARGIN,
@@ -591,6 +601,20 @@ export async function GET(
 
   drawLabelValue(
     page,
+    "Subtienda:",
+    safeText(quotation.subtiendaNombre),
+    {
+      x: MARGIN + 14,
+      y: y - 91,
+      normal,
+      bold,
+      labelWidth: 72,
+      valueWidth: 174,
+    },
+  );
+
+  drawLabelValue(
+    page,
     "Fecha:",
     formatDate(quotation.fechaSolicitud),
     {
@@ -631,9 +655,22 @@ export async function GET(
     },
   );
 
+  drawLabelValue(
+    page,
+    "Área:",
+    safeText(quotation.areaNombre),
+    {
+      x: middle + 14,
+      y: y - 91,
+      normal,
+      bold,
+      labelWidth: 93,
+      valueWidth: 125,
+    },
+  );
+
   y -= infoHeight + 16;
 
-  // Tabla
   const columns = {
     typeX: MARGIN,
     typeW: 88,
@@ -845,7 +882,6 @@ export async function GET(
 
   y -= 12;
 
-  // Resumen
   ensureSpace(115);
 
   const summaryWidth = 220;
@@ -947,7 +983,6 @@ export async function GET(
 
   y -= summaryHeight + 18;
 
-  // Condiciones y observaciones
   ensureSpace(160);
 
   const gap = 12;
@@ -1049,7 +1084,6 @@ export async function GET(
 
   y -= boxHeight + 32;
 
-  // Firma
   if (y < 92) {
     newPage();
   }

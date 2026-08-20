@@ -5,7 +5,11 @@ import { asc, eq } from "drizzle-orm";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { db } from "@/db";
-import { clientes } from "@/db/schema";
+import {
+  clienteAreas,
+  clienteSubtiendas,
+  clientes,
+} from "@/db/schema";
 import { requerirCompras } from "@/lib/auth";
 
 import { FormularioCotizacion } from "./formulario-cotizacion";
@@ -29,6 +33,8 @@ const mensajesError: Record<string, string> = {
     "Revisa la vigencia y los porcentajes de pago ingresados.",
   items:
     "Debes agregar por lo menos un producto, servicio o costo adicional válido.",
+  ubicacion:
+    "La subtienda o el área no pertenecen a ese cliente.",
 };
 
 export default async function NuevaCotizacionPage({
@@ -38,14 +44,40 @@ export default async function NuevaCotizacionPage({
 
   const parametros = await searchParams;
 
-  const listaClientes = await db
-    .select({
-      id: clientes.id,
-      nombre: clientes.nombre,
-    })
-    .from(clientes)
-    .where(eq(clientes.activo, true))
-    .orderBy(asc(clientes.nombre));
+  const [
+    listaClientes,
+    listaSubtiendas,
+    listaAreas,
+  ] = await Promise.all([
+    db
+      .select({
+        id: clientes.id,
+        nombre: clientes.nombre,
+      })
+      .from(clientes)
+      .where(eq(clientes.activo, true))
+      .orderBy(asc(clientes.nombre)),
+
+    db
+      .select({
+        id: clienteSubtiendas.id,
+        clienteId: clienteSubtiendas.clienteId,
+        nombre: clienteSubtiendas.nombre,
+      })
+      .from(clienteSubtiendas)
+      .where(eq(clienteSubtiendas.activo, true))
+      .orderBy(asc(clienteSubtiendas.nombre)),
+
+    db
+      .select({
+        id: clienteAreas.id,
+        subtiendaId: clienteAreas.subtiendaId,
+        nombre: clienteAreas.nombre,
+      })
+      .from(clienteAreas)
+      .where(eq(clienteAreas.activo, true))
+      .orderBy(asc(clienteAreas.nombre)),
+  ]);
 
   const mensajeError = parametros.error
     ? mensajesError[parametros.error]
@@ -100,6 +132,8 @@ export default async function NuevaCotizacionPage({
         ) : (
           <FormularioCotizacion
             clientes={listaClientes}
+            subtiendas={listaSubtiendas}
+            areas={listaAreas}
             fechaInicial={fechaHoy}
           />
         )}

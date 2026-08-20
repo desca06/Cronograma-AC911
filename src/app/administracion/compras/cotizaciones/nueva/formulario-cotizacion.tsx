@@ -13,10 +13,24 @@ import {
   Trash2,
 } from "lucide-react";
 
+import { SelectorUbicacionCliente } from "@/components/selector-ubicacion-cliente";
+
 import { crearCotizacion } from "../actions";
 
 type Cliente = {
   id: number;
+  nombre: string;
+};
+
+type Subtienda = {
+  id: number;
+  clienteId: number;
+  nombre: string;
+};
+
+type Area = {
+  id: number;
+  subtiendaId: number;
   nombre: string;
 };
 
@@ -36,6 +50,8 @@ type ItemCotizacion = {
 
 type Props = {
   clientes: Cliente[];
+  subtiendas: Subtienda[];
+  areas: Area[];
   fechaInicial: string;
 };
 
@@ -67,8 +83,12 @@ function obtenerNombreTipo(tipo: TipoItem) {
 
 export function FormularioCotizacion({
   clientes,
+  subtiendas,
+  areas,
   fechaInicial,
 }: Props) {
+  const [clienteId, setClienteId] = useState("");
+
   const [items, setItems] = useState<ItemCotizacion[]>([
     crearItem("PRODUCTO"),
   ]);
@@ -187,35 +207,13 @@ export function FormularioCotizacion({
             </div>
 
             <div className="mt-6 grid gap-5 md:grid-cols-2">
-              <div>
-                <label
-                  htmlFor="clienteId"
-                  className="mb-2 block text-sm font-semibold text-slate-700"
-                >
-                  Cliente
-                </label>
-
-                <select
-                  id="clienteId"
-                  name="clienteId"
-                  required
-                  defaultValue=""
-                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                >
-                  <option value="" disabled>
-                    Selecciona un cliente
-                  </option>
-
-                  {clientes.map((cliente) => (
-                    <option
-                      key={cliente.id}
-                      value={cliente.id}
-                    >
-                      {cliente.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <SelectorUbicacionCliente
+                clientes={clientes}
+                subtiendas={subtiendas}
+                areas={areas}
+                clienteId={clienteId}
+                onClienteIdChange={setClienteId}
+              />
 
               <div>
                 <label

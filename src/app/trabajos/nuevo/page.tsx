@@ -100,6 +100,8 @@ export default async function NuevoTrabajoPage({
         titulo: string;
         clienteId: number;
         clienteNombre: string;
+        subtiendaId: number | null;
+        areaId: number | null;
         observaciones:
           | string
           | null;
@@ -132,6 +134,10 @@ export default async function NuevoTrabajoPage({
             cotizaciones.titulo,
           clienteId:
             cotizaciones.clienteId,
+          subtiendaId:
+            cotizaciones.subtiendaId,
+          areaId:
+            cotizaciones.areaId,
           clienteNombre:
             clientes.nombre,
           estado:
@@ -196,6 +202,10 @@ export default async function NuevoTrabajoPage({
         cotizacion.clienteId,
       clienteNombre:
         cotizacion.clienteNombre,
+      subtiendaId:
+        cotizacion.subtiendaId,
+      areaId:
+        cotizacion.areaId,
       observaciones:
         cotizacion.observaciones,
     };
@@ -255,6 +265,8 @@ export default async function NuevoTrabajoPage({
           vehiculos.id,
         nombre:
           vehiculos.nombre,
+        placa:
+          vehiculos.placa,
         estado:
           vehiculos.estado,
       })
@@ -314,6 +326,10 @@ export default async function NuevoTrabajoPage({
           cotizaciones.clienteId,
         clienteNombre:
           clientes.nombre,
+        subtiendaId:
+          cotizaciones.subtiendaId,
+        areaId:
+          cotizaciones.areaId,
         observaciones:
           cotizaciones.observaciones,
       })

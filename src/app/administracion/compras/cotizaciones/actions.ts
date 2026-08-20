@@ -14,6 +14,10 @@ import {
 } from "@/db/schema";
 import { requerirCompras } from "@/lib/auth";
 import {
+  leerIdOpcional,
+  validarUbicacionCliente,
+} from "@/lib/ubicacion-cliente";
+import {
   cotizacionTrabajos,
 } from "@/db/schema-cotizacion-trabajo";
 
@@ -197,6 +201,14 @@ export async function crearCotizacion(
     formData.get("clienteId"),
   );
 
+  const subtiendaId = leerIdOpcional(
+    formData.get("subtiendaId"),
+  );
+
+  const areaId = leerIdOpcional(
+    formData.get("areaId"),
+  );
+
   const titulo = texto(formData, "titulo");
   const colaborador =
     texto(formData, "colaborador") ||
@@ -299,11 +311,19 @@ export async function crearCotizacion(
 
   const totales = calcularTotales(items);
 
-  const cotizacionId =
-    await db.transaction(async (tx) => {
+  let cotizacionId = 0;
+
+  try {
+    cotizacionId = await db.transaction(async (tx) => {
       await tx.execute(
         sql`select pg_advisory_xact_lock(911717)`,
       );
+
+      const ubicacion = await validarUbicacionCliente(tx, {
+        clienteId,
+        subtiendaId,
+        areaId,
+      });
 
       const [numero] = await tx
         .select({
@@ -321,6 +341,8 @@ export async function crearCotizacion(
         .values({
           codigo,
           clienteId,
+          subtiendaId: ubicacion.subtiendaId,
+          areaId: ubicacion.areaId,
           creadoPorId: sesion.usuarioId,
           colaborador,
           titulo,
@@ -373,6 +395,18 @@ export async function crearCotizacion(
 
       return creada.id;
     });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "UBICACION_INVALIDA"
+    ) {
+      redirect(
+        `${RUTA_COTIZACIONES}/nueva?error=ubicacion`,
+      );
+    }
+
+    throw error;
+  }
 
   revalidatePath(RUTA_COTIZACIONES);
 
