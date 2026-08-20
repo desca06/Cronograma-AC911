@@ -22,6 +22,7 @@ import {
   expedientes,
 } from "@/db/schema";
 import { requerirAdmin } from "@/lib/auth";
+import {quetzalesACentavos} from "@/lib/dinero";
 
 const ESTADOS_VALIDOS = [
   "ACTIVO",

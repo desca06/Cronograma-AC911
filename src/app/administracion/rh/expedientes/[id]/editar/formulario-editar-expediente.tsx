@@ -13,6 +13,8 @@ import {
   actualizarExpediente,
 } from "../../actions";
 
+import { centavosAQuetzalesInput } from "@/lib/dinero";
+
 type Empleado = {
   id: number;
   nombre: string;
@@ -223,14 +225,14 @@ export function FormularioEditarExpediente({
           </label>
 
           <input
-          id="fechaSalida"
-          name="fechaSalida"
-          type="date"
-          defaultValue={
-            expediente.fechaSalida ?? ""
-          }
-          className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-        />
+            id="fechaSalida"
+            name="fechaSalida"
+            type="date"
+            defaultValue={
+              expediente.fechaSalida ?? ""
+            }
+            className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+          />
         </div>
 
         <div>
@@ -241,17 +243,15 @@ export function FormularioEditarExpediente({
             Salario inicial (Q)
           </label>
 
-        <input
-          id="salarioInicial"
-          name="salarioInicial"
-          type="number"
-          defaultValue={
-            expediente.salarioInicial != null
-              ? expediente.salarioInicial / 100
-              : ""
-          }
-          className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-        />
+          <input
+            id="salarioInicial"
+            name="salarioInicial"
+            type="number"
+            defaultValue={centavosAQuetzalesInput(
+              expediente.salarioInicial,
+            )}
+            className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+          />
         </div>
 
         <div>
@@ -261,19 +261,17 @@ export function FormularioEditarExpediente({
           >
             Salario actual (Q)
           </label>
-          
-        <input
-          id="salarioActual"
-          name="salarioActual"
-          type="number"
-          defaultValue={
-            expediente.salarioActual != null
-              ? expediente.salarioActual / 100
-              : ""
-          }
-          className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
 
-        />
+          <input
+            id="salarioActual"
+            name="salarioActual"
+            type="number"
+            defaultValue={centavosAQuetzalesInput(
+              expediente.salarioActual,
+            )}
+            className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+
+          />
         </div>
 
 
