@@ -1,9 +1,12 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import {
   asc,
   eq,
 } from "drizzle-orm";
 import {
   PDFDocument,
+  PDFImage,
   PDFPage,
   StandardFonts,
   rgb,
@@ -91,6 +94,8 @@ const COLOR = {
     163 / 255,
     74 / 255,
   ),
+  brand: rgb(0.02, 0.25, 0.6),
+  brandDark: rgb(0.01, 0.17, 0.43),
 };
 
 function cortar(
@@ -221,88 +226,211 @@ function dibujarTextoEnvuelto(
   return cursorY;
 }
 
+function dibujarCampo(
+  page: PDFPage,
+  label: string,
+  value: string,
+  x: number,
+  y: number,
+  width: number,
+  regular: any,
+  bold: any,
+) {
+  page.drawRectangle({
+    x,
+    y,
+    width,
+    height: 52,
+    color: COLOR.white,
+    borderColor:
+      COLOR.skyBorder,
+    borderWidth: 1,
+  });
+
+  page.drawText(
+    label.toUpperCase(),
+    {
+      x: x + 10,
+      y: y + 34,
+      size: 6.4,
+      font: bold,
+      color: COLOR.blue,
+    },
+  );
+
+  const valor =
+    cortar(value, 42);
+
+  page.drawText(
+    valor,
+    {
+      x: x + 10,
+      y: y + 15,
+      size: 8.4,
+      font: bold,
+      color: COLOR.slate900,
+    },
+  );
+}
+
+async function cargarLogo(
+  pdf: PDFDocument,
+): Promise<PDFImage | null> {
+  const logoPath = path.join(
+    process.cwd(),
+    "public",
+    "img",
+    "logo-ac911.jpeg",
+  );
+
+  try {
+    const bytes = await readFile(logoPath);
+    return await pdf.embedJpg(bytes);
+  } catch (error) {
+    console.error("No se pudo cargar el logo del PDF:", error);
+    return null;
+  }
+}
+
 function dibujarEncabezado(
   page: PDFPage,
+  logo: PDFImage | null,
   codigo: string,
   estado: string,
   regular: any,
   bold: any,
 ) {
-  page.drawRectangle({
-    x: 0,
-    y: PAGE_HEIGHT - 82,
-    width: PAGE_WIDTH,
-    height: 82,
-    color: COLOR.navy,
-  });
+  const top = PAGE_HEIGHT - 16;
+  const logoWidth = 140;
+  const logoHeight = 72;
 
-  page.drawText(
-    "AC-911 · REPORTE TÉCNICO DE TRABAJO",
-    {
+  if (logo) {
+    page.drawImage(logo, {
       x: MARGIN,
-      y: PAGE_HEIGHT - 38,
+      y: top - logoHeight,
+      width: logoWidth,
+      height: logoHeight,
+    });
+  } else {
+    page.drawRectangle({
+      x: MARGIN,
+      y: top - logoHeight,
+      width: logoWidth,
+      height: logoHeight,
+      color: COLOR.sky,
+      borderColor: COLOR.brand,
+      borderWidth: 0.8,
+    });
+
+    page.drawText("AC-911", {
+      x: MARGIN + 36,
+      y: top - 42,
       size: 18,
       font: bold,
-      color: COLOR.white,
-    },
-  );
+      color: COLOR.brand,
+    });
+  }
 
-  page.drawText(codigo, {
-    x: MARGIN,
-    y: PAGE_HEIGHT - 58,
-    size: 8,
-    font: regular,
-    color:
-      rgb(
-        186 / 255,
-        230 / 255,
-        253 / 255,
-      ),
+  const companyX = MARGIN + logoWidth + 16;
+
+  page.drawText("INVERSIONES 3G DE GUATEMALA", {
+    x: companyX,
+    y: top - 10,
+    size: 13,
+    font: bold,
+    color: COLOR.slate900,
   });
 
-  const badgeWidth = 118;
+  const detalles = [
+    "Guatemala, Zona 11, Col. Roosevelt",
+    "Teléfono: 2267-4000",
+    "Email: proyectos@ac-911.com",
+  ];
+
+  detalles.forEach((detalle, index) => {
+    page.drawText(detalle, {
+      x: companyX,
+      y: top - 28 - index * 13,
+      size: 8.5,
+      font: regular,
+      color: COLOR.slate700,
+    });
+  });
+
+  const codigoAncho = bold.widthOfTextAtSize(codigo, 14);
+
+  page.drawText(codigo, {
+    x: PAGE_WIDTH - MARGIN - codigoAncho,
+    y: top - 14,
+    size: 14,
+    font: bold,
+    color: COLOR.brand,
+  });
+
+  const etiqueta = "Reporte Técnico";
+  const etiquetaAncho = bold.widthOfTextAtSize(etiqueta, 9.5);
+
+  page.drawText(etiqueta, {
+    x: PAGE_WIDTH - MARGIN - etiquetaAncho,
+    y: top - 34,
+    size: 9.5,
+    font: bold,
+    color: COLOR.brand,
+  });
+
+  const textoEstado = cortar(estado.toUpperCase(), 18);
+  const badgeWidth = Math.max(
+    92,
+    bold.widthOfTextAtSize(textoEstado, 8) + 18,
+  );
 
   page.drawRectangle({
+    x: PAGE_WIDTH - MARGIN - badgeWidth,
+    y: top - 60,
+    width: badgeWidth,
+    height: 18,
+    color: COLOR.brand,
+  });
+
+  const estadoAncho = bold.widthOfTextAtSize(textoEstado, 8);
+
+  page.drawText(textoEstado, {
     x:
       PAGE_WIDTH -
       MARGIN -
-      badgeWidth,
-    y:
-      PAGE_HEIGHT -
-      62,
-    width: badgeWidth,
-    height: 28,
-    color: COLOR.blue,
+      badgeWidth / 2 -
+      estadoAncho / 2,
+    y: top - 54,
+    size: 8,
+    font: bold,
+    color: COLOR.white,
   });
 
-  const textoEstado =
-    cortar(
-      estado.toUpperCase(),
-      20,
-    );
-
-  const ancho =
-    bold.widthOfTextAtSize(
-      textoEstado,
-      8,
-    );
-
-  page.drawText(
-    textoEstado,
-    {
-      x:
-        PAGE_WIDTH -
-        MARGIN -
-        badgeWidth / 2 -
-        ancho / 2,
-      y:
-        PAGE_HEIGHT -
-        51,
-      size: 8,
-      font: bold,
-      color: COLOR.white,
+  page.drawLine({
+    start: {
+      x: MARGIN,
+      y: top - logoHeight - 8,
     },
-  );
+    end: {
+      x: PAGE_WIDTH - MARGIN,
+      y: top - logoHeight - 8,
+    },
+    thickness: 2,
+    color: COLOR.brand,
+  });
+
+  const titulo = "INFORME DE TRABAJO";
+  const tituloAncho = bold.widthOfTextAtSize(titulo, 13);
+
+  page.drawText(titulo, {
+    x: (PAGE_WIDTH - tituloAncho) / 2,
+    y: top - logoHeight - 28,
+    size: 13,
+    font: bold,
+    color: COLOR.brand,
+  });
+
+  return top - logoHeight - 42;
 }
 
 function dibujarPie(
@@ -321,7 +449,6 @@ function dibujarPie(
     },
   );
 }
-
 export async function GET(
   request: Request,
   { params }: RouteProps,
@@ -503,7 +630,11 @@ export async function GET(
       StandardFonts.HelveticaBold,
     );
 
+  const logo = await cargarLogo(pdf);
+  const codigoTrabajo = `TR-${String(trabajo.id).padStart(5, "0")}`;
+
   let numeroPagina = 0;
+  let inicioContenido = PAGE_HEIGHT - 140;
 
   const nuevaPagina = () => {
     const page =
@@ -514,11 +645,10 @@ export async function GET(
 
     numeroPagina += 1;
 
-    dibujarEncabezado(
+    inicioContenido = dibujarEncabezado(
       page,
-      `TR-${String(
-        trabajo.id,
-      ).padStart(5, "0")}`,
+      logo,
+      codigoTrabajo,
       trabajo.estado,
       regular,
       bold,
@@ -537,8 +667,13 @@ export async function GET(
     nuevaPagina();
 
   const panelX = 36;
-  const panelY = 115;
+  const panelY = 108;
   const panelW = 250;
+  const panelAlto =
+    Math.max(
+      inicioContenido - 8 - panelY,
+      220,
+    );
   const rightX = 315;
   const rightW =
     PAGE_WIDTH -
@@ -549,7 +684,7 @@ export async function GET(
     x: panelX,
     y: panelY,
     width: panelW,
-    height: 360,
+    height: panelAlto,
     color: COLOR.white,
     borderColor:
       COLOR.skyBorder,
@@ -560,7 +695,7 @@ export async function GET(
     "DATOS DEL SERVICIO",
     {
       x: panelX + 16,
-      y: 445,
+      y: inicioContenido - 22,
       size: 9,
       font: bold,
       color: COLOR.blue,
@@ -618,7 +753,7 @@ export async function GET(
     ],
   ] as const;
 
-  let infoY = 418;
+  let infoY = inicioContenido - 48;
 
   for (
     const [label, value]
@@ -673,7 +808,7 @@ export async function GET(
     "RESUMEN DEL TRABAJO",
     {
       x: rightX,
-      y: 454,
+      y: inicioContenido - 14,
       size: 10,
       font: bold,
       color: COLOR.navy,
@@ -682,7 +817,7 @@ export async function GET(
 
   page.drawRectangle({
     x: rightX,
-    y: 374,
+    y: inicioContenido - 94,
     width: rightW,
     height: 62,
     color: COLOR.sky,
@@ -695,7 +830,7 @@ export async function GET(
     page,
     trabajo.descripcion,
     rightX + 14,
-    414,
+    inicioContenido - 54,
     rightW - 28,
     regular,
     8.4,
@@ -707,7 +842,7 @@ export async function GET(
     "INDICACIONES DEL SUPERVISOR",
     {
       x: rightX,
-      y: 345,
+      y: inicioContenido - 123,
       size: 10,
       font: bold,
       color: COLOR.navy,
@@ -716,7 +851,7 @@ export async function GET(
 
   page.drawRectangle({
     x: rightX,
-    y: 282,
+    y: inicioContenido - 186,
     width: rightW,
     height: 48,
     color: COLOR.white,
@@ -730,7 +865,7 @@ export async function GET(
     trabajo.observacionesSupervisor ||
       "El supervisor no agregó indicaciones.",
     rightX + 14,
-    311,
+    inicioContenido - 157,
     rightW - 28,
     regular,
     8,
@@ -742,14 +877,14 @@ export async function GET(
     "HISTORIAL DE OBSERVACIONES TÉCNICAS",
     {
       x: rightX,
-      y: 255,
+      y: inicioContenido - 213,
       size: 10,
       font: bold,
       color: COLOR.navy,
     },
   );
 
-  let obsY = 231;
+  let obsY = inicioContenido - 237;
 
   const historialPaginaUno =
     historial.slice(0, 4);
@@ -852,7 +987,7 @@ export async function GET(
       nuevaPagina();
 
     let y =
-      PAGE_HEIGHT - 112;
+      inicioContenido;
 
     if (
       restantes.length >
@@ -905,8 +1040,7 @@ export async function GET(
             nuevaPagina();
 
           y =
-            PAGE_HEIGHT -
-            112;
+            inicioContenido;
 
           page.drawText(
             "HISTORIAL DE OBSERVACIONES TÉCNICAS (CONT.)",
@@ -989,6 +1123,15 @@ export async function GET(
       listaEvidencias.length >
       0
     ) {
+      /*
+       * Las evidencias se acomodan de forma compacta
+       * para aprovechar mejor cada página.
+       *
+       * - Sin marco celeste alrededor de la tarjeta.
+       * - 3 columnas por fila.
+       * - Se crea otra página únicamente cuando
+       *   la siguiente FILA completa ya no cabe.
+       */
       const gap = 12;
       const columnas = 3;
 
@@ -1011,6 +1154,11 @@ export async function GET(
       const espacioEntreFilas = 14;
       const limiteInferior = 118;
 
+      /*
+       * Si todavía queda espacio suficiente en la
+       * página actual, empezamos aquí mismo.
+       * Solo saltamos si ni siquiera cabe una fila.
+       */
       if (
         y -
           altoTarjeta <
@@ -1020,8 +1168,7 @@ export async function GET(
           nuevaPagina();
 
         y =
-          PAGE_HEIGHT -
-          112;
+          inicioContenido;
       }
 
       page.drawText(
@@ -1050,6 +1197,12 @@ export async function GET(
             indice
           ];
 
+        /*
+         * El salto se evalúa únicamente al iniciar
+         * una nueva fila. Así no se manda una imagen
+         * a otra página si todavía cabe junto a las
+         * demás en la fila actual.
+         */
         if (
           columna === 0 &&
           y -
@@ -1060,8 +1213,7 @@ export async function GET(
             nuevaPagina();
 
           y =
-            PAGE_HEIGHT -
-            112;
+            inicioContenido;
 
           page.drawText(
             "EVIDENCIAS REGISTRADAS (CONT.)",
@@ -1087,6 +1239,11 @@ export async function GET(
         const tarjetaY =
           y -
           altoTarjeta;
+
+        /*
+         * Ya NO dibujamos un rectángulo/borde
+         * alrededor de toda la evidencia.
+         */
 
         let imagenInsertada =
           false;
