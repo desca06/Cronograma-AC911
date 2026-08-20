@@ -413,6 +413,9 @@ export const expedientes = pgTable("expedientes", {
   fechaIngreso: date("fecha_ingreso", {
     mode: "string",
   }).notNull(),
+  fechaSalida: date("fecha_salida", {
+    mode: "string",
+  }),
   contactoEmergencia: text(
     "contacto_emergencia",
   ).notNull(),

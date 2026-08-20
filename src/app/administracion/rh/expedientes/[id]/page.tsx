@@ -104,6 +104,8 @@ export default async function ExpedienteDetallePage({
         igss: expedientes.igss,
         fechaIngreso:
           expedientes.fechaIngreso,
+        fechaSalida:
+          expedientes.fechaSalida,
         contactoEmergencia:
           expedientes.contactoEmergencia,
         telefonoEmergencia:
@@ -208,23 +210,23 @@ export default async function ExpedienteDetallePage({
 
           {parametros.success ===
             "actualizado" && (
-            <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-              Cambios guardados correctamente.
-              {descargarPdf
-                ? " El PDF actualizado se descargará automáticamente."
-                : ""}
-            </div>
-          )}
+              <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+                Cambios guardados correctamente.
+                {descargarPdf
+                  ? " El PDF actualizado se descargará automáticamente."
+                  : ""}
+              </div>
+            )}
 
           {parametros.success ===
             "creado" && (
-            <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-              Expediente creado correctamente.
-              {descargarPdf
-                ? " El PDF se descargará automáticamente."
-                : ""}
-            </div>
-          )}
+              <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+                Expediente creado correctamente.
+                {descargarPdf
+                  ? " El PDF se descargará automáticamente."
+                  : ""}
+              </div>
+            )}
 
           <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
             <aside className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -258,15 +260,14 @@ export default async function ExpedienteDetallePage({
                 </p>
 
                 <span
-                  className={`mt-4 inline-flex rounded-full px-3 py-1 text-xs font-bold ${
-                    expediente.estado ===
-                    "ACTIVO"
+                  className={`mt-4 inline-flex rounded-full px-3 py-1 text-xs font-bold ${expediente.estado ===
+                      "ACTIVO"
                       ? "bg-emerald-100 text-emerald-700"
                       : "bg-slate-200 text-slate-700"
-                  }`}
+                    }`}
                 >
                   {expediente.estado ===
-                  "ACTIVO"
+                    "ACTIVO"
                     ? "Activo"
                     : "Inactivo"}
                 </span>
@@ -303,6 +304,22 @@ export default async function ExpedienteDetallePage({
                     valor={formatearFecha(
                       expediente.fechaIngreso,
                     )}
+                  />
+
+                  <Dato
+                    icono={
+                      <CalendarDays
+                        size={18}
+                      />
+                    }
+                    etiqueta="Fecha de salida"
+                    valor={
+                      expediente.fechaSalida
+                        ? formatearFecha(
+                          expediente.fechaSalida,
+                        )
+                        : "Sigue laborando"
+                    }
                   />
 
                   <Dato

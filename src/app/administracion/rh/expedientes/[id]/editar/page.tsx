@@ -83,6 +83,8 @@ export default async function EditarExpedientePage({
         igss: expedientes.igss,
         fechaIngreso:
           expedientes.fechaIngreso,
+        fechaSalida:
+          expedientes.fechaSalida,
         contactoEmergencia:
           expedientes.contactoEmergencia,
         telefonoEmergencia:
@@ -127,9 +129,8 @@ export default async function EditarExpedientePage({
     <AppShell>
       <PageHeader
         title="Editar expediente"
-        description={`Actualizá la información del expediente ${
-          expediente.codigo ?? ""
-        }.`}
+        description={`Actualizá la información del expediente ${expediente.codigo ?? ""
+          }.`}
       />
 
       <section className="p-5 md:p-8">
@@ -156,73 +157,80 @@ export default async function EditarExpedientePage({
 
           {parametros.error ===
             "campos" && (
-            <AlertaError>
-              Complete todos los campos obligatorios.
-            </AlertaError>
-          )}
+              <AlertaError>
+                Complete todos los campos obligatorios.
+              </AlertaError>
+            )}
 
           {parametros.error ===
             "estado" && (
-            <AlertaError>
-              El estado seleccionado no es válido.
-            </AlertaError>
-          )}
+              <AlertaError>
+                El estado seleccionado no es válido.
+              </AlertaError>
+            )}
 
           {parametros.error ===
             "empleado" && (
-            <AlertaError>
-              El empleado seleccionado no existe.
-            </AlertaError>
-          )}
+              <AlertaError>
+                El empleado seleccionado no existe.
+              </AlertaError>
+            )}
 
           {parametros.error ===
             "duplicado" && (
-            <AlertaError>
-              El empleado seleccionado ya tiene otro expediente.
-            </AlertaError>
-          )}
+              <AlertaError>
+                El empleado seleccionado ya tiene otro expediente.
+              </AlertaError>
+            )}
+
+          {parametros.error ===
+            "fecha-salida" && (
+              <AlertaError>
+                La fecha de salida no es válida. Si el empleado sigue laborando, dejá el campo vacío.
+              </AlertaError>
+            )}
 
           {parametros.error ===
             "dpi" && (
-            <AlertaError>
-              Ya existe otro expediente con ese DPI.
-            </AlertaError>
-          )}
+              <AlertaError>
+                Ya existe otro expediente con ese DPI.
+              </AlertaError>
+            )}
 
           {parametros.error ===
             "foto-vacia" && (
-            <AlertaError>
-              Debes seleccionar una imagen antes de subirla.
-            </AlertaError>
-          )}
+              <AlertaError>
+                Debes seleccionar una imagen antes de subirla.
+              </AlertaError>
+            )}
 
           {parametros.error ===
             "foto-tipo" && (
-            <AlertaError>
-              Solo puedes subir imágenes JPG, JPEG o PNG.
-            </AlertaError>
-          )}
+              <AlertaError>
+                Solo puedes subir imágenes JPG, JPEG o PNG.
+              </AlertaError>
+            )}
 
           {parametros.error ===
             "foto-peso" && (
-            <AlertaError>
-              La imagen no puede pesar más de 5 MB.
-            </AlertaError>
-          )}
+              <AlertaError>
+                La imagen no puede pesar más de 5 MB.
+              </AlertaError>
+            )}
 
           {parametros.success ===
             "foto" && (
-            <AlertaExito>
-              Fotografía actualizada correctamente.
-            </AlertaExito>
-          )}
+              <AlertaExito>
+                Fotografía actualizada correctamente.
+              </AlertaExito>
+            )}
 
           {parametros.success ===
             "foto-eliminada" && (
-            <AlertaExito>
-              Fotografía eliminada correctamente.
-            </AlertaExito>
-          )}
+              <AlertaExito>
+                Fotografía eliminada correctamente.
+              </AlertaExito>
+            )}
 
           <section className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-200 px-5 py-4">

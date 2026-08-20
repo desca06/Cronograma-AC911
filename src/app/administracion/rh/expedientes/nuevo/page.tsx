@@ -41,27 +41,27 @@ export default async function NuevoExpedientePage({
   const listaEmpleados =
     idsConExpediente.length > 0
       ? await db
-          .select({
-            id: empleados.id,
-            nombre: empleados.nombre,
-            puesto: empleados.puesto,
-          })
-          .from(empleados)
-          .where(
-            notInArray(
-              empleados.id,
-              idsConExpediente,
-            ),
-          )
-          .orderBy(asc(empleados.nombre))
+        .select({
+          id: empleados.id,
+          nombre: empleados.nombre,
+          puesto: empleados.puesto,
+        })
+        .from(empleados)
+        .where(
+          notInArray(
+            empleados.id,
+            idsConExpediente,
+          ),
+        )
+        .orderBy(asc(empleados.nombre))
       : await db
-          .select({
-            id: empleados.id,
-            nombre: empleados.nombre,
-            puesto: empleados.puesto,
-          })
-          .from(empleados)
-          .orderBy(asc(empleados.nombre));
+        .select({
+          id: empleados.id,
+          nombre: empleados.nombre,
+          puesto: empleados.puesto,
+        })
+        .from(empleados)
+        .orderBy(asc(empleados.nombre));
 
   return (
     <AppShell>
@@ -101,6 +101,12 @@ export default async function NuevoExpedientePage({
           {parametros.error === "dpi" && (
             <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
               Ya existe un expediente con ese DPI.
+            </div>
+          )}
+          
+          {parametros.error === "fecha-salida" && (
+            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+              La fecha de salida no es válida. Si el empleado sigue laborando, dejá el campo vacío.
             </div>
           )}
 

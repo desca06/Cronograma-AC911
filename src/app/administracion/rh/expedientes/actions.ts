@@ -44,6 +44,38 @@ function obtenerTexto(
     formData.get(campo) ?? "",
   ).trim();
 }
+function esFechaValida(valor: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(valor)) {
+    return false;
+  }
+
+  const fecha = new Date(`${valor}T00:00:00`);
+
+  return !Number.isNaN(fecha.getTime());
+}
+
+function leerFechaSalida(
+  formData: FormData,
+  fechaIngreso: string,
+) {
+  const fechaSalida = obtenerTexto(
+    formData,
+    "fechaSalida",
+  );
+
+  if (!fechaSalida) {
+    return null;
+  }
+
+  if (
+    !esFechaValida(fechaSalida) ||
+    fechaSalida < fechaIngreso
+  ) {
+    throw new Error("FECHA_SALIDA");
+  }
+
+  return fechaSalida;
+}
 
 function generarCodigo(
   expedienteId: number,
@@ -229,6 +261,18 @@ export async function crearExpediente(
       "/administracion/rh/expedientes/nuevo?error=campos",
     );
   }
+    let fechaSalida: string | null = null;
+
+  try {
+    fechaSalida = leerFechaSalida(
+      formData,
+      fechaIngreso,
+    );
+  } catch {
+    redirect(
+      "/administracion/rh/expedientes/nuevo?error=fecha-salida",
+    );
+  }
 
   const empleadoEncontrado =
     await db
@@ -301,6 +345,7 @@ export async function crearExpediente(
         nit: nit || null,
         igss: igss || null,
         fechaIngreso,
+        fechaSalida,
         contactoEmergencia,
         telefonoEmergencia,
         direccion,
@@ -439,6 +484,18 @@ export async function actualizarExpediente(
       `/administracion/rh/expedientes/${expedienteId}/editar?error=campos`,
     );
   }
+    let fechaSalida: string | null = null;
+
+  try {
+    fechaSalida = leerFechaSalida(
+      formData,
+      fechaIngreso,
+    );
+  } catch {
+    redirect(
+      `/administracion/rh/expedientes/${expedienteId}/editar?error=fecha-salida`,
+    );
+  }
 
   if (
     !ESTADOS_VALIDOS.includes(
@@ -552,6 +609,7 @@ export async function actualizarExpediente(
       nit: nit || null,
       igss: igss || null,
       fechaIngreso,
+      fechaSalida,
       contactoEmergencia,
       telefonoEmergencia,
       direccion,

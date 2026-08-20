@@ -156,6 +156,26 @@ export function FormularioExpediente({
 
         <div>
           <label
+            htmlFor="fechaSalida"
+            className="mb-2 block text-sm font-semibold text-slate-700"
+          >
+            Fecha de salida
+          </label>
+
+          <input
+            id="fechaSalida"
+            name="fechaSalida"
+            type="date"
+            className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+          />
+
+          <p className="mt-2 text-xs leading-5 text-slate-500">
+            Si lo dejás vacío, el empleado sigue laborando en la empresa.
+          </p>
+        </div>
+
+        <div>
+          <label
             htmlFor="contactoEmergencia"
             className="mb-2 block text-sm font-semibold text-slate-700"
           >

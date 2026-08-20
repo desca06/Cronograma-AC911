@@ -123,6 +123,8 @@ export default async function ExpedientesPage({
         dpi: expedientes.dpi,
         fechaIngreso:
           expedientes.fechaIngreso,
+        fechaSalida:
+          expedientes.fechaSalida,
         estado:
           expedientes.estado,
       })
@@ -137,9 +139,9 @@ export default async function ExpedientesPage({
       .where(
         condiciones.length > 0
           ? sql`${sql.join(
-              condiciones,
-              sql` AND `,
-            )}`
+            condiciones,
+            sql` AND `,
+          )}`
           : undefined,
       )
       .orderBy(
@@ -191,24 +193,24 @@ export default async function ExpedientesPage({
 
         {parametros.success ===
           "eliminado" && (
-          <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-            Expediente eliminado correctamente.
-          </div>
-        )}
+            <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+              Expediente eliminado correctamente.
+            </div>
+          )}
 
         {parametros.error ===
           "expediente" && (
-          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-            El expediente indicado no es válido.
-          </div>
-        )}
+            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+              El expediente indicado no es válido.
+            </div>
+          )}
 
         {parametros.error ===
           "no-encontrado" && (
-          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-            No se encontró el expediente.
-          </div>
-        )}
+            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+              No se encontró el expediente.
+            </div>
+          )}
 
         <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -368,7 +370,7 @@ export default async function ExpedientesPage({
           </div>
 
           {listaExpedientes.length ===
-          0 ? (
+            0 ? (
             <div className="px-6 py-16 text-center">
               <FolderOpen
                 size={48}
@@ -454,6 +456,14 @@ export default async function ExpedientesPage({
                           {formatearFecha(
                             expediente.fechaIngreso,
                           )}
+                        </td>
+
+                        <td className="whitespace-nowrap px-5 py-4 text-sm text-slate-700">
+                          {expediente.fechaSalida
+                            ? formatearFecha(
+                              expediente.fechaSalida,
+                            )
+                            : "Sigue laborando"}
                         </td>
 
                         <td className="whitespace-nowrap px-5 py-4">
