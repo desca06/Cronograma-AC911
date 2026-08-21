@@ -9,6 +9,7 @@ const nombreCookie = "control_trabajos_session";
 const rutasPublicas = [
   "/login",
   "/asistencia",
+  "/api/cron",
   "/manifest.webmanifest",
   "/sw.js",
 ];

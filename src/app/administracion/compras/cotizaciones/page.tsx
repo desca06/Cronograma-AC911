@@ -20,6 +20,7 @@ import {
   cotizaciones,
 } from "@/db/schema";
 import { requerirCompras } from "@/lib/auth";
+import { vencerCotizacionesCaducadas } from "@/lib/vencer-cotizaciones";
 import {
   cotizacionTrabajos,
 } from "@/db/schema-cotizacion-trabajo";
@@ -95,6 +96,7 @@ export default async function CotizacionesPage({
   searchParams,
 }: PageProps) {
   await requerirCompras();
+  await vencerCotizacionesCaducadas();
 
   const parametros = await searchParams;
 

@@ -11,6 +11,7 @@ import {
   clientes,
 } from "@/db/schema";
 import { requerirCompras } from "@/lib/auth";
+import { vencerCotizacionesCaducadas } from "@/lib/vencer-cotizaciones";
 
 import { FormularioCotizacion } from "./formulario-cotizacion";
 
@@ -41,6 +42,7 @@ export default async function NuevaCotizacionPage({
   searchParams,
 }: PageProps) {
   await requerirCompras();
+  await vencerCotizacionesCaducadas();
 
   const parametros = await searchParams;
 
