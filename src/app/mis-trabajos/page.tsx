@@ -103,6 +103,9 @@ export default async function MisTrabajosPage({
       observacionesSupervisor: trabajos.observaciones,
       clienteNombre: clientes.nombre,
       vehiculoNombre: vehiculos.nombre,
+      vehiculoKmActual: vehiculos.kmActual,
+      kmSalida: trabajos.kmSalida,
+      kmLlegada: trabajos.kmLlegada,
     })
     .from(trabajoEmpleados)
     .innerJoin(trabajos, eq(trabajoEmpleados.trabajoId, trabajos.id))
@@ -121,23 +124,23 @@ export default async function MisTrabajosPage({
   const observaciones =
     idsTrabajos.length > 0
       ? await db
-          .select({
-            id: trabajoObservacionesTecnico.id,
-            trabajoId: trabajoObservacionesTecnico.trabajoId,
-            observacion: trabajoObservacionesTecnico.observacion,
-            estadoTrabajo: trabajoObservacionesTecnico.estadoTrabajo,
-            creadoEn: trabajoObservacionesTecnico.creadoEn,
-            autor: usuarios.nombre,
-          })
-          .from(trabajoObservacionesTecnico)
-          .leftJoin(
-            usuarios,
-            eq(trabajoObservacionesTecnico.usuarioId, usuarios.id),
-          )
-          .where(
-            inArray(trabajoObservacionesTecnico.trabajoId, idsTrabajos),
-          )
-          .orderBy(desc(trabajoObservacionesTecnico.creadoEn))
+        .select({
+          id: trabajoObservacionesTecnico.id,
+          trabajoId: trabajoObservacionesTecnico.trabajoId,
+          observacion: trabajoObservacionesTecnico.observacion,
+          estadoTrabajo: trabajoObservacionesTecnico.estadoTrabajo,
+          creadoEn: trabajoObservacionesTecnico.creadoEn,
+          autor: usuarios.nombre,
+        })
+        .from(trabajoObservacionesTecnico)
+        .leftJoin(
+          usuarios,
+          eq(trabajoObservacionesTecnico.usuarioId, usuarios.id),
+        )
+        .where(
+          inArray(trabajoObservacionesTecnico.trabajoId, idsTrabajos),
+        )
+        .orderBy(desc(trabajoObservacionesTecnico.creadoEn))
       : [];
 
   const observacionesPorTrabajo = new Map<number, typeof observaciones>();
@@ -149,20 +152,22 @@ export default async function MisTrabajosPage({
     observacionesPorTrabajo.set(observacion.trabajoId, actuales);
   }
 
-  const mensajeError =
-    error === "permiso"
-      ? "No tienes permiso para modificar ese trabajo."
-      : error === "cuenta"
-        ? "Tu cuenta no está vinculada con un empleado."
-        : error === "no-encontrado"
-          ? "El trabajo no fue encontrado."
-          : error === "firma"
-            ? "Para finalizar el trabajo, el cliente debe firmar."
-            : error === "firma-nombre"
-              ? "Escribe el nombre de quien firma."
-              : error
-                ? "No se pudo realizar la operación."
-                : "";
+  const mensajesError: Record<string, string> = {
+    permiso: "No tienes permiso para modificar ese trabajo.",
+    cuenta: "Tu cuenta no está vinculada con un empleado.",
+    "no-encontrado": "El trabajo no fue encontrado.",
+    firma: "Para finalizar el trabajo, el cliente debe firmar.",
+    "firma-nombre": "Escribe el nombre de quien firma.",
+    km: "Para finalizar, ingresá km de salida y km de llegada.",
+    "km-salida":
+      "El km de salida no puede ser menor al km actual del vehículo.",
+    "km-llegada":
+      "El km de llegada no puede ser menor al km de salida.",
+  };
+
+  const mensajeError = error
+    ? (mensajesError[error] ?? "No se pudo realizar la operación.")
+    : "";
 
   return (
     <AppShell>
@@ -224,10 +229,9 @@ export default async function MisTrabajosPage({
                     </div>
 
                     <span
-                      className={`w-fit rounded-full px-3 py-1 text-xs font-bold ${
-                        coloresEstado[trabajo.estado] ??
+                      className={`w-fit rounded-full px-3 py-1 text-xs font-bold ${coloresEstado[trabajo.estado] ??
                         "bg-slate-100 text-slate-700"
-                      }`}
+                        }`}
                     >
                       {trabajo.estado}
                     </span>
@@ -329,6 +333,10 @@ export default async function MisTrabajosPage({
                     <CierreTrabajo
                       trabajoId={trabajo.id}
                       estadoInicial={trabajo.estado}
+                      vehiculoNombre={trabajo.vehiculoNombre}
+                      kmActual={trabajo.vehiculoKmActual}
+                      kmSalidaInicial={trabajo.kmSalida}
+                      kmLlegadaInicial={trabajo.kmLlegada}
                     />
 
                     <div>

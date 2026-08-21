@@ -129,6 +129,9 @@ export default async function TrabajoAsignadoPage({
         trabajos.observaciones,
       clienteNombre: clientes.nombre,
       vehiculoNombre: vehiculos.nombre,
+      vehiculoKmActual: vehiculos.kmActual,
+      kmSalida: trabajos.kmSalida,
+      kmLlegada: trabajos.kmLlegada,
     })
     .from(trabajoEmpleados)
     .innerJoin(
@@ -208,16 +211,22 @@ export default async function TrabajoAsignadoPage({
         ),
       );
 
-  const mensajeError =
-    error === "permiso"
-      ? "No tienes permiso para modificar este trabajo."
-      : error === "cuenta"
-        ? "Tu cuenta no está vinculada con un empleado."
-        : error === "no-encontrado"
-          ? "El trabajo no fue encontrado."
-          : error
-            ? "No se pudo realizar la operación."
-            : "";
+  const mensajesError: Record<string, string> = {
+    permiso: "No tienes permiso para modificar este trabajo.",
+    cuenta: "Tu cuenta no está vinculada con un empleado.",
+    "no-encontrado": "El trabajo no fue encontrado.",
+    firma: "Para finalizar el trabajo, el cliente debe firmar.",
+    "firma-nombre": "Escribe el nombre de quien firma.",
+    km: "Para finalizar, ingresá km de salida y km de llegada.",
+    "km-salida":
+      "El km de salida no puede ser menor al km actual del vehículo.",
+    "km-llegada":
+      "El km de llegada no puede ser menor al km de salida.",
+  };
+
+  const mensajeError = error
+    ? (mensajesError[error] ?? "No se pudo realizar la operación.")
+    : "";
 
   return (
     <AppShell>
@@ -271,7 +280,7 @@ export default async function TrabajoAsignadoPage({
             <span
               className={`w-fit rounded-full px-3 py-1 text-xs font-bold ${coloresEstado[
                 trabajo.estado
-                ] ??
+              ] ??
                 "bg-slate-100 text-slate-700"
                 }`}
             >

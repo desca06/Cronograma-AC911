@@ -13,6 +13,10 @@ import {
   usuarios,
 } from "@/db/schema";
 import { requerirSesion } from "@/lib/auth";
+import {
+  leerKm,
+  registrarKilometrajeTrabajo,
+} from "@/lib/kilometraje";
 
 function obtenerTexto(
   formData: FormData,
@@ -97,6 +101,11 @@ export async function actualizarMiTrabajo(
     "estado",
   );
 
+  /*
+   * Este campo representa UNA NUEVA observación.
+   * Ya no contiene todo el historial ni reemplaza
+   * la observación anterior.
+   */
   const nuevaObservacion =
     obtenerTexto(
       formData,
@@ -179,6 +188,9 @@ export async function actualizarMiTrabajo(
       tipo: trabajos.tipo,
       fecha: trabajos.fecha,
       estado: trabajos.estado,
+      vehiculoId: trabajos.vehiculoId,
+      kmSalida: trabajos.kmSalida,
+      kmLlegada: trabajos.kmLlegada,
       firmaClienteUrl: trabajos.firmaClienteUrl,
       firmaClienteNombre: trabajos.firmaClienteNombre,
     })
@@ -215,11 +227,11 @@ export async function actualizarMiTrabajo(
     firmaCliente.startsWith("data:image/");
 
   if (estado === "Finalizado") {
-    const yaTeniaFirma = Boolean(
+    const yaTeníaFirma = Boolean(
       trabajoActual.firmaClienteUrl,
     );
 
-    if (!yaTeniaFirma && !firmaNueva) {
+    if (!yaTeníaFirma && !firmaNueva) {
       redirect(
         agregarParametro(
           rutaRetorno,
@@ -229,7 +241,7 @@ export async function actualizarMiTrabajo(
       );
     }
 
-    if (!yaTeniaFirma && !firmaClienteNombre) {
+    if (!yaTeníaFirma && !firmaClienteNombre) {
       redirect(
         agregarParametro(
           rutaRetorno,
@@ -240,9 +252,33 @@ export async function actualizarMiTrabajo(
     }
   }
 
+  let kmSalida: number | null = trabajoActual.kmSalida;
+  let kmLlegada: number | null = trabajoActual.kmLlegada;
+
+  if (estado === "Finalizado" && trabajoActual.vehiculoId) {
+    try {
+      kmSalida = leerKm(formData.get("kmSalida"));
+      kmLlegada = leerKm(formData.get("kmLlegada"));
+    } catch {
+      redirect(
+        agregarParametro(rutaRetorno, "error", "km"),
+      );
+    }
+
+    if (kmSalida === null || kmLlegada === null) {
+      redirect(
+        agregarParametro(rutaRetorno, "error", "km"),
+      );
+    }
+  }
+
   const cambioEstado =
     trabajoActual.estado !== estado;
 
+  /*
+   * Cualquier texto no vacío es una nueva entrada
+   * histórica, aunque sea parecido a una anterior.
+   */
   const agregoObservacion =
     nuevaObservacion.length > 0;
 
@@ -261,7 +297,14 @@ export async function actualizarMiTrabajo(
 
   const ahora = new Date();
 
+  try {
   await db.transaction(async (tx) => {
+    /*
+     * Conservamos observacionesTecnico como "última
+     * observación" por compatibilidad con pantallas
+     * antiguas. El historial real vive en
+     * trabajo_observaciones_tecnico.
+     */
     await tx
       .update(trabajos)
       .set({
@@ -281,6 +324,15 @@ export async function actualizarMiTrabajo(
               firmaClienteEn: ahora.toISOString(),
             }
           : {}),
+        ...(estado === "Finalizado" &&
+        trabajoActual.vehiculoId &&
+        kmSalida !== null &&
+        kmLlegada !== null
+          ? {
+              kmSalida,
+              kmLlegada,
+            }
+          : {}),
       })
       .where(
         eq(
@@ -288,6 +340,22 @@ export async function actualizarMiTrabajo(
           trabajoId,
         ),
       );
+
+    if (
+      estado === "Finalizado" &&
+      trabajoActual.vehiculoId &&
+      !trabajoActual.kmLlegada &&
+      kmSalida !== null &&
+      kmLlegada !== null
+    ) {
+      await registrarKilometrajeTrabajo(tx, {
+        vehiculoId: trabajoActual.vehiculoId,
+        trabajoId,
+        usuarioId: sesion.usuarioId,
+        kmSalida,
+        kmLlegada,
+      });
+    }
 
     if (agregoObservacion) {
       await tx
@@ -386,8 +454,36 @@ export async function actualizarMiTrabajo(
         ),
       );
   });
+  } catch (error) {
+    if (error instanceof Error && error.message === "KM_SALIDA_BAJO") {
+      redirect(
+        agregarParametro(rutaRetorno, "error", "km-salida"),
+      );
+    }
+
+    if (error instanceof Error && error.message === "KM_LLEGADA_BAJO") {
+      redirect(
+        agregarParametro(rutaRetorno, "error", "km-llegada"),
+      );
+    }
+
+    if (error instanceof Error && error.message === "KM_INVALIDO") {
+      redirect(
+        agregarParametro(rutaRetorno, "error", "km"),
+      );
+    }
+
+    throw error;
+  }
 
   revalidarPaginas(trabajoId);
+  revalidatePath("/vehiculos");
+
+  if (trabajoActual.vehiculoId) {
+    revalidatePath(
+      `/vehiculos/${trabajoActual.vehiculoId}/kilometraje`,
+    );
+  }
 
   redirect(
     agregarParametro(

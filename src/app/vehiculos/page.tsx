@@ -170,6 +170,25 @@ export default async function VehiculosPage({
 
             <div>
               <label
+                htmlFor="kmActual"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
+                Km actual
+              </label>
+
+              <input
+                id="kmActual"
+                name="kmActual"
+                type="number"
+                min={0}
+                step={1}
+                defaultValue={0}
+                className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label
                 htmlFor="estado"
                 className="mb-2 block text-sm font-semibold text-slate-700"
               >
@@ -244,6 +263,10 @@ export default async function VehiculosPage({
                     </th>
 
                     <th className="px-5 py-4">
+                      Km actual
+                    </th>
+
+                    <th className="px-5 py-4">
                       Estado
                     </th>
 
@@ -304,6 +327,18 @@ export default async function VehiculosPage({
                         </td>
 
                         <td className="px-5 py-4">
+                          <input
+                            form={formId}
+                            name="kmActual"
+                            type="number"
+                            min={0}
+                            step={1}
+                            defaultValue={vehiculo.kmActual ?? 0}
+                            className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                          />
+                        </td>
+
+                        <td className="px-5 py-4">
                           <select
                             form={formId}
                             name="estado"
@@ -352,6 +387,13 @@ export default async function VehiculosPage({
                                 value={vehiculo.id}
                               />
                             </form>
+
+                            <Link
+                              href={`/vehiculos/${vehiculo.id}/kilometraje`}
+                              className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200"
+                            >
+                              Km
+                            </Link>
 
                             <button
                               form={formId}

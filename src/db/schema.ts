@@ -63,6 +63,7 @@ export const vehiculos = pgTable("vehiculos", {
   marca: text("marca"),
   modelo: text("modelo"),
   estado: text("estado").notNull().default("Disponible"),
+  kmActual: integer("km_actual").notNull().default(0),
   activo: boolean("activo").notNull().default(true),
   creadoEn: timestamp("creado_en", { mode: "string" }).notNull().defaultNow(),
 });
@@ -86,6 +87,8 @@ export const trabajos = pgTable("trabajos", {
   estado: text("estado").notNull().default("Pendiente"),
   horaInicio: text("hora_inicio"),
   horaFin: text("hora_fin"),
+  kmSalida: integer("km_salida"),
+  kmLlegada: integer("km_llegada"),
   observaciones: text("observaciones"),
   observacionesTecnico: text("observaciones_tecnico"),
   firmaClienteUrl: text("firma_cliente_url"),
@@ -119,6 +122,59 @@ export const usuarios = pgTable("usuarios", {
   activo: boolean("activo").notNull().default(true),
   creadoEn: timestamp("creado_en", { mode: "string" }).notNull().defaultNow(),
 });
+
+export const vehiculoKilometraje = pgTable(
+  "vehiculo_kilometraje",
+  {
+    id: serial("id").primaryKey(),
+
+    vehiculoId: integer("vehiculo_id")
+      .notNull()
+      .references(() => vehiculos.id, {
+        onDelete: "cascade",
+      }),
+
+    trabajoId: integer("trabajo_id").references(
+      () => trabajos.id,
+      { onDelete: "set null" },
+    ),
+
+    usuarioId: integer("usuario_id").references(
+      () => usuarios.id,
+      { onDelete: "set null" },
+    ),
+
+    kmAnterior: integer("km_anterior")
+      .notNull()
+      .default(0),
+
+    kmSalida: integer("km_salida"),
+
+    kmLlegada: integer("km_llegada").notNull(),
+
+    kmRecorridos: integer("km_recorridos")
+      .notNull()
+      .default(0),
+
+    tipo: text("tipo").notNull().default("TRABAJO"),
+
+    nota: text("nota"),
+
+    creadoEn: timestamp("creado_en", {
+      mode: "date",
+    })
+      .notNull()
+      .defaultNow(),
+  },
+  (tabla) => [
+    index("vehiculo_kilometraje_vehiculo_idx").on(
+      tabla.vehiculoId,
+    ),
+    index("vehiculo_kilometraje_trabajo_idx").on(
+      tabla.trabajoId,
+    ),
+  ],
+);
 
 
 export const trabajoObservacionesTecnico = pgTable(
@@ -1185,6 +1241,11 @@ export const clienteAreas = pgTable(
   ],
 );
 
+
+export type VehiculoKilometraje =
+  typeof vehiculoKilometraje.$inferSelect;
+export type NuevoVehiculoKilometraje =
+  typeof vehiculoKilometraje.$inferInsert;
 
 export type ClienteSubtienda =
   typeof clienteSubtiendas.$inferSelect;
