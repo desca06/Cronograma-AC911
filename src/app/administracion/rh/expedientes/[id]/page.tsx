@@ -5,6 +5,7 @@ import {
   Download,
   Edit3,
   FileText,
+  ScrollText,
   Hash,
   IdCard,
   MapPin,
@@ -23,10 +24,6 @@ import {
   expedientes,
 } from "@/db/schema";
 import { requerirAdmin } from "@/lib/auth";
-
-import {
-  DescargarPdfAutomatico,
-} from "./descargar-pdf-automatico";
 
 export const dynamic =
   "force-dynamic";
@@ -146,15 +143,6 @@ export default async function ExpedienteDetallePage({
 
   return (
     <AppShell>
-      <DescargarPdfAutomatico
-        expedienteId={
-          expediente.id
-        }
-        activar={
-          descargarPdf
-        }
-      />
-
       <PageHeader
         title="Detalle del expediente"
         description={`Información laboral de ${expediente.empleado}.`}
@@ -204,6 +192,18 @@ export default async function ExpedienteDetallePage({
                   size={17}
                 />
                 Descargar PDF
+              </a>
+
+              <a
+                href={`/administracion/rh/expedientes/${expediente.id}/carta`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+              >
+                <ScrollText
+                  size={17}
+                />
+                Carta de recomendación
               </a>
             </div>
           </div>
@@ -261,9 +261,9 @@ export default async function ExpedienteDetallePage({
 
                 <span
                   className={`mt-4 inline-flex rounded-full px-3 py-1 text-xs font-bold ${expediente.estado ===
-                      "ACTIVO"
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-slate-200 text-slate-700"
+                    "ACTIVO"
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-slate-200 text-slate-700"
                     }`}
                 >
                   {expediente.estado ===
