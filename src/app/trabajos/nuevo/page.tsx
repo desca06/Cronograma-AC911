@@ -49,6 +49,9 @@ type Props = {
     error?:
     | string
     | string[];
+    detalle?:
+    | string
+    | string[];
   }>;
 };
 
@@ -91,6 +94,11 @@ export default async function NuevoTrabajoPage({
   const error =
     obtenerParametro(
       parametros.error,
+    );
+
+  const detalle =
+    obtenerParametro(
+      parametros.detalle,
     );
 
   let cotizacionOrigen:
@@ -414,7 +422,12 @@ export default async function NuevoTrabajoPage({
           {error ===
             "guardar" && (
               <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-                No se pudo guardar el trabajo. Revisá que Neon ya tenga la columna direccion en cotizaciones e intentá de nuevo.
+                No se pudo guardar el trabajo.
+                {detalle ? (
+                  <span className="mt-2 block font-medium text-red-800">
+                    Detalle: {detalle}
+                  </span>
+                ) : null}
               </div>
             )}
 

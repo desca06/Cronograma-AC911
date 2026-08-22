@@ -69,12 +69,40 @@ function revalidarPaginas(): void {
 function rutaNuevoTrabajo(
   cotizacionId: number | null,
   error: string,
+  detalle?: string,
 ) {
+  const parametros = new URLSearchParams({
+    error,
+  });
+
   if (cotizacionId) {
-    return `/trabajos/nuevo?cotizacionId=${cotizacionId}&error=${error}`;
+    parametros.set("cotizacionId", String(cotizacionId));
   }
 
-  return `/trabajos/nuevo?error=${error}`;
+  if (detalle) {
+    parametros.set("detalle", detalle.slice(0, 180));
+  }
+
+  return `/trabajos/nuevo?${parametros.toString()}`;
+}
+
+function mensajeErrorGuardar(error: unknown) {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return "Error desconocido al guardar el trabajo.";
+}
+
+function esRedirectNext(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in error &&
+    String((error as { digest?: string }).digest).startsWith(
+      "NEXT_REDIRECT",
+    )
+  );
 }
 
 export async function crearTrabajo(
@@ -174,18 +202,6 @@ export async function crearTrabajo(
   try {
     await db.transaction(async (tx) => {
       if (cotizacionId) {
-        /*
-         * Evita dos trabajos simultáneos para la misma
-         * cotización.
-         */
-        await tx.execute(
-          sql`
-          select pg_advisory_xact_lock(
-            ${911000} + ${cotizacionId}
-          )
-        `,
-        );
-
         const [cotizacionOrigen] =
           await tx
             .select({
@@ -287,6 +303,10 @@ export async function crearTrabajo(
         })
         .returning({ id: trabajos.id });
 
+      if (!nuevoTrabajo) {
+        throw new Error("No se pudo crear el trabajo.");
+      }
+
       const trabajoId =
         nuevoTrabajo.id;
 
@@ -358,7 +378,11 @@ export async function crearTrabajo(
       usuarioIdsNotificar =
         usuarioIds;
     });
-  } catch (error) {
+  }catch (error) {
+    if (esRedirectNext(error)) {
+      throw error;
+    }
+
     if (
       error instanceof Error &&
       error.message === "UBICACION_INVALIDA"
@@ -370,28 +394,31 @@ export async function crearTrabajo(
       cotizacionId &&
       error instanceof Error
     ) {
-      if (
-        error.message ===
-        "COTIZACION_NO_APROBADA"
-      ) {
+      if (error.message === "COTIZACION_NO_EXISTE") {
+        redirect(rutaNuevoTrabajo(cotizacionId, "datos"));
+      }
+
+      if (error.message === "COTIZACION_NO_APROBADA") {
         redirect(
           `/administracion/compras/cotizaciones/${cotizacionId}?error=no-aprobada`,
         );
       }
 
-      if (
-        error.message ===
-        "COTIZACION_YA_TIENE_TRABAJO"
-      ) {
+      if (error.message === "COTIZACION_YA_TIENE_TRABAJO") {
         redirect(
           `/administracion/compras/cotizaciones/${cotizacionId}?error=trabajo-duplicado`,
         );
       }
-
     }
 
     console.error("[AC911] No se pudo crear el trabajo:", error);
-    redirect(rutaNuevoTrabajo(cotizacionId, "guardar"));
+    redirect(
+      rutaNuevoTrabajo(
+        cotizacionId,
+        "guardar",
+        mensajeErrorGuardar(error),
+      ),
+    );
   }
 
   if (
