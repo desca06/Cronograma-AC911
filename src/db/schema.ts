@@ -670,6 +670,8 @@ export const cotizaciones = pgTable(
       { onDelete: "set null" },
     ),
 
+    direccion: text("direccion"),
+
     creadoPorId: integer("creado_por_id")
       .references(() => usuarios.id, {
         onDelete: "set null",

@@ -147,9 +147,9 @@ export function FormularioCotizacion({
       actuales.map((item) =>
         item.idTemporal === idTemporal
           ? {
-              ...item,
-              [campo]: valor,
-            }
+            ...item,
+            [campo]: valor,
+          }
           : item,
       ),
     );
@@ -214,6 +214,24 @@ export function FormularioCotizacion({
                 clienteId={clienteId}
                 onClienteIdChange={setClienteId}
               />
+
+              <div className="md:col-span-2">
+                <label
+                  htmlFor="direccion"
+                  className="mb-2 block text-sm font-semibold text-slate-700"
+                >
+                  Dirección del trabajo
+                </label>
+
+                <textarea
+                  id="direccion"
+                  name="direccion"
+                  rows={2}
+                  maxLength={400}
+                  placeholder="Dirección o referencia de donde se va a trabajar"
+                  className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                />
+              </div>
 
               <div>
                 <label

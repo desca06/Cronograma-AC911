@@ -45,6 +45,7 @@ type CotizacionOrigen = {
   clienteNombre: string;
   subtiendaId?: number | null;
   areaId?: number | null;
+  direccion?: string | null;
   observaciones:
     | string
     | null;
@@ -125,6 +126,14 @@ export function FormularioTrabajo({
   );
 
   const [
+    direccion,
+    setDireccion,
+  ] = useState(
+    cotizacion?.direccion ??
+      "",
+  );
+
+  const [
     observaciones,
     setObservaciones,
   ] = useState(
@@ -196,6 +205,11 @@ export function FormularioTrabajo({
 
     setObservaciones(
       seleccionada.observaciones ??
+        "",
+    );
+
+    setDireccion(
+      seleccionada.direccion ??
         "",
     );
   }
@@ -442,6 +456,10 @@ export function FormularioTrabajo({
           <input
             id="direccion"
             name="direccion"
+            value={direccion}
+            onChange={(evento) =>
+              setDireccion(evento.target.value)
+            }
             placeholder="Dirección o ubicación"
             className="w-full rounded-xl border border-slate-300 px-4 py-3"
           />

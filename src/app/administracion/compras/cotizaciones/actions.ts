@@ -240,6 +240,9 @@ export async function crearCotizacion(
   const observaciones =
     texto(formData, "observaciones") || null;
 
+  const direccion =
+    texto(formData, "direccion") || null;
+
   const condicionesPago =
     texto(formData, "condicionesPago") ||
     null;
@@ -275,8 +278,8 @@ export async function crearCotizacion(
     porcentajeAnticipo < 0 ||
     porcentajeFinal < 0 ||
     porcentajeAnticipo +
-      porcentajeFinal !==
-      100
+    porcentajeFinal !==
+    100
   ) {
     redirect(
       `${RUTA_COTIZACIONES}/nueva?error=datos`,
@@ -343,6 +346,7 @@ export async function crearCotizacion(
           clienteId,
           subtiendaId: ubicacion.subtiendaId,
           areaId: ubicacion.areaId,
+          direccion,
           creadoPorId: sesion.usuarioId,
           colaborador,
           titulo,

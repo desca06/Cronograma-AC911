@@ -185,6 +185,7 @@ export default async function DetalleCotizacionPage({
       total: cotizaciones.total,
       creadoEn: cotizaciones.creadoEn,
       actualizadoEn: cotizaciones.actualizadoEn,
+      direccion: cotizaciones.direccion,
     })
     .from(cotizaciones)
     .innerJoin(
@@ -348,10 +349,10 @@ export default async function DetalleCotizacionPage({
 
         {parametros.error ===
           "estado-eliminar" && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-            Solo se pueden eliminar cotizaciones pendientes.
-          </div>
-        )}
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+              Solo se pueden eliminar cotizaciones pendientes.
+            </div>
+          )}
 
         <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
@@ -439,6 +440,15 @@ export default async function DetalleCotizacionPage({
                 </dt>
                 <dd className="mt-1 font-semibold text-slate-900">
                   {cotizacion.colaborador}
+                </dd>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-4 sm:col-span-2">
+                <dt className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                  Dirección del trabajo
+                </dt>
+                <dd className="mt-1 font-semibold text-slate-900">
+                  {cotizacion.direccion || "Sin dirección"}
                 </dd>
               </div>
 
@@ -681,24 +691,22 @@ export default async function DetalleCotizacionPage({
         </div>
 
         <article
-          className={`rounded-2xl border p-6 shadow-sm ${
-            trabajoVinculado
-              ? "border-blue-200 bg-blue-50"
-              : cotizacion.estado === "APROBADA"
-                ? "border-emerald-300 bg-emerald-50"
-                : "border-amber-200 bg-amber-50"
-          }`}
+          className={`rounded-2xl border p-6 shadow-sm ${trabajoVinculado
+            ? "border-blue-200 bg-blue-50"
+            : cotizacion.estado === "APROBADA"
+              ? "border-emerald-300 bg-emerald-50"
+              : "border-amber-200 bg-amber-50"
+            }`}
         >
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-start gap-4">
               <div
-                className={`grid h-12 w-12 shrink-0 place-items-center rounded-xl ${
-                  trabajoVinculado
-                    ? "bg-blue-100 text-blue-700"
-                    : cotizacion.estado === "APROBADA"
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-amber-100 text-amber-700"
-                }`}
+                className={`grid h-12 w-12 shrink-0 place-items-center rounded-xl ${trabajoVinculado
+                  ? "bg-blue-100 text-blue-700"
+                  : cotizacion.estado === "APROBADA"
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-amber-100 text-amber-700"
+                  }`}
               >
                 <BriefcaseBusiness
                   size={23}
@@ -762,55 +770,55 @@ export default async function DetalleCotizacionPage({
             <div className="flex flex-wrap gap-2">
               {!trabajoVinculado &&
                 cotizacion.estado !== "APROBADA" && (
-                <form action={aprobar}>
-                  <button
-                    type="submit"
-                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
-                  >
-                    <CheckCircle2 size={17} />
-                    Aprobar
-                  </button>
-                </form>
-              )}
+                  <form action={aprobar}>
+                    <button
+                      type="submit"
+                      className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                    >
+                      <CheckCircle2 size={17} />
+                      Aprobar
+                    </button>
+                  </form>
+                )}
 
               {!trabajoVinculado &&
                 cotizacion.estado !== "RECHAZADA" && (
-                <form action={rechazar}>
-                  <button
-                    type="submit"
-                    className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700"
-                  >
-                    <XCircle size={17} />
-                    Rechazar
-                  </button>
-                </form>
-              )}
+                  <form action={rechazar}>
+                    <button
+                      type="submit"
+                      className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700"
+                    >
+                      <XCircle size={17} />
+                      Rechazar
+                    </button>
+                  </form>
+                )}
 
               {!trabajoVinculado &&
                 cotizacion.estado !== "VENCIDA" && (
-                <form action={marcarVencida}>
-                  <button
-                    type="submit"
-                    className="inline-flex items-center gap-2 rounded-xl bg-slate-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
-                  >
-                    <Clock3 size={17} />
-                    Marcar vencida
-                  </button>
-                </form>
-              )}
+                  <form action={marcarVencida}>
+                    <button
+                      type="submit"
+                      className="inline-flex items-center gap-2 rounded-xl bg-slate-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                    >
+                      <Clock3 size={17} />
+                      Marcar vencida
+                    </button>
+                  </form>
+                )}
 
               {!trabajoVinculado &&
                 cotizacion.estado !== "PENDIENTE" && (
-                <form action={marcarPendiente}>
-                  <button
-                    type="submit"
-                    className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-600"
-                  >
-                    <Clock3 size={17} />
-                    Volver a pendiente
-                  </button>
-                </form>
-              )}
+                  <form action={marcarPendiente}>
+                    <button
+                      type="submit"
+                      className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-600"
+                    >
+                      <Clock3 size={17} />
+                      Volver a pendiente
+                    </button>
+                  </form>
+                )}
 
               {cotizacion.estado === "PENDIENTE" && (
                 <form action={eliminar}>

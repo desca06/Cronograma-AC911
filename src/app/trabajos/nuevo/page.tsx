@@ -44,11 +44,11 @@ export const runtime =
 type Props = {
   searchParams: Promise<{
     cotizacionId?:
-      | string
-      | string[];
+    | string
+    | string[];
     error?:
-      | string
-      | string[];
+    | string
+    | string[];
   }>;
 };
 
@@ -95,17 +95,18 @@ export default async function NuevoTrabajoPage({
 
   let cotizacionOrigen:
     | {
-        id: number;
-        codigo: string;
-        titulo: string;
-        clienteId: number;
-        clienteNombre: string;
-        subtiendaId: number | null;
-        areaId: number | null;
-        observaciones:
-          | string
-          | null;
-      }
+      id: number;
+      codigo: string;
+      titulo: string;
+      clienteId: number;
+      clienteNombre: string;
+      subtiendaId: number | null;
+      areaId: number | null;
+      observaciones:
+      | string
+      | null;
+      direccion: string | null;
+    }
     | null = null;
 
   if (cotizacionTexto) {
@@ -146,6 +147,8 @@ export default async function NuevoTrabajoPage({
             cotizaciones.observaciones,
           trabajoId:
             cotizacionTrabajos.trabajoId,
+          direccion:
+            cotizaciones.direccion,
         })
         .from(cotizaciones)
         .innerJoin(
@@ -208,6 +211,8 @@ export default async function NuevoTrabajoPage({
         cotizacion.areaId,
       observaciones:
         cotizacion.observaciones,
+      direccion:
+        cotizacion.direccion,
     };
   }
 
@@ -332,6 +337,8 @@ export default async function NuevoTrabajoPage({
           cotizaciones.areaId,
         observaciones:
           cotizaciones.observaciones,
+        direccion:
+          cotizaciones.direccion,
       })
       .from(cotizaciones)
       .innerJoin(
@@ -385,17 +392,17 @@ export default async function NuevoTrabajoPage({
         <div className="mx-auto max-w-6xl">
           {error ===
             "cliente" && (
-            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-              El cliente del trabajo debe coincidir con el cliente de la cotización.
-            </div>
-          )}
+              <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                El cliente del trabajo debe coincidir con el cliente de la cotización.
+              </div>
+            )}
 
           {error ===
             "ubicacion" && (
-            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-              La subtienda o el área no pertenecen a ese cliente.
-            </div>
-          )}
+              <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                La subtienda o el área no pertenecen a ese cliente.
+              </div>
+            )}
 
           <FormularioTrabajo
             clientes={

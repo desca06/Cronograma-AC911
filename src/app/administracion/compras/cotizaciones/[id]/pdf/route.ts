@@ -439,6 +439,7 @@ export async function GET(
       clienteNombre: clientes.nombre,
       subtiendaNombre: clienteSubtiendas.nombre,
       areaNombre: clienteAreas.nombre,
+      direccion: cotizaciones.direccion,
     })
     .from(cotizaciones)
     .innerJoin(
@@ -531,7 +532,7 @@ export async function GET(
     }
   };
 
-  const infoHeight = 118;
+  const infoHeight = 142;
 
   drawRoundedCard(page, {
     x: MARGIN,
@@ -669,6 +670,20 @@ export async function GET(
     },
   );
 
+  drawLabelValue(
+    page,
+    "Dirección:",
+    safeText(quotation.direccion),
+    {
+      x: MARGIN + 14,
+      y: y - 114,
+      normal,
+      bold,
+      labelWidth: 72,
+      valueWidth: CONTENT_WIDTH - 100,
+    },
+  );
+  
   y -= infoHeight + 16;
 
   const columns = {
