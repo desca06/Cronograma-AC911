@@ -14,6 +14,7 @@ import { PageHeader } from "@/components/page-header";
 import { db } from "@/db";
 import { categoriasInventario } from "@/db/schema";
 import { requerirInventario } from "@/lib/auth";
+import { FormularioArticuloSerie } from "@/components/formulario-articulo-serie";
 import { crearArticulo } from "../actions";
 
 type PageProps = {
@@ -33,6 +34,12 @@ const mensajesError: Record<string, string> = {
   unidad: "Debes ingresar la unidad de medida.",
   duplicado:
     "Ya existe un artículo con ese nombre dentro de la categoría seleccionada.",
+  "serie-requerida":
+    "Los bienes o activos deben llevar número de serie.",
+  "serie-invalida":
+    "El número de serie solo puede tener letras, números y guiones. Mínimo 4 caracteres.",
+  "serie-duplicada":
+    "Ese número de serie ya está registrado en otro artículo.",
 };
 
 export default async function NuevoArticuloPage({
@@ -100,7 +107,10 @@ export default async function NuevoArticuloPage({
           </div>
         )}
 
-        <form action={crearArticulo} className="space-y-6">
+        <FormularioArticuloSerie
+          action={crearArticulo}
+          className="space-y-6"
+        >
           <div className="grid gap-6 xl:grid-cols-[1.4fr_0.6fr]">
             <div className="space-y-6">
               <article className="rounded-2xl border border-blue-200 bg-white p-6 shadow-sm">
@@ -274,6 +284,29 @@ export default async function NuevoArticuloPage({
                     />
                   </div>
 
+                  <div className="md:col-span-2">
+                    <label
+                      htmlFor="numeroSerie"
+                      className="mb-2 block text-sm font-semibold text-slate-700"
+                    >
+                      Número de serie
+                    </label>
+
+                    <input
+                      id="numeroSerie"
+                      name="numeroSerie"
+                      type="text"
+                      maxLength={40}
+                      placeholder="Obligatorio en bienes o activos"
+                      className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm uppercase text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-purple-500 focus:ring-4 focus:ring-purple-100"
+                    />
+
+                    <p className="mt-2 text-xs leading-5 text-slate-500">
+                      Al guardar un bien o activo te vamos a pedir que confirmés
+                      que la serie está bien escrita.
+                    </p>
+                  </div>
+
                   <div>
                     <label
                       htmlFor="unidadMedida"
@@ -425,7 +458,7 @@ export default async function NuevoArticuloPage({
               Guardar artículo
             </button>
           </div>
-        </form>
+        </FormularioArticuloSerie>
       </section>
     </AppShell>
   );

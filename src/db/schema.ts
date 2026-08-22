@@ -540,6 +540,7 @@ export const articulosInventario = pgTable(
       .notNull(),
     marca: text("marca"),
     modelo: text("modelo"),
+    numeroSerie: text("numero_serie"),
     costoReferencia: integer(
       "costo_referencia",
     )

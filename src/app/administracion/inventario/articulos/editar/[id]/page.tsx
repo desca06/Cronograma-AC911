@@ -18,6 +18,7 @@ import {
   categoriasInventario,
 } from "@/db/schema";
 import { requerirInventario } from "@/lib/auth";
+import { FormularioArticuloSerie } from "@/components/formulario-articulo-serie";
 import { editarArticulo } from "@/app/administracion/inventario/articulos/actions";
 
 type PageProps = {
@@ -41,6 +42,12 @@ const mensajesError: Record<string, string> = {
   unidad: "Debes ingresar la unidad de medida.",
   duplicado:
     "Ya existe otro artículo con ese nombre dentro de la categoría seleccionada.",
+  "serie-requerida":
+    "Los bienes o activos deben llevar número de serie.",
+  "serie-invalida":
+    "El número de serie solo puede tener letras, números y guiones. Mínimo 4 caracteres.",
+  "serie-duplicada":
+    "Ese número de serie ya está registrado en otro artículo.",
 };
 
 export default async function EditarArticuloPage({
@@ -77,6 +84,7 @@ export default async function EditarArticuloPage({
       stockMinimo: articulosInventario.stockMinimo,
       controlaStock:
         articulosInventario.controlaStock,
+      numeroSerie: articulosInventario.numeroSerie,
       estado: articulosInventario.estado,
     })
     .from(articulosInventario)
@@ -150,7 +158,7 @@ export default async function EditarArticuloPage({
           </div>
         </div>
 
-        <form
+        <FormularioArticuloSerie
           action={editarArticuloConId}
           className="space-y-6"
         >
@@ -332,6 +340,30 @@ export default async function EditarArticuloPage({
                       placeholder="Ejemplo: Latitude 5420"
                       className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-purple-500 focus:ring-4 focus:ring-purple-100"
                     />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label
+                      htmlFor="numeroSerie"
+                      className="mb-2 block text-sm font-semibold text-slate-700"
+                    >
+                      Número de serie
+                    </label>
+
+                    <input
+                      id="numeroSerie"
+                      name="numeroSerie"
+                      type="text"
+                      maxLength={40}
+                      defaultValue={articulo.numeroSerie ?? ""}
+                      placeholder="Obligatorio en bienes o activos"
+                      className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm uppercase text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-purple-500 focus:ring-4 focus:ring-purple-100"
+                    />
+
+                    <p className="mt-2 text-xs leading-5 text-slate-500">
+                      Al guardar un bien o activo te vamos a pedir que
+                      confirmés que la serie está bien escrita.
+                    </p>
                   </div>
 
                   <div>
@@ -525,7 +557,7 @@ export default async function EditarArticuloPage({
               Guardar cambios
             </button>
           </div>
-        </form>
+        </FormularioArticuloSerie>
       </section>
     </AppShell>
   );
