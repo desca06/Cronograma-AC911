@@ -75,6 +75,7 @@ type FormularioTrabajoProps = {
   cotizacion?:
     | CotizacionOrigen
     | null;
+  bloquearCotizacion?: boolean;
 };
 
 const estadosDisponibles = [
@@ -94,6 +95,7 @@ export function FormularioTrabajo({
   cotizacionesAprobadas,
   fechaInicial,
   cotizacion = null,
+  bloquearCotizacion = false,
 }: FormularioTrabajoProps) {
   const [
     cotizacionId,
@@ -473,66 +475,86 @@ export function FormularioTrabajo({
             Cotización aprobada
           </label>
 
-          <select
-            id="cotizacionId"
-            name="cotizacionId"
-            value={
-              cotizacionId
-            }
-            onChange={(
-              evento,
-            ) =>
-              cambiarCotizacion(
-                evento.target
-                  .value,
-              )
-            }
-            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"
-          >
-            <option value="">
-              Sin cotización
-            </option>
+          {bloquearCotizacion && cotizacion ? (
+            <>
+              <input
+                type="hidden"
+                name="cotizacionId"
+                value={cotizacion.id}
+              />
 
-            {cotizacionesAprobadas.map(
-              (item) => (
-                <option
-                  key={
-                    item.id
-                  }
-                  value={
-                    item.id
-                  }
-                >
-                  {item.codigo} —{" "}
-                  {
-                    item.clienteNombre
-                  }
+              <div className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-900">
+                {cotizacion.codigo} — {cotizacion.clienteNombre}
+              </div>
+
+              <p className="mt-1 text-xs text-slate-500">
+                Esta cotización viene bloqueada porque el trabajo se está creando desde ella.
+              </p>
+            </>
+          ) : (
+            <>
+              <select
+                id="cotizacionId"
+                name="cotizacionId"
+                value={
+                  cotizacionId
+                }
+                onChange={(
+                  evento,
+                ) =>
+                  cambiarCotizacion(
+                    evento.target
+                      .value,
+                  )
+                }
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"
+              >
+                <option value="">
+                  Sin cotización
                 </option>
-              ),
-            )}
 
-            {cotizacion &&
-              !cotizacionesAprobadas.some(
-                (item) =>
-                  item.id ===
-                  cotizacion.id,
-              ) && (
-                <option
-                  value={
-                    cotizacion.id
-                  }
-                >
-                  {cotizacion.codigo} —{" "}
-                  {
-                    cotizacion.clienteNombre
-                  }
-                </option>
-              )}
-          </select>
+                {cotizacionesAprobadas.map(
+                  (item) => (
+                    <option
+                      key={
+                        item.id
+                      }
+                      value={
+                        item.id
+                      }
+                    >
+                      {item.codigo} —{" "}
+                      {
+                        item.clienteNombre
+                      }
+                    </option>
+                  ),
+                )}
 
-          <p className="mt-1 text-xs text-slate-500">
-            Solo aparecen cotizaciones aprobadas que todavía no tienen trabajo.
-          </p>
+                {cotizacion &&
+                  !cotizacionesAprobadas.some(
+                    (item) =>
+                      item.id ===
+                      cotizacion.id,
+                  ) && (
+                    <option
+                      value={
+                        cotizacion.id
+                      }
+                    >
+                      {cotizacion.codigo} —{" "}
+                      {
+                        cotizacion.clienteNombre
+                      }
+                    </option>
+                  )}
+              </select>
+
+              <p className="mt-1 text-xs text-slate-500">
+                Solo aparecen cotizaciones aprobadas que todavía no tienen trabajo.
+              </p>
+            </>
+          )}
         </div>
 
         <div>

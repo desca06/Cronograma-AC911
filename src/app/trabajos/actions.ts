@@ -66,6 +66,17 @@ function revalidarPaginas(): void {
   );
 }
 
+function rutaNuevoTrabajo(
+  cotizacionId: number | null,
+  error: string,
+) {
+  if (cotizacionId) {
+    return `/trabajos/nuevo?cotizacionId=${cotizacionId}&error=${error}`;
+  }
+
+  return `/trabajos/nuevo?error=${error}`;
+}
+
 export async function crearTrabajo(
   formData: FormData,
 ): Promise<void> {
@@ -150,7 +161,7 @@ export async function crearTrabajo(
     !descripcion
   ) {
     redirect(
-      "/trabajos/nuevo?error=datos",
+      rutaNuevoTrabajo(cotizacionId, "datos"),
     );
   }
 
@@ -352,7 +363,7 @@ export async function crearTrabajo(
       error instanceof Error &&
       error.message === "UBICACION_INVALIDA"
     ) {
-      redirect("/trabajos/nuevo?error=ubicacion");
+      redirect(rutaNuevoTrabajo(cotizacionId, "ubicacion"));
     }
 
     if (
@@ -379,7 +390,8 @@ export async function crearTrabajo(
 
     }
 
-    throw error;
+    console.error("[AC911] No se pudo crear el trabajo:", error);
+    redirect(rutaNuevoTrabajo(cotizacionId, "guardar"));
   }
 
   if (

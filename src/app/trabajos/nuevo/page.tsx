@@ -404,6 +404,20 @@ export default async function NuevoTrabajoPage({
               </div>
             )}
 
+          {error ===
+            "datos" && (
+              <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                Completá fecha, tipo y descripción para guardar el trabajo.
+              </div>
+            )}
+
+          {error ===
+            "guardar" && (
+              <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                No se pudo guardar el trabajo. Revisá que Neon ya tenga la columna direccion en cotizaciones e intentá de nuevo.
+              </div>
+            )}
+
           <FormularioTrabajo
             clientes={
               listaClientes
@@ -429,6 +443,10 @@ export default async function NuevoTrabajoPage({
             cotizacion={
               cotizacionOrigen
             }
+
+            bloquearCotizacion={Boolean(
+              cotizacionOrigen,
+            )}
           />
         </div>
       </section>
